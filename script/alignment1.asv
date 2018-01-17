@@ -90,8 +90,7 @@ N = 400;
 
 %%
 
-m1_roi = m1.far_plane_calibration;
-m2_roi = m2.far_plane_calibration;
+m1_roi = m1.far_plane_calibr
 
 map = brains.arduino.calino.get_calibration_key_roi_map();
 consts = brains.arduino.calino.define_calibration_target_constants();
