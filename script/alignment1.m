@@ -9,7 +9,9 @@ for i = 1:numel(depends)
   addpath( genpath(fullfile(repo_dir, depends{i})) );
 end
 
-outerdir = fullfile( conf.PATHS.data_root, 'raw', '011118' );
+outerdir = fullfile( conf.PATHS.data_root, 'raw', '01162018' );
+
+plex_dir = fullfile( outerdir, 'plex', 'sorted' );
 
 m1_dir = fullfile( outerdir, 'm1' );
 m2_dir = fullfile( outerdir, 'm2' );
@@ -19,11 +21,11 @@ m2_caldir = fullfile( m2_dir, 'calibration' );
 
 %%
 
-pl2_file = char( shared_utils.io.find(outerdir, '.pl2') );
+pl2_file = char( shared_utils.io.find(plex_dir, '.pl2') );
 pl2_map = bfw.get_plex_channel_map();
 
 spike_chan = 'SPK09';
-spikes = PL2Ts( pl2_file, spike_chan, 1 );
+spikes = PL2Ts( pl2_file, spike_chan, 0 );
 
 sync_pulse_raw = PL2Ad( pl2_file, pl2_map('sync_pulse') );
 start_pulse_raw = PL2Ad( pl2_file, pl2_map('session_start') );
@@ -37,7 +39,9 @@ id_times = bfw.get_ad_id_times( numel(sync_pulse_raw.Values), ai_fs );
 
 binned = bfw.bin_pulses( sync_pulses, start_pulses );
 
-all_sync_pulses = binned([1, 3]);
+% all_sync_pulses = binned([1, 3]);
+
+all_sync_pulses = binned(1);
 
 %%
 
@@ -114,8 +118,8 @@ face_rect = face_m1;
 m1_ib = bfw.bounds.rect( pos_aligned(1, :), pos_aligned(2, :), face_m1 );
 m2_ib = bfw.bounds.rect( pos_aligned(3, :), pos_aligned(4, :), face_m2 );
 
-mutual = m1_ib & m2_ib;
-% mutual = m1_ib;
+% mutual = m1_ib & m2_ib;
+mutual = m1_ib;
 
 starts = shared_utils.logical.find_starts( mutual, 10 );
 
