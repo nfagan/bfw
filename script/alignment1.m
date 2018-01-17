@@ -1,25 +1,23 @@
-%%  NOTES
-
-% - save roi data along with other data
-% 
-
-%%
-
-addpath( genpath(fullfile(pathfor('repositories'), 'spike_helpers')) );
-addpath( genpath(fullfile(pathfor('repositories'), 'plexon')) );
-addpath( genpath(fullfile(pathfor('repositories'), 'bfw')) );
-
 %%
 
 conf = bfw.config.load();
 
-outerdir = fullfile( conf.PATHS.data_root, 'raw', '01162018' );
+depends = conf.DEPENDS.repositories;
+repo_dir = conf.PATHS.repositories;
+
+for i = 1:numel(depends)
+  addpath( genpath(fullfile(repo_dir, depends{i})) );
+end
+
+outerdir = fullfile( conf.PATHS.data_root, 'raw', '011118' );
 
 m1_dir = fullfile( outerdir, 'm1' );
 m2_dir = fullfile( outerdir, 'm2' );
 
 m1_caldir = fullfile( m1_dir, 'calibration' );
 m2_caldir = fullfile( m2_dir, 'calibration' );
+
+%%
 
 pl2_file = char( shared_utils.io.find(outerdir, '.pl2') );
 pl2_map = bfw.get_plex_channel_map();
@@ -51,17 +49,15 @@ m2_data = cellfun( load_func, shared_utils.io.find(m2_dir, '.mat') );
 m1_calibrations = shared_utils.io.find( m1_caldir, '.mat' );
 m2_calibrations = shared_utils.io.find( m2_caldir, '.mat' );
 
-m1_roi = shared_utils.io.fload( m1_calibrations{end} );
-m2_roi = shared_utils.io.fload( m1_calibrations{end} );
-
 if ( ~isfield(m1_data, 'far_plane_calibration') )
+  m1_roi = shared_utils.io.fload( m1_calibrations{end} );
   for i = 1:numel(m1_data), m1_data(i).far_plane_calibration = m1_roi; end
 end
 
 if ( ~isfield(m2_data, 'far_plane_calibration'))
+  m2_roi = shared_utils.io.fload( m2_calibrations{end} );
   for i = 1:numel(m2_data), m2_data(i).far_plane_calibration = m2_roi; end
 end
-
 
 %%
 
