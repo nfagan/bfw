@@ -9,9 +9,9 @@ for i = 1:numel(depends)
   addpath( genpath(fullfile(repo_dir, depends{i})) );
 end
 
-outerdir = fullfile( conf.PATHS.data_root, 'raw', '01162018' );
+outerdir = fullfile( conf.PATHS.data_root, 'raw', '011118' );
 
-plex_dir = fullfile( outerdir, 'plex', 'sorted' );
+plex_dir = fullfile( outerdir, 'plex', 'unsorted' );
 
 m1_dir = fullfile( outerdir, 'm1' );
 m2_dir = fullfile( outerdir, 'm2' );
@@ -93,8 +93,8 @@ N = 400;
 m1_roi = m1.far_plane_calibration;
 m2_roi = m2.far_plane_calibration;
 
-map = brains.arduino.calino.get_calibration_key_roi_map();
-consts = brains.arduino.calino.define_calibration_target_constants();
+map = bfw.calibration.get_calibration_key_roi_map();
+consts = bfw.calibration.define_calibration_target_constants();
 consts.FACE_WIDTH_CM = 8;
 consts.FACE_HEIGHT_CM = 8;
 consts.INTER_EYE_DISTANCE_CM = 8.25 - 4.75;
@@ -104,12 +104,15 @@ pad.face.y = 2;
 pad.eyes.x = 2;
 pad.eyes.y = 2;
 
-face_m1 = brains.arduino.calino.bound_funcs.face_top_only( m1_roi, map, pad, consts );
-eyes_m1 = brains.arduino.calino.bound_funcs.both_eyes( m1_roi, map, pad, consts );
-face_m2 = brains.arduino.calino.bound_funcs.face_top_only( m2_roi, map, pad, consts );
-eyes_m2 = brains.arduino.calino.bound_funcs.face_top_only( m2_roi, map, pad, consts );
+face_m1 = bfw.calibration.rect_face( m1_roi, map, pad, consts );
+face_m2 = bfw.calibration.rect_face( m2_roi, map, pad, consts );
 
-eye_rect = eyes_m1;
+% face_m1 = brains.arduino.calino.bound_funcs.face_top_only( m1_roi, map, pad, consts );
+% eyes_m1 = brains.arduino.calino.bound_funcs.both_eyes( m1_roi, map, pad, consts );
+% face_m2 = brains.arduino.calino.bound_funcs.face_top_only( m2_roi, map, pad, consts );
+% eyes_m2 = brains.arduino.calino.bound_funcs.face_top_only( m2_roi, map, pad, consts );
+% 
+% eye_rect = eyes_m1;
 face_rect = face_m1;
 
 
@@ -141,3 +144,11 @@ plot( binT, psth );
 
 xlabel( 'Time (s) from mutual looks to face' );
 ylabel( 'sp/s' );
+
+%%
+
+figure(2); clf();
+
+plot( pos_aligned(1, :), pos_aligned(2, :), 'k*', 'markersize', 0.2 );
+hold on;
+plot( pos_aligned(1, mutual), pos_aligned(2, mutual), 'r*', 'markersize', 0.2 );

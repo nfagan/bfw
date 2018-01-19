@@ -21,10 +21,12 @@ conf.(const.config_id) = true;
 PATHS = struct();
 PATHS.data_root = '/Volumes/My Passport/NICK/Chang Lab 2016/brains/free_viewing';
 PATHS.repositories = '/Volumes/My Passport/NICK/Chang Lab 2016/repositories';
+PATHS.plots = '/Volumes/My Passport/NICK/Chang Lab 2016/brains/free_viewing/plots';
 
 %   DEPENDENCIES
 DEPENDS = struct();
 DEPENDS.repositories = { 'shared_utils', 'spike_helpers', 'plexon' };
+DEPENDS.classes = { 'Edf2Mat' };
 
 %   EXPORT
 conf.PATHS = PATHS;

@@ -44,5 +44,4 @@ for j = 1:numel(m2_times)
   aligned_data(ind, nearest_1ms) = m2_data(:, j);
 end
 
-
 end
