@@ -14,12 +14,15 @@ for i = 1:numel(mats)
   unified = shared_utils.io.fload( mats{i} );
   
   fields = fieldnames( unified );
+  first = fields{1};
   
-  pl2_file = unified.(fields{1}).plex_filename;
-  pl2_dir = fullfile( unified.(fields{1}).plex_directory{:} );
+  pl2_file = unified.(first).plex_filename;
+  pl2_dir = fullfile( unified.(first).plex_directory{:} );
   pl2_dir = fullfile( data_root, pl2_dir );
   
   pl2_file = fullfile( pl2_dir, pl2_file );
+  
+  mat_index = unified.(first).mat_index;
   
   sync_pulse_raw = PL2Ad( pl2_file, pl2_map('sync_pulse') );
   start_pulse_raw = PL2Ad( pl2_file, pl2_map('session_start') );
