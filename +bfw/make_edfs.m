@@ -9,8 +9,6 @@ data_root = conf.PATHS.data_root;
 
 mats = shared_utils.io.find( data_p, '.mat' );
 
-base_filename = 'edf';
-
 do_save = true;
 
 copy_fields = { 'unified_filename', 'unified_directory' };
@@ -29,7 +27,7 @@ for i = 1:numel(mats)
   
   mat_dir = first.mat_directory_name;
   m_filename = first.mat_filename;
-  e_filename = bfw.make_intermediate_filename( base_filename, mat_dir, m_filename );
+  e_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
   for j = 1:numel(fields)
     m_dir = current.(fields{j}).mat_directory;
