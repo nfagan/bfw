@@ -4,6 +4,8 @@ data_p = bfw.get_intermediate_directory( 'edf' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
 save_p = bfw.get_intermediate_directory( 'aligned' );
 
+shared_utils.io.require_dir( save_p );
+
 mats = shared_utils.io.find( data_p, '.mat' );
 
 fs = 1/1e3;
@@ -12,9 +14,7 @@ N = 400;
 
 copy_fields = { 'unified_directory', 'unified_filename' };
 
-do_save = true;
-
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   current = shared_utils.io.fload( mats{i} );
@@ -88,11 +88,14 @@ for i = 1:numel(mats)
     aligned.(fields{j}).aligned_directory = save_p;
   end
   
-  if ( do_save )
-    shared_utils.io.require_dir( save_p );
-    save( fullfile(save_p, a_filename), 'aligned' );
-  end
+  do_save( aligned, fullfile(save_p, a_filename) );
 end
+
+end
+
+function do_save( variable, filepath )
+
+save( filepath, 'variable' );
 
 end
 

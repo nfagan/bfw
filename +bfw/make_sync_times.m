@@ -15,8 +15,6 @@ pl2_map = bfw.get_plex_channel_map();
 
 copy_fields = { 'unified_filename', 'plex_filename', 'plex_directory' };
 
-base_filename = 'sync';
-
 for i = 1:numel(mats)
   unified = shared_utils.io.fload( mats{i} );
   
@@ -33,16 +31,12 @@ for i = 1:numel(mats)
   start_pulse_raw = PL2Ad( pl2_file, pl2_map('session_start') );
   reward_pulse_raw = PL2Ad( pl2_file, pl2_map('reward') );
 
-  ai_fs = start_pulse_raw.ADFreq;
-
   sync_pulses = bfw.get_pulse_indices( sync_pulse_raw.Values );
   reward_pulses = bfw.get_pulse_indices( reward_pulse_raw.Values );
   start_pulses = bfw.get_pulse_indices( start_pulse_raw.Values );
 
   binned_sync = bfw.bin_pulses( sync_pulses, start_pulses );
   binned_reward = bfw.bin_pulses( reward_pulses, start_pulses );
-
-  id_times = bfw.get_ad_id_times( numel(sync_pulse_raw.Values), ai_fs );
   
   sync_index = unified.(first).plex_sync_index;
   
@@ -87,7 +81,7 @@ for i = 1:numel(mats)
     shared_utils.io.require_dir( save_p );
     mat_dir_name = unified.(first).mat_directory_name;
     mat_filename = unified.(first).mat_filename;
-    filename = bfw.make_intermediate_filename( base_filename, mat_dir_name, mat_filename );
+    filename = bfw.make_intermediate_filename( mat_dir_name, mat_filename );
     save( fullfile(save_p, filename), 'sync' );
   end
 end
