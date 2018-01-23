@@ -97,15 +97,11 @@ for idx = 1:numel(outerdirs)
     
     edf_map = containers.Map();
     
+    m_edfs = cellfun( @shared_utils.path.filename, m_edfs, 'un', false );
+    
     if ( ~isempty(m_edfs) && ~isfield(m_data, 'edf_file') )
-      m_edfs = cellfun( @shared_utils.path.filename, m_edfs, 'un', false );
       assert( numel(m_edfs) == numel(m_data), 'Edfs must match mat data.' );
-      num_ind = cellfun( @(x) isstrprop(x, 'digit'), m_edfs, 'un', false );
-      cellfun( @(x) assert(any(x), 'Improper .edf file format.'), num_ind );
-      nums = zeros( size(num_ind) );
-      for j = 1:numel(num_ind)
-        nums(j) = str2double( m_edfs{j}(num_ind{j}) );
-      end
+      nums = get_filenumbers( m_edfs );
       [~, I] = sort( nums );
       m_edfs = m_edfs(I);
 %       edf_map_ = jsondecode( fileread(m_edf_map{1}) );
@@ -116,8 +112,20 @@ for idx = 1:numel(outerdirs)
         edf_map(pos_fs{j}) = [m_edfs{edf_num}, '.edf'];
       end
     else
-      for j = 1:numel(m_data)
-        edf_map(m_filenames{j}) = '';
+      if ( numel(m_edfs) ~= numel(m_data) )
+        fprintf( ['\n WARNING: Number of edfs for %s does not match' ...
+          , ' number of .mat files.'], outerdir );
+        for j = 1:numel(m_data)
+          edf_map(m_filenames{j}) = '';
+        end
+      else
+        edf_nums = get_filenumbers( m_edfs );
+        mat_nums = get_filenumbers( m_filenames );
+        for j = 1:numel(mat_nums)
+          ind = edf_nums == mat_nums(j);
+          assert( sum(ind) == 1, 'Mismatch between edf + position numbers.' );
+          edf_map( m_filenames{j} ) = [m_edfs{ind}, '.edf'];
+        end
       end
     end
     
@@ -166,6 +174,19 @@ for idx = 1:numel(outerdirs)
       save( file, 'data' );
     end
   end
+end
+
+end
+
+function nums = get_filenumbers( m_edfs, kind )
+
+if ( nargin < 2 ), kind = 'edf'; end
+
+num_ind = cellfun( @(x) isstrprop(x, 'digit'), m_edfs, 'un', false );
+cellfun( @(x) assert(any(x), 'Improper %s file format.', kind), num_ind );
+nums = zeros( size(num_ind) );
+for j = 1:numel(num_ind)
+  nums(j) = str2double( m_edfs{j}(num_ind{j}) );
 end
 
 end
