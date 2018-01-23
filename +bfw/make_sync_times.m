@@ -32,11 +32,11 @@ for i = 1:numel(mats)
   sync_pulses = bfw.get_pulse_indices( sync_pulse_raw.Values );
   start_pulses = bfw.get_pulse_indices( start_pulse_raw.Values );
 
-  id_times = bfw.get_ad_id_times( numel(sync_pulse_raw.Values), ai_fs );
-
   binned = bfw.bin_pulses( sync_pulses, start_pulses );
+
+  id_times = bfw.get_ad_id_times( numel(sync_pulse_raw.Values), ai_fs );
   
-  d = 10;
+  sync_index = 10;
   
 end
 

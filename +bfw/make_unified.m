@@ -54,7 +54,18 @@ for idx = 1:numel(outerdirs)
     [~, pl2_file, ext] = fileparts( pl2s{1} );
     pl2_file = sprintf('%s%s', pl2_file, ext );
   end
+  
+  %
+  %   get plex sync map
+  %
 
+  m_plex_sync_map_file = shared_utils.io.find( pl2_dir, 'plex_sync_map.json' );
+  
+  assert( numel(m_plex_sync_map_file) == 1, ['Expected to find 1 plex_sync_map.json' ...
+    , ' file in "%s", but there were %d.'], pl2_dir, numel(m_plex_sync_map_file) );
+  
+  m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
+  
   for i = 1:numel(m_dirs)
     m_str = m_dirs{i};
     m_dir = fullfile( outerdir, m_str );
@@ -150,8 +161,9 @@ for idx = 1:numel(outerdirs)
       m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
-      m_data(j).mat_index = mat_index;
       m_data(j).edf_filename = edf_filename;
+      m_data(j).mat_index = mat_index;
+      m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
     end
 
     data_.(m_str) = m_data;
@@ -187,6 +199,18 @@ cellfun( @(x) assert(any(x), 'Improper %s file format.', kind), num_ind );
 nums = zeros( size(num_ind) );
 for j = 1:numel(num_ind)
   nums(j) = str2double( m_edfs{j}(num_ind{j}) );
+end
+
+end
+
+function map = get_plex_sync_map( plex_sync_struct )
+
+map = containers.Map();
+
+fields = fieldnames( plex_sync_struct );
+
+for i = 1:numel(fields)
+  map(fields{i}) = plex_sync_struct.(fields{i});
 end
 
 end
