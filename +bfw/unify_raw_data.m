@@ -15,7 +15,7 @@ for i = 1:numel(dat)
     new_dat(i).(required_fields{j}) = dat(i).(required_fields{j});
   end
   for j = 1:numel(remaining_fields)
-    new_dat(j).(remaining_fields{j}) = dat(i).(remaining_fields{j});
+    new_dat(i).(remaining_fields{j}) = dat(i).(remaining_fields{j});
   end
 
   nan_ps = isnan( dat(i).plex_sync_times );

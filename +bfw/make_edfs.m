@@ -1,7 +1,11 @@
 function make_edfs()
 
+conf = bfw.config.load();
+
 data_p = bfw.get_intermediate_directory( 'unified' );
 save_p = bfw.get_intermediate_directory( 'edf' );
+
+data_root = conf.PATHS.data_root;
 
 mats = shared_utils.io.find( data_p, '.mat' );
 
@@ -30,7 +34,7 @@ for i = 1:numel(mats)
   for j = 1:numel(fields)
     m_dir = current.(fields{j}).mat_directory;
     edf_filename = current.(fields{j}).edf_filename;
-    edf.(fields{j}).edf = Edf2Mat( fullfile(m_dir, edf_filename) );
+    edf.(fields{j}).edf = Edf2Mat( fullfile(data_root, m_dir{:}, edf_filename) );
     edf.(fields{j}).medf_filename = e_filename;
     edf.(fields{j}).medf_directory = save_p;
   end

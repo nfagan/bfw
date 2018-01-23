@@ -1,4 +1,4 @@
-function make_unified()
+function make_unified(sub_dirs)
 
 conf = bfw.config.load();
 
@@ -10,17 +10,23 @@ do_save = true;
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
 base_dir = fullfile( conf.PATHS.data_root, 'raw' );
-sub_dirs = { '011118', '011618' };
+% sub_dirs = { '011118', '011618' };
 
 outerdirs = cellfun( @(x) fullfile(base_dir, x), sub_dirs, 'un', false );
 
 m_dirs = { 'm1', 'm2' };
 
+if ( ispc() )
+  dir_sep = '\';
+else
+  dir_sep = '/';
+end
+
 for idx = 1:numel(outerdirs)
   
   outerdir = outerdirs{idx};
   
-  dir_components = strsplit( outerdir, '/' );
+  dir_components = strsplit( outerdir, dir_sep );
   
   last_dir = dir_components{end};
   
@@ -102,7 +108,8 @@ for idx = 1:numel(outerdirs)
       end
       [~, I] = sort( nums );
       m_edfs = m_edfs(I);
-      edf_map_ = jsondecode( fileread(m_edf_map{1}) );
+%       edf_map_ = jsondecode( fileread(m_edf_map{1}) );
+      edf_map_ = bfw.jsondecode( m_edf_map{1} );
       pos_fs = fieldnames( edf_map_ );
       for j = 1:numel(pos_fs)
         edf_num = edf_map_.(pos_fs{j});
