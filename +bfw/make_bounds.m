@@ -7,6 +7,10 @@ conf = bfw.config.load();
 data_p = bfw.get_intermediate_directory( 'aligned' );
 aligned_mats = shared_utils.io.find( data_p, '.mat' );
 
+unified_p = bfw.get_intermediate_directory( 'unified' );
+
+data_root = conf.PATHS.data_root;
+
 roi_p = bfw.get_intermediate_directory( 'rois' );
 roi_mats = shared_utils.io.find( roi_p, '.mat' );
 rects = percell( @shared_utils.io.fload, roi_mats );
@@ -35,10 +39,9 @@ for i = 1:numel(aligned_mats)
   
   bounds = struct();
   
-  un_dir = aligned.(fields{1}).unified_directory;
   un_f = aligned.(fields{1}).unified_filename;
   
-  meta = shared_utils.io.fload( fullfile(un_dir, un_f) );
+  meta = shared_utils.io.fload( fullfile(unified_p, un_f) );
   
   m_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;

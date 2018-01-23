@@ -12,7 +12,7 @@ base_filename = 'aligned';
 
 mats = shared_utils.io.find( data_p, '.mat' );
 
-fs = 2/1e3;
+fs = 1/1e3;
 
 N = 400;
 

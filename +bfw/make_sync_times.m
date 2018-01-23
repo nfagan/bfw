@@ -2,7 +2,9 @@ function make_sync_times()
 
 conf = bfw.config.load();
 
-data_p = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
+data_root = conf.PATHS.data_root;
+
+data_p = fullfile( data_root, 'intermediates', 'unified' );
 
 mats = shared_utils.io.find( data_p, '.mat' );
 
@@ -14,7 +16,8 @@ for i = 1:numel(mats)
   fields = fieldnames( unified );
   
   pl2_file = unified.(fields{1}).plex_filename;
-  pl2_dir = unified.(fields{1}).plex_directory;
+  pl2_dir = fullfile( unified.(fields{1}).plex_directory{:} );
+  pl2_dir = fullfile( data_root, pl2_dir );
   
   pl2_file = fullfile( pl2_dir, pl2_file );
   

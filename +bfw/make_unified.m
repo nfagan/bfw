@@ -24,15 +24,20 @@ for idx = 1:numel(outerdirs)
   
   last_dir = dir_components{end};
   
+  all_dir_components = { 'raw', last_dir };
+  plex_dir_components = [ all_dir_components, 'plex' ];
+  
   data_ = struct();
   
   pl2_dir = fullfile( outerdir, 'plex' );
   plex_directory = fullfile( pl2_dir, 'sorted' );
   pl2s = shared_utils.io.find( plex_directory, '.pl2' );
+  plex_dir_components{end+1} = 'sorted';
   
   if ( isempty(pl2s) )
     plex_directory = fullfile( pl2_dir, 'unsorted' );
     pl2s = shared_utils.io.find( plex_directory, '.pl2' );
+    plex_dir_components(end) = { 'unsorted' };
   end
   
   if ( numel(pl2s) ~= 1 )
@@ -51,6 +56,9 @@ for idx = 1:numel(outerdirs)
     m_mats = shared_utils.io.find( m_dir, '.mat' );
     m_edfs = shared_utils.io.find( m_dir, '.edf' );
     m_edf_map = shared_utils.io.find( m_dir, '.json' );
+    
+    m_dir_components = all_dir_components;
+    m_dir_components{end+1} = m_str;
     
     m_filenames = cell( 1, numel(m_mats) );
     for j = 1:numel(m_mats)
@@ -122,18 +130,13 @@ for idx = 1:numel(outerdirs)
     for j = 1:numel(m_data)
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
-      m_data(j).plex_directory = plex_directory;
+      m_data(j).plex_directory = plex_dir_components;
       m_data(j).plex_filename = pl2_file;
-      m_data(j).mat_directory = m_dir;
+      m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
       m_data(j).mat_index = mat_index;
       m_data(j).edf_filename = edf_filename;
-      if ( ~isempty(edf_filename) )
-        m_data(j).edf = Edf2Mat( fullfile(m_dir, edf_filename) );
-      else
-        m_data(j).edf = [];
-      end
     end
 
     data_.(m_str) = m_data;
