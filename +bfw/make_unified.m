@@ -3,7 +3,7 @@ function make_unified(sub_dirs)
 conf = bfw.config.load();
 
 save_dir = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
-save_filename = 'unified';
+save_filename = '';
 
 do_save = true;
 
@@ -174,7 +174,7 @@ for idx = 1:numel(outerdirs)
   for i = 1:numel(data_.(m_dirs{1}))
     data = struct();
     m_filename = data_.(m_dirs{1})(i).mat_filename;
-    u_filename = bfw.make_intermediate_filename( save_filename, last_dir, m_filename );
+    u_filename = bfw.make_intermediate_filename( last_dir, m_filename );
     for j = 1:numel(m_dirs)
       data.(m_dirs{j}) = data_.(m_dirs{j})(i);
       data.(m_dirs{j}).unified_filename = u_filename;

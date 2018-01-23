@@ -17,8 +17,6 @@ rects = percell( @shared_utils.io.fload, roi_mats );
 
 save_p = bfw.get_intermediate_directory( 'bounds' );
 
-base_filename = 'bounds';
-
 copy_fields = { 'unified_filename', 'unified_directory' ...
   , 'aligned_filename', 'aligned_directory', 'time' };
 
@@ -46,7 +44,7 @@ for i = 1:numel(aligned_mats)
   m_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;
   
-  b_filename = bfw.make_intermediate_filename( base_filename, m_dir, m_filename );
+  b_filename = bfw.make_intermediate_filename( m_dir, m_filename );
   
   for k = 1:numel(fields)
     bounds.(fields{k}).bounds = containers.Map();

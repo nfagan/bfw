@@ -8,8 +8,6 @@ save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'aligned' );
 
 do_save = true;
 
-base_filename = 'aligned';
-
 mats = shared_utils.io.find( data_p, '.mat' );
 
 fs = 1/1e3;
@@ -52,7 +50,7 @@ for i = 1:numel(mats)
 
   mat_dir = m1.mat_directory_name;
   
-  a_filename = bfw.make_intermediate_filename( base_filename, mat_dir, m_filename );
+  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
 
   aligned = struct();
   aligned.m1 = m1_aligned;

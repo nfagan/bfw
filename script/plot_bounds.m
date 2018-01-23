@@ -6,7 +6,7 @@ bound_mats = shared_utils.io.find( p, '.mat' );
 
 fs = 1e3;
 
-evt_length = 50;
+evt_length = 10;
 bin_size = 10 * fs;
 
 n_events_across_sessions = Container();
@@ -14,7 +14,7 @@ n_events_within_session = Container();
 
 date_dir = datestr( now, 'mmddyy' );
 do_save = true;
-save_p = fullfile( conf.PATHS.plots, 'looking_behavior', date_dir );
+save_p = fullfile( conf.PATHS.data_root, 'plots', 'looking_behavior', date_dir );
 
 if ( do_save ), shared_utils.io.require_dir( save_p ); end
 
@@ -84,7 +84,8 @@ numbers = n_events_across_sessions.set_data( cellfun(@numel, n_events_across_ses
 
 pl = ContainerPlotter();
 
-plt = numbers({'face'});
+% plt = numbers({'face'});
+plt = numbers;
 
 nums = plt( 'run_n' );
 [~, I] = sort( cellfun(@(x) str2double(x(numel('run_n__')+1:end)), nums) );

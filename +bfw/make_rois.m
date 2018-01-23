@@ -8,8 +8,6 @@ save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'rois' );
 
 do_save = true;
 
-base_filename = 'rois';
-
 mats = shared_utils.io.find( data_p, '.mat' );
 
 event_funcs = containers.Map();
@@ -34,7 +32,7 @@ for i = 1:numel(mats)
   mat_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;
   
-  r_filename = bfw.make_intermediate_filename( base_filename, mat_dir, m_filename );
+  r_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
   for j = 1:numel(fields)
     rect_map = containers.Map();

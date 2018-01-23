@@ -12,8 +12,6 @@ N = 400;
 
 copy_fields = { 'unified_directory', 'unified_filename' };
 
-base_filename = 'aligned';
-
 do_save = true;
 
 for i = 1:numel(mats)
@@ -74,7 +72,7 @@ for i = 1:numel(mats)
   mat_dir = current_meta.m1.mat_directory_name;
   m_filename = current_meta.m1.mat_filename;
   
-  a_filename = bfw.make_intermediate_filename( base_filename, mat_dir, m_filename );
+  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
 
   aligned = struct();
   aligned.m1 = m1_aligned;
