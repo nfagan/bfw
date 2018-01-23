@@ -61,10 +61,22 @@ for idx = 1:numel(outerdirs)
 
   m_plex_sync_map_file = shared_utils.io.find( pl2_dir, 'plex_sync_map.json' );
   
-  assert( numel(m_plex_sync_map_file) == 1, ['Expected to find 1 plex_sync_map.json' ...
-    , ' file in "%s", but there were %d.'], pl2_dir, numel(m_plex_sync_map_file) );
+  assert__n_files( m_plex_sync_map_file, 2, 'plex_sync_map.json', pl2_dir );
   
   m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
+  
+  %
+  %   get plex channel map
+  %
+  
+  m_plex_channel_map_file = shared_utils.io.find( pl2_dir, 'regions.json' );
+  m_plex_unit_map_file = shared_utils.io.find( pl2_dir, 'units.json' );
+  
+  assert__n_files( m_plex_channel_map_file, 1, 'regions.json', pl2_dir );
+  assert__n_files( m_plex_unit_map_file, 1, 'units.json', pl2_dir );
+  
+  m_plex_channel_map = unify_plex_channel_map_channels( bfw.jsondecode(m_plex_channel_map_file{1}) );
+  m_plex_unit_map = unify_plex_units( bfw.jsondecode(m_plex_unit_map_file{1}) );
   
   for i = 1:numel(m_dirs)
     m_str = m_dirs{i};
@@ -158,6 +170,8 @@ for idx = 1:numel(outerdirs)
       edf_filename = edf_map(m_filenames{j});
       m_data(j).plex_directory = plex_dir_components;
       m_data(j).plex_filename = pl2_file;
+      m_data(j).plex_channel_map = m_plex_channel_map;
+      m_data(j).plex_unit_map = m_plex_unit_map;
       m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
@@ -190,6 +204,11 @@ end
 
 end
 
+function assert__n_files( files, N, kind, directory )
+assert( numel(files) == 1, ['Expected to find %d "%s"' ...
+    , ' file in "%s", but there were %d.'], N, kind, directory, numel(files) );
+end
+
 function nums = get_filenumbers( m_edfs, kind )
 
 if ( nargin < 2 ), kind = 'edf'; end
@@ -199,6 +218,67 @@ cellfun( @(x) assert(any(x), 'Improper %s file format.', kind), num_ind );
 nums = zeros( size(num_ind) );
 for j = 1:numel(num_ind)
   nums(j) = str2double( m_edfs{j}(num_ind{j}) );
+end
+
+end
+
+function plex_channel_map_struct = unify_plex_channel_map_channels( plex_channel_map_struct )
+
+for i = 1:numel(plex_channel_map_struct)
+  current = plex_channel_map_struct(i);
+  channels = current.channels;
+  all_channels = parse_channel_numbers( channels );
+  plex_channel_map_struct(i).channels = all_channels;
+end
+
+end
+
+function plex_units = unify_plex_units( plex_units )
+
+for i = 1:numel(plex_units)
+  plex_units(i).channels = parse_channel_numbers( plex_units(i).channels );
+end
+
+end
+
+function out = parse_channel_numbers( channels )
+
+%   channels are a simple array of numbers
+if ( isa(channels, 'double') )
+  out = channels;
+  return;
+end
+%   otherwise, channels are either a string like "17-32", or a mix of
+%   string and number
+shared_utils.assertions.assert__isa( channels, 'cell', 'channels' );
+out = [];
+for j = 1:numel(channels)
+  chan = channels{j};    
+  if ( isa(chan, 'double') )
+    out(end+1) = chan;
+    continue;
+  end
+  if ( isa(chan, 'char') )
+    ind = strfind( chan, '-' );
+    err_msg = sprintf( ['Wrong format for string channel interval;' ...
+      , ' expected a format like this: "17-32", but got this: "%s".'] ...
+      , chan );
+
+    assert( numel(ind) == 1, err_msg );
+
+    start = str2double( chan(1:ind-1) );
+    stop = str2double( chan(ind+1:end) );
+
+    assert( ~isnan(start) && ~isnan(stop), err_msg );
+
+    interval = start:stop;
+
+    out(end+1:end+numel(interval)) = interval;
+
+    continue;
+  end
+
+  error( 'Unrecognized channel type "%s."', class(chan) );
 end
 
 end
