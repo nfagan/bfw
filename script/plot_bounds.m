@@ -116,12 +116,13 @@ pl.x = binned_time;
 
 pl.add_ribbon = true;
 pl.x_label = 'Time (s) from sessions start';
-pl.y_label = 'Time (s) of looking';
+pl.y_label = sprintf( '%% of time spent looking per %d (s) bins', bin_size/fs );
 
 plt = n_events_within_session;
-plt = plt({'face'});
+% plt = plt({'face'});
 
 plt.data = plt.data / fs;
+plt.data = plt.data / 10 * 100;
 
 lines_are = { 'm_alias' };
 panels_are = { 'session', 'roi' };

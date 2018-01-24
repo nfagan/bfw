@@ -13,8 +13,8 @@ metas = arrayfun( @(x) shared_utils.io.fload(fullfile(un_dir, x.m1.unified_filen
 
 conditions = true( size(metas) );
 
-conditions = conditions & arrayfun(@(x) strcmp(x.m1.mat_directory_name, '011618'), metas);
-conditions = conditions & arrayfun(@(x) x.m1.mat_index == 2, metas);
+conditions = conditions & arrayfun(@(x) strcmp(x.m1.mat_directory_name, '01162018'), metas);
+conditions = conditions & arrayfun(@(x) x.m1.mat_index == 1, metas);
 
 filtered_bounds = all_bounds( conditions );
 
@@ -45,6 +45,8 @@ for i = 1:numel(filtered_bounds)
     subplot( 2, 1, j ); hold on;
     
     plot( position(1, :), position(2, :), 'k*', 'markersize', marker_size ); hold on;
+    
+    title( monks{j} );
     
     for k = 1:numel(rois)
       bound = current.bounds(rois{k});

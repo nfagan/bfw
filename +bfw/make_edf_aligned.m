@@ -38,6 +38,12 @@ parfor i = 1:numel(mats)
   sync_m1_m2 = current_meta.m2.sync_times(:, 2);
   sync_m2 = current_meta.m2.sync_times(:, 1);
   
+  edf_sync_m1 = current_meta.m1.plex_sync_times(2:end);
+  edf_sync_m2 = current_meta.m2.plex_sync_times(2:end);
+  
+  assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
+  assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
+  
   t_m1 = m1_edf.Samples.time;
   t_m2 = m2_edf.Samples.time;
   
@@ -50,9 +56,9 @@ parfor i = 1:numel(mats)
   m1t_ = m1t - m1_edf_start;
   m2t_ = m2t - m2_edf_start;
   
-  %   make eyelink clock -> matlab clock
-  t_m1_ = bfw.clock_a_to_b( t_m1, m1t_, sync_m1*1e3 ) / 1e3;
-  t_m2_ = bfw.clock_a_to_b( t_m2, m2t_, sync_m2*1e3 ) / 1e3;
+  %   make eyelink clock -> matlab clock  
+  t_m1_ = bfw.clock_a_to_b( t_m1, m1t_, edf_sync_m1*1e3 ) / 1e3;
+  t_m2_ = bfw.clock_a_to_b( t_m2, m2t_, edf_sync_m2*1e3 ) / 1e3;
   
   pos_m1 = [m1_edf.Samples.posX(:)'; m1_edf.Samples.posY(:)'];
   pos_m2 = [m2_edf.Samples.posX(:)'; m2_edf.Samples.posY(:)'];
