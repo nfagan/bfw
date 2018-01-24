@@ -29,9 +29,15 @@ DEPENDS.repositories = { 'shared_utils', 'spike_helpers', 'plexon' ...
   , 'jsonlab-1.5' };
 DEPENDS.classes = { 'Edf2Mat' };
 
+%   CLUSTER
+
+CLUSTER = struct();
+CLUSTER.use_cluster = false;
+
 %   EXPORT
 conf.PATHS = PATHS;
 conf.DEPENDS = DEPENDS;
+conf.CLUSTER = CLUSTER;
 
 if ( do_save )
   bfw.config.save( conf );
