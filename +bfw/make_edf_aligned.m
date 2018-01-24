@@ -43,8 +43,13 @@ parfor i = 1:numel(mats)
   edf_sync_m1 = current_meta.m1.plex_sync_times(2:end);
   edf_sync_m2 = current_meta.m2.plex_sync_times(2:end);
   
-  assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
-  assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
+  try
+    assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
+    assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
+  catch err
+    fprintf( '\n WARNING: %s; skipping "%s".', err.message, current_meta.m1.unified_filename );
+    continue;
+  end
   
   t_m1 = m1_edf.Samples.time;
   t_m2 = m2_edf.Samples.time;
