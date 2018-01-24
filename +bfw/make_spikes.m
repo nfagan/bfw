@@ -11,7 +11,8 @@ shared_utils.io.require_dir( save_p );
 
 un_mats = shared_utils.io.find( unified_p, '.mat' );
 
-parfor i = 1:numel(un_mats)
+for i = 1:numel(un_mats)
+  fprintf( '\n %d of %d', i, numel(un_mats) );
   
   unified = shared_utils.io.fload( un_mats{i} );
   
@@ -39,6 +40,7 @@ parfor i = 1:numel(un_mats)
   all_maps = bfw.get_plex_region_and_unit_maps( region_map_file, unit_map_file );
   
   unit_map = all_maps.units;
+  region_map = all_maps.regions;
   
   all_units = {};
   stp = 1;
@@ -70,6 +72,7 @@ parfor i = 1:numel(un_mats)
       current_unit.times = spikes;
       current_unit.channel = channel;
       current_unit.channel_str = channel_str;
+      current_unit.region = units_this_channel_set.region;
       
       if ( stp == 1 )
         all_units = current_unit;

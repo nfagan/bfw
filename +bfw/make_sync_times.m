@@ -45,6 +45,8 @@ for i = 1:numel(mats)
       , mats{i}, numel(binned_sync), sync_index ); 
   end
   
+  id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
+  
   current_plex_sync = binned_sync{sync_index};
   current_plex_reward = binned_reward{sync_index};
   current_plex_start = start_pulses(sync_index);
@@ -66,6 +68,9 @@ for i = 1:numel(mats)
     , ' number of plex sync and mat sync pulses.'] );
   
   current_plex_sync = [ current_plex_start; current_plex_sync ];
+  current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
+  
+  current_plex_reward = arrayfun( @(x) id_times(x), current_plex_reward );
   
   sync = struct();
   
