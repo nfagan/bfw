@@ -1,4 +1,4 @@
-function make_edf_aligned()
+function make_edf_aligned(mats)
 
 data_p = bfw.get_intermediate_directory( 'edf' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
@@ -6,7 +6,9 @@ save_p = bfw.get_intermediate_directory( 'aligned' );
 
 shared_utils.io.require_dir( save_p );
 
-mats = shared_utils.io.find( data_p, '.mat' );
+if ( nargin < 1 )
+  mats = shared_utils.io.find( data_p, '.mat' );
+end
 
 fs = 1/1e3;
 
@@ -14,7 +16,7 @@ N = 400;
 
 copy_fields = { 'unified_directory', 'unified_filename' };
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   current = shared_utils.io.fload( mats{i} );
@@ -24,9 +26,7 @@ parfor i = 1:numel(mats)
   m1 = current.m1;
   m2 = current.m2;
   
-  if ( isempty(m1.edf) )
-    continue;
-  end
+  if ( isempty(m1.edf) ), continue; end
   
   m1_edf = m1.edf;
   m2_edf = m2.edf;
@@ -47,8 +47,17 @@ parfor i = 1:numel(mats)
     assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
     assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
   catch err
-    fprintf( '\n WARNING: %s; skipping "%s".', err.message, current_meta.m1.unified_filename );
-    continue;
+%     fprintf( '\n WARNING: %s; skipping "%s".', err.message, current_meta.m1.unified_filename );
+    fprintf( '\n WARNING: %s; truncating "%s".', err.message, current_meta.m1.unified_filename );
+    n = min( numel(m1t), numel(m2t) );
+    m1t = m1t(1:n);
+    m2t = m2t(1:n);
+    edf_sync_m1 = edf_sync_m1(1:n);
+    edf_sync_m2 = edf_sync_m2(1:n);
+    sync_m1 = sync_m1(1:n);
+    sync_m1_m2 = sync_m1_m2(1:n);
+    sync_m2(1:n);
+%     continue;
   end
   
   t_m1 = m1_edf.Samples.time;

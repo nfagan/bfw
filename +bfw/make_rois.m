@@ -49,7 +49,7 @@ for i = 1:numel(mats)
     rois.(fields{j}).roi_filename = r_filename;
     rois.(fields{j}).roi_directory = save_p;
     rois.(fields{j}).rects = rect_map;
-  end
+  end  
  
   if ( do_save )
     shared_utils.io.require_dir( save_p );

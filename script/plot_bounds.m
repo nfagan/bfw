@@ -6,11 +6,12 @@ bound_mats = shared_utils.io.find( p, '.mat' );
 
 fs = 1e3;
 
-evt_length = 10;
+evt_length = 1;
 bin_size = 10 * fs;
 
 n_events_across_sessions = Container();
 n_events_within_session = Container();
+total_n_samples = Container();
 
 date_dir = datestr( now, 'mmddyy' );
 do_save = true;
@@ -57,6 +58,13 @@ for i = 1:numel(bound_mats)
     cont( 'roi' ) = roi_name;
     
     n_events_across_sessions = n_events_across_sessions.append( cont );
+    
+    p_m1 = sum( m1_bounds ) / numel( m1_bounds );
+    p_m2 = sum( m2_bounds ) / numel( m2_bounds );
+    p_mutual = sum( mutual_bounds ) / numel( mutual_bounds );
+    cont2 = set_data( cont, [p_m1; p_m2; p_mutual] );
+    
+    total_n_samples = total_n_samples.append( cont2 );
     
     discard_final_bin = true;
 
@@ -137,4 +145,32 @@ filename = sprintf( 'within_run_looks__%s', strjoin(plt.flat_uniques(filenames_a
 saveas( gcf(), fullfile(save_p, [filename, '.eps']), 'epsc' );
 saveas( gcf(), fullfile(save_p, [filename, '.fig']), 'fig' );
 saveas( gcf(), fullfile(save_p, [filename, '.png']), 'png' );
+
+%%   percent of time per session
+
+pl = ContainerPlotter();
+
+x_is = 'm_alias';
+groups_are = { 'roi' };
+panels_are = { 'session' };
+
+plt = total_n_samples;
+plt.data = plt.data * 100;
+
+pl.summary_function = @nanmean;
+pl.error_function = @ContainerPlotter.nansem;
+pl.y_label = '% of samples in bounds in roi';
+pl.y_lim = [0, 10];
+
+figure(1); clf(); colormap( 'default' );
+
+pl.bar( plt, x_is, groups_are, panels_are );
+
+filenames_are = unique( [groups_are, panels_are, x_is] );
+filename = sprintf( 'total_percent_looking__%s', strjoin(plt.flat_uniques(filenames_are), '_') );
+
+saveas( gcf(), fullfile(save_p, [filename, '.eps']), 'epsc' );
+saveas( gcf(), fullfile(save_p, [filename, '.fig']), 'fig' );
+saveas( gcf(), fullfile(save_p, [filename, '.png']), 'png' );
+
 

@@ -11,6 +11,8 @@ shared_utils.io.require_dir( save_p );
 
 un_mats = shared_utils.io.find( unified_p, '.mat' );
 
+pl2_visited_files = containers.Map();
+
 for i = 1:numel(un_mats)
   fprintf( '\n %d of %d', i, numel(un_mats) );
   
@@ -33,6 +35,21 @@ for i = 1:numel(un_mats)
     fprintf( '\nmake_spikes(): WARNING: No .pl2 file for "%s".', un_filename );
     continue;
   end
+  
+   %   provide a link to the full data, rather than duplicating
+  if ( pl2_visited_files.isKey(pl2_fullfile) )
+    fprintf( '\n Using cached data for "%s".', pl2_fullfile );
+    
+    spikes = struct();
+    
+    spikes.is_link = true;
+    spikes.data_file = un_filename;
+    
+    do_save( spikes, fullfile(save_p, un_filename) );
+    continue;
+  end
+  
+  pl2_visited_files(pl2_fullfile) = true;
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
@@ -85,6 +102,7 @@ for i = 1:numel(un_mats)
   
   spikes = struct();
   
+  spikes.is_link = false;
   spikes.data = all_units;
   spikes.unified_filename = un0.unified_filename;
   
