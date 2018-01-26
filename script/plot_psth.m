@@ -15,6 +15,7 @@ shared_utils.io.require_dir( look_save_p );
 
 cont = Container();
 evt_info = Container();
+rasters = Container();
 
 spike_map = containers.Map();
 
@@ -185,17 +186,109 @@ for i = 1:numel(event_files)
       );
     
     cont = cont.append( cont_ );
+    
+    unqs = cont_.field_label_pairs();
+    
+    rasters = rasters.append( Container(raster, unqs{:}) );
   end
 end
 
 if ( update_spikes )
   cont = cont.require_fields( 'unit_id' );
   [I, C] = cont.get_indices( {'channel', 'region', 'unit_name', 'session_name'} );
-
   for i = 1:numel(I)
     cont('unit_id', I{i}) = sprintf( 'unit__%d', i );
   end
+  rasters = rasters.require_fields( 'unit_id' );
+  for i = 1:size(C, 1)
+    ind = rasters.where(C(i, :));
+    rasters('unit_id', ind) = sprintf( 'unit__%d', i );
+  end
 end
+
+%%  plot population response matrix
+
+psth = cont;
+
+pre_bin_t = -0.2;
+post_bin_t = 0.2;
+
+pre_ind = bint >= pre_bin_t & bint < 0;
+post_ind = bint > 0 & bint <= post_bin_t;
+
+psth_pre = set_data( psth, nanmean(psth.data(:, pre_ind), 2) );
+psth_post = set_data( psth, nanmean(psth.data(:, post_ind), 2) );
+
+psth_modulation = (psth_post.data - psth_pre.data) ./ (psth_post.data + psth_pre.data);
+
+psth_modulation = abs( psth_modulation );
+
+psth_modulation = set_data( psth_post, psth_modulation );
+
+psth_modulation = psth_modulation.each1d( {'unit_id', 'looks_by', 'looks_to'}, @rowops.nanmean );
+
+psth_modulation = psth_modulation({'m1', 'mutual'});
+
+[I, C] = psth_modulation.get_indices( {'unit_id'} );
+
+modulation_index = Container();
+
+fig = figure(1); clf( fig );
+
+x_range = 1;
+y_range = 1;
+
+colors = containers.Map();
+colors( 'bla' ) = 'r';
+colors( 'accg' ) = 'b';
+
+for i = 1:numel(I)
+  subset_ = psth_modulation(I{i});
+  
+  reg = char( subset_('region') );
+  current_color = colors( reg );
+  
+  for j = 1:numel(regs)
+    subset = subset_(regs(j));
+    
+    ind_face = subset.where( 'face' );
+    ind_eyes = subset.where( 'eyes' );
+    ind_mut = subset.where( 'mutual' );
+    ind_excl = subset.where( {'m1'} );
+
+    if ( ~any(ind_face) || ~any(ind_eyes) || ~any(ind_mut) || ~any(ind_excl) )
+      fprintf( '\n skipping "%s"', strjoin([regs{j}, C(i, :)], ', ') );
+      continue;
+    end
+
+    face = subset.data(ind_face);
+    eyes = subset.data(ind_eyes);
+    mut = subset.data(ind_mut);
+    excl = subset.data(ind_excl);
+
+    eyes_over_face = (eyes-face) ./ (face + eyes);
+    mut_over_excl = (mut-excl) ./ (mut + excl);
+
+    x_coord = eyes_over_face * x_range;
+    y_coord = mut_over_excl * y_range;
+
+    plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+  end
+end
+
+title( 'ACCg' );
+
+hold on;
+plot( [-1, 1], [0, 0], 'k-' );
+plot( [0, 0], [-1, 1], 'k-' );
+
+xlabel( 'eyes over face' );
+ylabel( 'mutual over exclusive' );
+
+ylim( [-1, 1] );
+xlim( [-1, 1] );
+
+axis( 'square' );
 
 %%  event info
 
@@ -212,6 +305,7 @@ plt = evt_info;
 plt = plt({'median_length'});
 
 plt('unified_filename') = 'a';
+plt('session_name') = 'b';
 
 panels_are = { 'unified_filename', 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -238,6 +332,7 @@ plt = evt_info;
 
 plt = plt({'n_events'});
 plt('unified_filename') = 'a';
+plt('session_name') = 'b';
 
 panels_are = { 'unified_filename', 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -273,7 +368,11 @@ plt.plot( pl, 'looks_to', 'looks_by' );
 
 date_dir = datestr( now, 'mmddyy' );
 
-plt = cont({'01162018', '01172018'});
+% plt = cont({'01162018', '01172018'});
+plt = cont;
+
+% plt = plt.replace( 'm1', 'zm1' );
+% plt = plt.replace( 'm2', 'zm2' );
 
 kind = 'per_unit';
 
@@ -290,10 +389,16 @@ for i = 1:numel(I)
   pl.default();
   pl.x = bint;
   pl.vertical_lines_at = 0;
+  pl.shape = [3, 2];
+  pl.order_panels_by = { 'mutual', 'm1' };
   
   figure(1); clf();
   
-  subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
+%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+  
+  matching_raster = rasters(C(i, :));
+  
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
@@ -301,4 +406,76 @@ for i = 1:numel(I)
   saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
   
 end
+
+%%  per unit, overlay rasters
+
+date_dir = datestr( now, 'mmddyy' );
+
+% plt = cont({'01162018', '01172018'});
+plt = cont;
+
+% plt = plt.replace( 'm1', 'zm1' );
+% plt = plt.replace( 'm2', 'zm2' );
+
+kind = 'per_unit_rasters';
+
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind );
+
+shared_utils.io.require_dir( save_plot_p );
+
+[I, C] = plt.get_indices( {'unit_id', 'looks_to', 'looks_by', 'region'} );
+
+fig = figure(1);
+
+for i = 41:numel(I)
+  subset = plt(I{i});
+  
+  pl.default();
+  pl.x = bint;
+  pl.vertical_lines_at = 0;
+%   pl.shape = [3, 2];
+  pl.order_panels_by = { 'mutual', 'm1' };
+  
+  clf(fig);
+  
+%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+  matching_raster = rasters(C(i, :));
+  
+  y_lims = get( gca, 'ylim' );
+  x_lims = get( gca, 'xlim' );
+  
+  min_x_lim = x_lims(1);
+  max_x_lim = x_lims(2);
+  max_y_lim = y_lims(2);
+  min_y_lim = y_lims(1);
+  
+  min_y_lim = max_y_lim - (max_y_lim - min_y_lim) / 8;
+  
+  raster_data = matching_raster.data;
+  
+  for j = 1:size(raster_data, 1)
+    for k = 1:size(raster_data, 2)
+      perc_y = (j-1) / size(raster_data, 1);
+      perc_x = (k-1) / size(raster_data, 2);
+      x_coord = ((max_x_lim - min_x_lim) * perc_x) + min_x_lim;
+      y_coord = ((max_y_lim - min_y_lim) * perc_y) + min_y_lim;
+      if ( raster_data(j, k) )
+        hold on;
+        plot( x_coord, y_coord, 'k*', 'markersize', 1 );
+      end
+%       else
+%         plot( x_coord, y_coord, 'k-', 'markersize', 0.2 );
+%       end
+    end
+  end
+  
+  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
+  
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
+  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  
+end
+
 

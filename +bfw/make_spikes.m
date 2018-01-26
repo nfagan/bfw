@@ -1,4 +1,4 @@
-function make_spikes()
+function make_spikes(un_mats)
 
 conf = bfw.config.load();
 
@@ -9,7 +9,9 @@ save_p = bfw.get_intermediate_directory( 'spikes' );
 
 shared_utils.io.require_dir( save_p );
 
-un_mats = shared_utils.io.find( unified_p, '.mat' );
+if ( nargin < 1 )
+  un_mats = shared_utils.io.find( unified_p, '.mat' );
+end
 
 pl2_visited_files = containers.Map();
 
