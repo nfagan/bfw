@@ -71,7 +71,7 @@ for i = 1:numel(un_mats)
     n_units = numel( units );
     unit_ids = 1:n_units;
     
-    C = combvec( regions, unit_ids );
+    C = combvec( regions(:)', unit_ids );
     
     for k = 1:size(C, 2)
       
