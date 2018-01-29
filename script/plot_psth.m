@@ -245,7 +245,10 @@ colors( 'accg' ) = 'b';
 for i = 1:numel(I)
   subset_ = psth_modulation(I{i});
   
-  reg = char( subset_('region') );
+  regs = subset_('region');
+  
+  reg = char( regs );
+  
   current_color = colors( reg );
   
   for j = 1:numel(regs)
@@ -276,7 +279,7 @@ for i = 1:numel(I)
   end
 end
 
-title( 'ACCg' );
+% title( 'ACCg' );
 
 hold on;
 plot( [-1, 1], [0, 0], 'k-' );
