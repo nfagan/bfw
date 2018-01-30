@@ -4,17 +4,30 @@ conf = bfw.config.load();
 
 event_p = bfw.get_intermediate_directory( 'events' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
+bounds_p = bfw.get_intermediate_directory( 'bounds' );
 sync_p = bfw.get_intermediate_directory( 'sync' );
 spike_p = bfw.get_intermediate_directory( 'spikes' );
 event_files = shared_utils.io.find( event_p, '.mat' );
 
+first_event_file = fload( event_files{1} );
+first_bounds_file = fload( fullfile(bounds_p, first_event_file.unified_filename) );
+first_event_params = first_event_file.params;
+
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots' );
 
 look_save_p = fullfile( save_plot_p, 'looking_behavior', datestr(now, 'mmddyy') );
+
+event_param_str = sprintf( 'event_%s_%d', first_event_params.mutual_method, first_event_params.duration );
+window_param_str = sprintf( 'window_%d_step_%d', first_bounds_file.window_size, first_bounds_file.step_size );
+event_subdir = sprintf( '%s_%s', event_param_str, window_param_str );
+
+look_save_p = fullfile( look_save_p, event_subdir );
+
 shared_utils.io.require_dir( look_save_p );
 
 cont = Container();
 evt_info = Container();
+all_event_lengths = Container();
 rasters = Container();
 
 spike_map = containers.Map();
@@ -126,6 +139,10 @@ for i = 1:numel(event_files)
     conts2('meas_type') = { 'median_length', 'max_length' };
     
     evt_info = evt_info.extend( conts, conts2 );
+    
+    pairs = cont1.field_label_pairs();
+    
+    all_event_lengths = all_event_lengths.append( Container(evt_lengths(:), pairs{:}) );
   end
   
   if ( ~update_spikes ), continue; end
@@ -242,6 +259,8 @@ colors = containers.Map();
 colors( 'bla' ) = 'r';
 colors( 'accg' ) = 'b';
 
+res = Container();
+
 for i = 1:numel(I)
   subset_ = psth_modulation(I{i});
   
@@ -250,6 +269,8 @@ for i = 1:numel(I)
   reg = char( regs );
   
   current_color = colors( reg );
+  
+  if ( i == 1 ), legend( gca, '-dynamiclegend' ); end
   
   for j = 1:numel(regs)
     subset = subset_(regs(j));
@@ -274,9 +295,28 @@ for i = 1:numel(I)
 
     x_coord = eyes_over_face * x_range;
     y_coord = mut_over_excl * y_range;
+    
+    pairs = field_label_pairs( one(subset) );
+    
+    res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
 
     plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+    
+    if ( i == 1 )
+      legend( regs{j} );
+    end
   end
+end
+
+[I, C] = res.get_indices( 'region' );
+
+corred = Container();
+
+for i = 1:numel(I)
+  reg = res(I{i});
+  reg( any(isnan(reg.data), 2) ) = [];
+  [r, p] = corr( reg.data(:, 1), reg.data(:, 2) );
+  corred = corred.append( set_data(one(reg), [r, p]) );
 end
 
 % title( 'ACCg' );
@@ -292,6 +332,16 @@ ylim( [-1, 1] );
 xlim( [-1, 1] );
 
 axis( 'square' );
+
+%%  plot histogram of event lengths
+
+pl = ContainerPlotter();
+
+panels_are = { 'looks_to', 'looks_by' };
+
+figure(1); clf();
+
+pl.hist( all_event_lengths, 500, [], panels_are );
 
 %%  event info
 
@@ -381,6 +431,7 @@ kind = 'per_unit';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
+save_plot_p = fullfile( save_plot_p, event_subdir );
 
 shared_utils.io.require_dir( save_plot_p );
 
@@ -423,7 +474,7 @@ plt = cont;
 kind = 'per_unit_rasters';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
-save_plot_p = fullfile( save_plot_p, date_dir, kind );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, event_subdir );
 
 shared_utils.io.require_dir( save_plot_p );
 

@@ -18,6 +18,8 @@ bound_mats = shared_utils.io.find( bounds_p, '.mat' );
 
 duration = params.duration;
 
+assert( ~isnan(duration), 'Specify a valid "duration".' );
+
 for i = 1:numel(bound_mats)
   fprintf( '\n %d of %d', i, numel(bound_mats) );
   
@@ -58,14 +60,25 @@ for i = 1:numel(bound_mats)
     m1_evts = find_starts( m1_bounds, adjusted_duration );
     m2_evts = find_starts( m2_bounds, adjusted_duration );
     
-    switch ( params.mutual_method )
-      case 'duration'
-        mutual = find_starts( mutual_bounds, duration );
-      case 'plus-minus'
-        mutual = mutual_plus_minus( m1_evts, m2_evts, adjusted_mutual_duration );
-      otherwise
-        error( 'Unrecognized mutual method "%s".', params.mutual_method );
+    mut_method = params.mutual_method;
+    
+    if ( strcmp(mut_method, 'plus-minus') )
+      mutual_bounds = m1_bounds & b_plus_minus( m1_bounds, m2_bounds, adjusted_mutual_duration );
+    else
+      assert( strcmp(mut_method, 'duration'), 'Unrecognized mutual method "%s".', mut_method );
     end
+    
+    mutual = find_starts( mutual_bounds, duration );
+    
+%     switch ( params.mutual_method )
+%       case 'duration'
+%         mutual = find_starts( mutual_bounds, duration );
+%       case 'plus-minus'
+%         m2_bounds2 = b_plus_minus( m1_bounds, m2_bounds, adjusted_mutual_duration );
+%         mutual = mutual_plus_minus( m1_evts, m2_evts, adjusted_mutual_duration );
+%       otherwise
+%         error( 'Unrecognized mutual method "%s".', params.mutual_method );
+%     end
     
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
@@ -90,8 +103,26 @@ for i = 1:numel(bound_mats)
   events.roi_key = event_roi_key;
   events.monk_key = monk_key;
   events.unified_filename = unified_filename;
+  events.params = params;
   
   save( fullfile(save_p, unified_filename), 'events' );
+end
+
+end
+
+function b = b_plus_minus( a, b, duration )
+
+N = numel( a );
+
+for i = duration+1:N-duration
+  if ( ~a(i) ), continue; end
+  for j = -duration:duration
+    idx = i + j;
+    if ( b(idx) )
+      b(i) = true;
+      break;
+    end
+  end
 end
 
 end
