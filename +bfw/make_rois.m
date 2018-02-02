@@ -2,6 +2,7 @@ function make_rois(varargin)
 
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -11,14 +12,7 @@ data_p = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
 
 save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'rois' );
 
-do_save = true;
-
-if ( isempty(params.files) )
-  mats = shared_utils.io.find( data_p, '.mat' );
-else
-  files = shared_utils.cell.ensure_cell( params.files );
-  mats = cellfun( @(x) fullfile(data_p, x), files, 'un', false );
-end
+mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
 event_funcs = containers.Map();
 event_funcs('face') = @bfw.calibration.rect_face;
@@ -63,12 +57,9 @@ for i = 1:numel(mats)
     rois.(fields{j}).roi_directory = save_p;
     rois.(fields{j}).rects = rect_map;
   end  
- 
-  if ( do_save )
-    shared_utils.io.require_dir( save_p );
-    save( fullfile(save_p, r_filename), 'rois' );
-  end
-    
+  
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, r_filename), 'rois' );
 end
 
 end

@@ -2,10 +2,9 @@ function make_bounds(varargin)
 
 import shared_utils.cell.percell;
 
-conf = bfw.config.load();
-
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 defaults.window_size = 500;
 defaults.step_size = 1;
 defaults.update_time = true;
@@ -16,12 +15,7 @@ params = bfw.parsestruct( defaults, varargin );
 data_p = bfw.get_intermediate_directory( 'aligned' );
 blink_p = bfw.get_intermediate_directory( 'blinks' );
 
-if ( isempty(params.files) )
-  aligned_mats = shared_utils.io.find( data_p, '.mat' );
-else
-  aligned_files = shared_utils.cell.ensure_cell( params.files );
-  aligned_mats = cellfun( @(x) fullfile(data_p, x), aligned_files, 'un', false );
-end
+aligned_mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
 unified_p = bfw.get_intermediate_directory( 'unified' );
 

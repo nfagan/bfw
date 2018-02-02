@@ -2,6 +2,7 @@ function make_edfs(varargin)
 
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -12,12 +13,7 @@ save_p = bfw.get_intermediate_directory( 'edf' );
 
 data_root = conf.PATHS.data_root;
 
-if ( isempty(params.files) )
-  mats = shared_utils.io.find( data_p, '.mat' );
-else
-  mats = shared_utils.cell.ensure_cell( params.files );
-  mats = cellfun( @(x) fullfile(data_p, x), mats, 'un', false );
-end
+mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 

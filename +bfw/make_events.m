@@ -7,6 +7,7 @@ defaults.duration = NaN;
 defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
 defaults.files = [];
+defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -15,12 +16,7 @@ save_p = bfw.get_intermediate_directory( 'events' );
 
 shared_utils.io.require_dir( save_p );
 
-if ( isempty(params.files) )
-  bound_mats = shared_utils.io.find( bounds_p, '.mat' );
-else
-  bound_files = shared_utils.cell.ensure_cell( params.files );
-  bound_mats = cellfun( @(x) fullfile(bounds_p, x), bound_files, 'un', false );
-end
+bound_mats = bfw.require_intermediate_mats( params.files, bounds_p, params.files_containing );
 
 duration = params.duration;
 

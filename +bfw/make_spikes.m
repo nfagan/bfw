@@ -2,6 +2,7 @@ function make_spikes(varargin)
 
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -14,12 +15,7 @@ save_p = bfw.get_intermediate_directory( 'spikes' );
 
 shared_utils.io.require_dir( save_p );
 
-if ( isempty(params.files) )
-  un_mats = shared_utils.io.find( unified_p, '.mat' );
-else
-  un_mat_files = shared_utils.cell.ensure_cell( params.files );
-  un_mats = cellfun( @(x) fullfile(unified_p, x), un_mat_files, 'un', false );
-end
+un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 pl2_visited_files = containers.Map();
 

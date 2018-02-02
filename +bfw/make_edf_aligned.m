@@ -2,6 +2,7 @@ function make_edf_aligned(varargin)
 
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 defaults.fs = 1e3;
 defaults.N = 400;
 
@@ -13,12 +14,7 @@ save_p = bfw.get_intermediate_directory( 'aligned' );
 
 shared_utils.io.require_dir( save_p );
 
-if ( isempty(params.files) )
-  mats = shared_utils.io.find( data_p, '.mat' );
-else
-  mats = shared_utils.cell.ensure_cell( params.files );
-  mats = cellfun( @(x) fullfile(data_p, x), mats, 'un', false );
-end
+mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
 fs = 1 / params.fs;
 N = params.N;

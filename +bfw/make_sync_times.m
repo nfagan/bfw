@@ -2,6 +2,7 @@ function make_sync_times(varargin)
 
 defaults = struct();
 defaults.files = [];
+defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -12,14 +13,7 @@ data_root = conf.PATHS.data_root;
 data_p = bfw.get_intermediate_directory( 'unified' );
 save_p = bfw.get_intermediate_directory( 'sync' );
 
-do_save = true;
-
-if ( isempty(params.files) )
-  mats = shared_utils.io.find( data_p, '.mat' );
-else
-  mat_files = shared_utils.cell.ensure_cell( params.files );
-  mats = cellfun( @(x) fullfile(data_p, x), mat_files, 'un', false );
-end
+mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
 pl2_map = bfw.get_plex_channel_map();
 
@@ -92,13 +86,11 @@ for i = 1:numel(mats)
     sync.(copy_fields{j}) = unified.(first).(copy_fields{j});
   end
   
-  if ( do_save )
-    shared_utils.io.require_dir( save_p );
-    mat_dir_name = unified.(first).mat_directory_name;
-    mat_filename = unified.(first).mat_filename;
-    filename = bfw.make_intermediate_filename( mat_dir_name, mat_filename );
-    save( fullfile(save_p, filename), 'sync' );
-  end
+  shared_utils.io.require_dir( save_p );
+  mat_dir_name = unified.(first).mat_directory_name;
+  mat_filename = unified.(first).mat_filename;
+  filename = bfw.make_intermediate_filename( mat_dir_name, mat_filename );
+  save( fullfile(save_p, filename), 'sync' );
 end
 
 end
