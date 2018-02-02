@@ -28,7 +28,7 @@ for i = 1:numel(edfs)
   for j = 1:numel(fields)
     c_edf = edf.(fields{j}).edf;
     
-    s_blinks = c_edf.Events.Sblink.time;
+    s_blinks = c_edf.Events.Eblink.start;
     e_blinks = c_edf.Events.Eblink.end;
     
     blink_info.(fields{j}).starts = s_blinks;

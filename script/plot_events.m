@@ -6,8 +6,8 @@ event_p = bfw.get_intermediate_directory( 'events' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
 bounds_p = bfw.get_intermediate_directory( 'bounds' );
 
-% event_files = shared_utils.io.find( event_p, '.mat' );
-event_files = { fullfile(event_p, 'test_position_1.mat') };
+event_files = shared_utils.io.find( event_p, '.mat' );
+% event_files = { fullfile(event_p, 'test_position_1.mat') };
 
 first_event_file = fload( event_files{1} );
 first_bounds_file = fload( fullfile(bounds_p, first_event_file.unified_filename) );
@@ -155,8 +155,6 @@ figure(1); clf(); colormap( 'default' );
 
 plt = all_event_distances;
 
-% pl.summary_function = @min;
-
 plt('unified_filename') = 'a';
 plt('session_name') = 'b';
 
@@ -178,6 +176,8 @@ saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
 %%  event info
 
+for i = 1:2
+
 pl = ContainerPlotter();
 
 pl.summary_function = @nanmean;
@@ -191,7 +191,10 @@ plt = evt_info;
 plt = plt({'median_length'});
 
 plt('unified_filename') = 'a';
-plt('session_name') = 'b';
+
+if ( i == 1 )
+  plt('session_name') = 'b';
+end
 
 panels_are = { 'unified_filename', 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -208,7 +211,11 @@ filename = sprintf( 'event_length_%s_%s', filename, meas_types );
 saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
 saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
+end
+
 %%  n events per session
+
+for i = 1:2
 
 pl = ContainerPlotter();
 pl.summary_function = @nanmean;
@@ -219,8 +226,12 @@ figure(1); clf(); colormap( 'default' );
 plt = evt_info;
 
 plt = plt({'n_events'});
+
 plt('unified_filename') = 'a';
-plt('session_name') = 'b';
+
+if ( i == 1 )
+  plt('session_name') = 'b';
+end
 
 panels_are = { 'unified_filename', 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -235,7 +246,11 @@ filename = sprintf( 'n_events_per_session_%s', filename );
 saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
 saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
+end
+
 %%  n events per day
+
+for i = 1:2
 
 pl = ContainerPlotter();
 pl.summary_function = @nanmean;
@@ -250,7 +265,10 @@ plt = plt({'n_events'});
 plt = plt.each1d( {'session_name', 'meas_type', 'looks_to', 'looks_by'}, @rowops.sum );
 
 plt('unified_filename') = 'a';
-plt('session_name') = 'b';
+
+if ( i == 1 )
+  plt('session_name') = 'b';
+end
 
 panels_are = { 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -264,4 +282,6 @@ filename = sprintf( 'n_events_per_day_%s', filename );
   
 saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
 saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+
+end
 

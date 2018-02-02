@@ -1,18 +1,22 @@
-function make_aligned()
+function make_aligned(varargin)
 
-conf = bfw.config.load();
+defaults = struct();
+defaults.files = [];
+defaults.files_containing = [];
+defaults.fs = 1e3;
+defaults.N = 400;
 
-data_p = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
+params = bfw.parsestruct( defaults, varargin );
 
-save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'aligned' );
+data_p = bfw.get_intermediate_directory( 'unified' );
 
-do_save = true;
+save_p = bfw.get_intermediate_directory( 'aligned' );
 
-mats = shared_utils.io.find( data_p, '.mat' );
+mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
-fs = 1/1e3;
+fs = 1 / params.fs;
 
-N = 400;
+N = params.N;
 
 for i = 1:numel(mats)
   fprintf( '\n Processing %d of %d', i, numel(mats) );
@@ -64,11 +68,9 @@ for i = 1:numel(mats)
     aligned.(fields{j}).aligned_filename = a_filename;
     aligned.(fields{j}).aligned_directory = save_p;
   end
-  
-  if ( do_save )
-    shared_utils.io.require_dir( save_p );
-    save( fullfile(save_p, a_filename), 'aligned' );
-  end
+
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, a_filename), 'aligned' );
 end
 
 end
