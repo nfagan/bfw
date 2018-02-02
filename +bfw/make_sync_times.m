@@ -1,4 +1,9 @@
-function make_sync_times()
+function make_sync_times(varargin)
+
+defaults = struct();
+defaults.files = [];
+
+params = bfw.parsestruct( defaults, varargin );
 
 conf = bfw.config.load();
 
@@ -9,7 +14,12 @@ save_p = bfw.get_intermediate_directory( 'sync' );
 
 do_save = true;
 
-mats = shared_utils.io.find( data_p, '.mat' );
+if ( isempty(params.files) )
+  mats = shared_utils.io.find( data_p, '.mat' );
+else
+  mat_files = shared_utils.cell.ensure_cell( params.files );
+  mats = cellfun( @(x) fullfile(data_p, x), mat_files, 'un', false );
+end
 
 pl2_map = bfw.get_plex_channel_map();
 

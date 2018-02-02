@@ -16,6 +16,7 @@ if ( isempty(params.files) )
   mats = shared_utils.io.find( data_p, '.mat' );
 else
   mats = shared_utils.cell.ensure_cell( params.files );
+  mats = cellfun( @(x) fullfile(data_p, x), mats, 'un', false );
 end
 
 copy_fields = { 'unified_filename', 'unified_directory' };

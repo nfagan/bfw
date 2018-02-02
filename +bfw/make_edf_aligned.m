@@ -1,4 +1,11 @@
-function make_edf_aligned(mats)
+function make_edf_aligned(varargin)
+
+defaults = struct();
+defaults.files = [];
+defaults.fs = 1e3;
+defaults.N = 400;
+
+params = bfw.parsestruct( defaults, varargin );
 
 data_p = bfw.get_intermediate_directory( 'edf' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
@@ -6,13 +13,15 @@ save_p = bfw.get_intermediate_directory( 'aligned' );
 
 shared_utils.io.require_dir( save_p );
 
-if ( nargin < 1 )
+if ( isempty(params.files) )
   mats = shared_utils.io.find( data_p, '.mat' );
+else
+  mats = shared_utils.cell.ensure_cell( params.files );
+  mats = cellfun( @(x) fullfile(data_p, x), mats, 'un', false );
 end
 
-fs = 1/1e3;
-
-N = 400;
+fs = 1 / params.fs;
+N = params.N;
 
 copy_fields = { 'unified_directory', 'unified_filename' };
 

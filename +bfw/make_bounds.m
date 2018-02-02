@@ -19,12 +19,11 @@ blink_p = bfw.get_intermediate_directory( 'blinks' );
 if ( isempty(params.files) )
   aligned_mats = shared_utils.io.find( data_p, '.mat' );
 else
-  aligned_mats = params.files;
+  aligned_files = shared_utils.cell.ensure_cell( params.files );
+  aligned_mats = cellfun( @(x) fullfile(data_p, x), aligned_files, 'un', false );
 end
 
 unified_p = bfw.get_intermediate_directory( 'unified' );
-
-data_root = conf.PATHS.data_root;
 
 roi_p = bfw.get_intermediate_directory( 'rois' );
 roi_mats = shared_utils.io.find( roi_p, '.mat' );

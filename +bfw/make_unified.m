@@ -2,6 +2,8 @@ function make_unified(sub_dirs)
 
 conf = bfw.config.load();
 
+sub_dirs = shared_utils.cell.ensure_cell( sub_dirs );
+
 save_dir = bfw.get_intermediate_directory( 'unified' );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );

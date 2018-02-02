@@ -1,4 +1,9 @@
-function make_edf_blink_info()
+function make_edf_blink_info(varargin)
+
+defaults = struct();
+defaults.files = [];
+
+params = bfw.parsestruct( defaults, varargin );
 
 edf_p = bfw.get_intermediate_directory( 'edf' );
 
@@ -6,7 +11,12 @@ save_p = bfw.get_intermediate_directory( 'blinks' );
 
 shared_utils.io.require_dir( save_p );
 
-edfs = shared_utils.io.find( edf_p, '.mat' );
+if ( isempty(params.files) )
+  edfs = shared_utils.io.find( edf_p, '.mat' );
+else
+  edf_files = shared_utils.cell.ensure_cell( params.files );
+  edfs = cellfun( @(x) fullfile(edf_p, x), edf_files, 'un', false );
+end
 
 for i = 1:numel(edfs)
   fprintf( '\n %d of %d', i, numel(edfs) );

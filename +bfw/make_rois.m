@@ -1,4 +1,9 @@
-function make_rois()
+function make_rois(varargin)
+
+defaults = struct();
+defaults.files = [];
+
+params = bfw.parsestruct( defaults, varargin );
 
 conf = bfw.config.load();
 
@@ -8,7 +13,12 @@ save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'rois' );
 
 do_save = true;
 
-mats = shared_utils.io.find( data_p, '.mat' );
+if ( isempty(params.files) )
+  mats = shared_utils.io.find( data_p, '.mat' );
+else
+  files = shared_utils.cell.ensure_cell( params.files );
+  mats = cellfun( @(x) fullfile(data_p, x), files, 'un', false );
+end
 
 event_funcs = containers.Map();
 event_funcs('face') = @bfw.calibration.rect_face;
@@ -17,6 +27,8 @@ event_funcs('eyes') = @bfw.calibration.rect_eyes;
 copy_fields = { 'unified_filename', 'unified_directory' };
 
 for i = 1:numel(mats)
+  fprintf( '\n %d of %d', i, numel(mats) );
+  
   meta = shared_utils.io.fload( mats{i} );
   
   fields = fieldnames( meta );
