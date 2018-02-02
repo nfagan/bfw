@@ -28,11 +28,12 @@ shared_utils.io.require_dir( look_save_p );
 cont = Container();
 evt_info = Container();
 all_event_lengths = Container();
+all_event_distances = Container();
 rasters = Container();
 
 spike_map = containers.Map();
 
-update_spikes = true;
+update_spikes = false;
 
 look_back = -0.5;
 look_ahead = 0.5;
@@ -105,10 +106,12 @@ for i = 1:numel(event_files)
     
     median_evt_length = median( evt_lengths );
     max_evt_length = max( evt_lengths );
+    min_evt_length = min( evt_lengths );
     dev_evt_length = std( evt_lengths );
     
     if ( isempty(min_evt_distance) ), min_evt_distance = NaN; end
     if ( isempty(max_evt_distance) ), max_evt_distance = NaN; end
+    if ( isempty(min_evt_length) ), min_evt_length = NaN; end
     if ( isempty(max_evt_length) ), max_evt_length = NaN; end
     
     labs = SparseLabels.create( ...
@@ -134,15 +137,17 @@ for i = 1:numel(event_files)
     
     cont1 = Container( median_evt_length, labs );
     cont2 = Container( max_evt_length, labs );
+    cont3 = Container( min_evt_length, labs );
     
-    conts2 = extend( cont1, cont2 );
-    conts2('meas_type') = { 'median_length', 'max_length' };
+    conts2 = extend( cont1, cont2, cont3 );
+    conts2('meas_type') = { 'median_length', 'max_length', 'min_length' };
     
     evt_info = evt_info.extend( conts, conts2 );
     
     pairs = cont1.field_label_pairs();
     
     all_event_lengths = all_event_lengths.append( Container(evt_lengths(:), pairs{:}) );
+    all_event_distances = all_event_distances.append( Container(evt_distances(:), pairs{:}) );
   end
   
   if ( ~update_spikes ), continue; end
@@ -343,6 +348,57 @@ figure(1); clf();
 
 pl.hist( all_event_lengths, 500, [], panels_are );
 
+% filename = sprintf( 'event_length_histogram_', filename );
+filename = 'event_length_histogram';
+  
+saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+
+%%  plot histogram of event distances
+
+pl = ContainerPlotter();
+
+panels_are = { 'looks_to', 'looks_by' };
+
+figure(1); clf();
+
+pl.hist( all_event_distances, 500, [], panels_are );
+
+% filename = sprintf( 'event_length_histogram_', filename );
+filename = 'event_distance_histogram';
+  
+saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+
+%%  plot bar of event distances
+
+pl = ContainerPlotter();
+
+figure(1); clf(); colormap( 'default' );
+
+plt = all_event_distances;
+
+% pl.summary_function = @min;
+
+plt('unified_filename') = 'a';
+plt('session_name') = 'b';
+
+panels_are = { 'unified_filename', 'session_name', 'meas_type' };
+groups_are = { 'looks_to' };
+x_is = 'looks_by';
+
+pl.bar( plt, x_is, groups_are, panels_are );
+
+filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
+
+meas_types = strjoin( plt('meas_type'), '_' );
+
+filename = sprintf( 'event_distances_%s_%s', filename, meas_types );
+  
+saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+
+
 %%  event info
 
 pl = ContainerPlotter();
@@ -368,7 +424,9 @@ pl.bar( plt, x_is, groups_are, panels_are );
 
 filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
 
-filename = sprintf( 'event_length_%s', filename );
+meas_types = strjoin( plt('meas_type'), '_' );
+
+filename = sprintf( 'event_length_%s_%s', filename, meas_types );
   
 saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
 saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
@@ -400,6 +458,35 @@ filename = sprintf( 'n_events_per_session_%s', filename );
 saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
 saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
+%%  n events per day
+
+pl = ContainerPlotter();
+pl.summary_function = @nanmean;
+pl.error_function = @ContainerPlotter.nansem;
+
+figure(1); clf(); colormap( 'default' );
+
+plt = evt_info;
+
+plt = plt({'n_events'});
+
+plt = plt.each1d( {'session_name', 'meas_type', 'looks_to', 'looks_by'}, @rowops.sum );
+
+plt('unified_filename') = 'a';
+plt('session_name') = 'b';
+
+panels_are = { 'session_name', 'meas_type' };
+groups_are = { 'looks_to' };
+x_is = 'looks_by';
+
+pl.bar( plt, x_is, groups_are, panels_are );
+
+filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
+
+filename = sprintf( 'n_events_per_day_%s', filename );
+  
+saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 %%
 
 pl = ContainerPlotter();

@@ -9,10 +9,12 @@ defaults.files = [];
 defaults.window_size = 500;
 defaults.step_size = 1;
 defaults.update_time = true;
+defaults.remove_blink_nans = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
 data_p = bfw.get_intermediate_directory( 'aligned' );
+blink_p = bfw.get_intermediate_directory( 'blinks' );
 
 if ( isempty(params.files) )
   aligned_mats = shared_utils.io.find( data_p, '.mat' );
@@ -40,21 +42,24 @@ for i = 1:numel(aligned_mats)
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
-  roi_index = cellfun( @(x) strcmp(aligned.m1.unified_filename, x.m1.unified_filename), rects );
-  
-  assert( sum(roi_index) == 1, 'Only one roi can be associated with an alignment.' );
-  
-  rect = rects{roi_index};
   
   fields = fieldnames( aligned );
+  
+  un_f = aligned.(fields{1}).unified_filename;
+  
+  roi_index = cellfun( @(x) strcmp(aligned.m1.unified_filename, x.m1.unified_filename), rects );
+  
+  assert( sum(roi_index) == 1, 'Expected 1 roi to be associated with "%s"; instead there were %d' ...
+    , un_f, sum(roi_index) );
+  
+  rect = rects{roi_index};
   
   rect_keys = rect.m1.rects.keys();
   
   bounds = struct();
   
-  un_f = aligned.(fields{1}).unified_filename;
-  
   meta = shared_utils.io.fload( fullfile(unified_p, un_f) );
+  blinks = shared_utils.io.fload( fullfile(blink_p, un_f) );
   
   m_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;
@@ -65,12 +70,28 @@ for i = 1:numel(aligned_mats)
     bounds.(fields{k}).bounds = containers.Map();
     for j = 1:numel(rect_keys)
       key = rect_keys{j};
+      
       x = aligned.(fields{k}).position(1, :);
       y = aligned.(fields{k}).position(2, :);
       t = aligned.(fields{k}).time;
       
       m_rect = rect.(fields{k}).rects(key);
-      m_ib = bfw.bounds.rect( x, y, m_rect );
+      m_blink_thresh = round( median(blinks.(fields{k}).durations) );
+      
+      %   if there are no blinks ... (unlikely)
+      if ( isnan(m_blink_thresh) ), m_blink_thresh = Inf; end
+      
+      if ( params.remove_blink_nans )
+        [m_ib, n_included_blink_x, n_included_blink_y, n_included_samples] = ...
+          bfw.bounds.rect_excluding_blinks( x, y, m_rect, m_blink_thresh );
+        n_included_blinks = max( n_included_blink_x, n_included_blink_y );
+      else
+        m_ib = bfw.bounds.rect( x, y, m_rect );
+        n_included_blinks = NaN;
+        n_included_blink_x = NaN;
+        n_included_blink_y = NaN;
+        n_included_samples = NaN;
+      end
       
       %   add sliding window
       if ( params.update_time )
@@ -82,6 +103,10 @@ for i = 1:numel(aligned_mats)
       
       bounds.(fields{k}).bounds(key) = m_ib;
       bounds.(fields{k}).time = t;
+      bounds.(fields{k}).n_included_blinks = n_included_blinks;
+      bounds.(fields{k}).n_included_blink_x = n_included_blink_x;
+      bounds.(fields{k}).n_included_blink_y = n_included_blink_y;
+      bounds.(fields{k}).n_included_samples = n_included_samples;
     end
     for j = 1:numel(copy_fields)
       bounds.(fields{k}).(copy_fields{j}) = aligned.(fields{k}).(copy_fields{j});
@@ -109,22 +134,22 @@ function [out, out_t] = slide_window( bounds, t, window_size, step_size )
 
 total = floor( numel(bounds) / step_size );
 
+N = numel( bounds );
+
 out = false( 1, total );
 out_t = zeros( 1, total );
 
 half_window = floor( window_size/2 );
-start = half_window;
-stop = min( total, start+window_size );
-stp = window_size;
+start = 1;
+stp = 1;
+stop = min( N, start+window_size );
 
-while ( stop <= total )
+while ( stop <= N )
   out(stp) = any( bounds(start:stop-1) );
-  out_t(stp) = t(start+half_window+1);
-  if ( stop == total ), break; end
+  out_t(stp) = t(start+half_window);
   stp = stp + 1;
   start = start + step_size;
   stop = start + window_size;
-  stop = min( stop, total );
 end
 
 end

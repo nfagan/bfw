@@ -6,6 +6,7 @@ defaults = struct();
 defaults.duration = NaN;
 defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
+defaults.files = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -14,7 +15,11 @@ save_p = bfw.get_intermediate_directory( 'events' );
 
 shared_utils.io.require_dir( save_p );
 
-bound_mats = shared_utils.io.find( bounds_p, '.mat' );
+if ( isempty(params.files) )
+  bound_mats = shared_utils.io.find( bounds_p, '.mat' );
+else
+  bound_mats = shared_utils.cell.ensure_cell( params.files );
+end
 
 duration = params.duration;
 
@@ -68,7 +73,7 @@ for i = 1:numel(bound_mats)
       assert( strcmp(mut_method, 'duration'), 'Unrecognized mutual method "%s".', mut_method );
     end
     
-    mutual = find_starts( mutual_bounds, duration );
+    mutual = find_starts( mutual_bounds, adjusted_duration );
     
 %     switch ( params.mutual_method )
 %       case 'duration'
