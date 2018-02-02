@@ -1,4 +1,9 @@
-function make_edfs()
+function make_edfs(varargin)
+
+defaults = struct();
+defaults.files = [];
+
+params = bfw.parsestruct( defaults, varargin );
 
 conf = bfw.config.load();
 
@@ -7,13 +12,16 @@ save_p = bfw.get_intermediate_directory( 'edf' );
 
 data_root = conf.PATHS.data_root;
 
-mats = shared_utils.io.find( data_p, '.mat' );
-
-do_save = true;
+if ( isempty(params.files) )
+  mats = shared_utils.io.find( data_p, '.mat' );
+else
+  mats = shared_utils.cell.ensure_cell( params.files );
+end
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
 for i = 1:numel(mats)
+  fprintf( '\n Processing %d of %d', i, numel(mats) );
   
   current = shared_utils.io.fload( mats{i} );
   fields = fieldnames( current );
@@ -42,11 +50,9 @@ for i = 1:numel(mats)
       edf.(fields{k}).(copy_fields{j}) = current.(fields{k}).(copy_fields{j});
     end
   end
-  
-  if ( do_save )
-    shared_utils.io.require_dir( save_p );
-    save( fullfile(save_p, e_filename), 'edf' );
-  end
+
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, e_filename), 'edf' );
 end
 
 end

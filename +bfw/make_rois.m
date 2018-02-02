@@ -19,11 +19,12 @@ copy_fields = { 'unified_filename', 'unified_directory' };
 for i = 1:numel(mats)
   meta = shared_utils.io.fload( mats{i} );
   
-  roi_map = bfw.calibration.get_calibration_key_roi_map();
+  fields = fieldnames( meta );
+  
+%   roi_map = bfw.calibration.get_calibration_key_roi_map();
+  roi_map = meta.(fields{1}).far_plane_key_map;
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
-  
-  fields = fieldnames( meta );
   
   event_func_keys = event_funcs.keys();
   

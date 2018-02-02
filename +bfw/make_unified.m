@@ -2,15 +2,11 @@ function make_unified(sub_dirs)
 
 conf = bfw.config.load();
 
-save_dir = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
-save_filename = '';
-
-do_save = true;
+save_dir = bfw.get_intermediate_directory( 'unified' );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
 base_dir = fullfile( conf.PATHS.data_root, 'raw' );
-% sub_dirs = { '011118', '011618' };
 
 outerdirs = cellfun( @(x) fullfile(base_dir, x), sub_dirs, 'un', false );
 
@@ -114,7 +110,6 @@ for idx = 1:numel(outerdirs)
       nums = get_filenumbers( m_edfs );
       [~, I] = sort( nums );
       m_edfs = m_edfs(I);
-%       edf_map_ = jsondecode( fileread(m_edf_map{1}) );
       edf_map_ = bfw.jsondecode( m_edf_map{1} );
       pos_fs = fieldnames( edf_map_ );
       for j = 1:numel(pos_fs)
@@ -152,6 +147,19 @@ for idx = 1:numel(outerdirs)
       end
     end
     
+    %
+    %   attach key map file to data, if it's not already attached
+    %
+    
+    if ( ~isfield(m_data, 'far_plane_key_map') )
+      m_map_mats = shared_utils.io.find( outerdir, 'calibration_key_map.mat' );
+      assert__n_files( m_map_mats, 1, 'calibration key map', outerdir );
+      m_key_map = shared_utils.io.fload( m_map_mats{1} );
+      for j = 1:numel(m_data)
+        m_data(j).far_plane_key_map = m_key_map;
+      end
+    end
+    
     for j = 1:numel(m_data)
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
@@ -181,11 +189,9 @@ for idx = 1:numel(outerdirs)
       data.(m_dirs{j}).unified_filename = u_filename;
       data.(m_dirs{j}).unified_directory = save_dir;
     end
-    if ( do_save )
-      shared_utils.io.require_dir( save_dir );
-      file = fullfile( save_dir, u_filename );
-      save( file, 'data' );
-    end
+    shared_utils.io.require_dir( save_dir );
+    file = fullfile( save_dir, u_filename );
+    save( file, 'data' );
   end
 end
 
