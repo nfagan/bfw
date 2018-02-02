@@ -25,7 +25,7 @@ N = params.N;
 
 copy_fields = { 'unified_directory', 'unified_filename' };
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   current = shared_utils.io.fload( mats{i} );

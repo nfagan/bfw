@@ -38,13 +38,24 @@ for i = 1:numel(mats)
   m_filename = first.mat_filename;
   e_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
+  is_valid_edf = true;
+  
   for j = 1:numel(fields)
     m_dir = current.(fields{j}).mat_directory;
     edf_filename = current.(fields{j}).edf_filename;
-    edf.(fields{j}).edf = Edf2Mat( fullfile(data_root, m_dir{:}, edf_filename) );
+    try
+      edf_obj = Edf2Mat( fullfile(data_root, m_dir{:}, edf_filename) );
+    catch err
+      fprintf( '\n Error parsing edf file "%s": \n%s', edf_filename, err.message );
+      is_valid_edf = false;
+      continue;
+    end
+    edf.(fields{j}).edf = edf_obj;
     edf.(fields{j}).medf_filename = e_filename;
     edf.(fields{j}).medf_directory = save_p;
   end
+  
+  if ( ~is_valid_edf ), continue; end
   
   for j = 1:numel(copy_fields)
     for k = 1:numel(fields)
