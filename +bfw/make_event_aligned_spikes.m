@@ -36,7 +36,7 @@ null_n_iterations = params.null_n_iterations;
 
 allow_overwrite = params.overwrite;
 
-parfor i = 1:numel(event_files)
+for i = 1:numel(event_files)
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );

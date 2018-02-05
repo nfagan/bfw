@@ -1,6 +1,6 @@
 function make_spikes(varargin)
 
-defalts = bfw.get_common_make_defaults();
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -51,13 +51,13 @@ for i = 1:numel(un_mats)
     spikes = struct();
     
     spikes.is_link = true;
-    spikes.data_file = un_filename;
+    spikes.data_file = pl2_visited_files( pl2_fullfile );
     
     do_save( spikes, fullfile(save_p, un_filename) );
     continue;
   end
   
-  pl2_visited_files(pl2_fullfile) = true;
+  pl2_visited_files(pl2_fullfile) = un_filename;
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
