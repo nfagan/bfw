@@ -19,7 +19,7 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 fs = 1 / params.fs;
 N = params.N;
 
-copy_fields = { 'unified_directory', 'unified_filename' };
+copy_fields = { 'unified_filename' };
 
 parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
