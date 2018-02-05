@@ -1,7 +1,7 @@
 folders = { '02022018', '02042018' };
 file_spec = folders;
 
-shared_inputs = { 'files_containing', file_spec };
+shared_inputs = { 'files_containing', file_spec, 'overwrite', false };
 
 %%  unified
 
@@ -40,6 +40,7 @@ bfw.make_events( shared_inputs{:} ...
   , 'duration', 10 ...
 );
 
+%   classify events as m1 leading m2, vs. m2 leading m1
 bfw.adjust.add_m_ordering( shared_inputs{:} ...
   , 'max_lag', 2 ...
 );

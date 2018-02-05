@@ -1,8 +1,6 @@
 function separate_eyes_from_face(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 

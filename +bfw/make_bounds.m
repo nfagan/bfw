@@ -2,9 +2,8 @@ function make_bounds(varargin)
 
 import shared_utils.cell.percell;
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
+
 defaults.window_size = 500;
 defaults.step_size = 1;
 defaults.update_time = true;
@@ -60,6 +59,10 @@ for i = 1:numel(aligned_mats)
   m_filename = meta.(fields{1}).mat_filename;
   
   b_filename = bfw.make_intermediate_filename( m_dir, m_filename );
+  
+  full_filename = fullfile( save_p, b_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   for k = 1:numel(fields)
     bounds.(fields{k}).bounds = containers.Map();
@@ -119,7 +122,7 @@ for i = 1:numel(aligned_mats)
   bounds.step_size = step_size;
 
   shared_utils.io.require_dir( save_p );
-  do_save( fullfile(save_p, b_filename), bounds );
+  do_save( full_filename, bounds );
 end
 
 end

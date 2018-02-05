@@ -1,8 +1,6 @@
 function make_edf_blink_info(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -23,6 +21,10 @@ for i = 1:numel(edfs)
   
   unified_filename = edf.(fields{1}).unified_filename;
   
+  filename = fullfile( save_p, unified_filename );
+  
+  if ( bfw.conditional_skip_file(filename, params.overwrite) ), continue; end
+  
   blink_info = struct();
   
   for j = 1:numel(fields)
@@ -37,8 +39,6 @@ for i = 1:numel(edfs)
     
     blink_info.(fields{j}).unified_filename = edf.(fields{j}).unified_filename;
   end
-  
-  filename = fullfile( save_p, unified_filename );
   
   save( filename, 'blink_info' );
 end

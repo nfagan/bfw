@@ -1,8 +1,6 @@
 function make_edfs(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -34,6 +32,10 @@ for i = 1:numel(mats)
   m_filename = first.mat_filename;
   e_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
+  full_filename = fullfile( save_p, e_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
+  
   is_valid_edf = true;
   
   for j = 1:numel(fields)
@@ -60,7 +62,7 @@ for i = 1:numel(mats)
   end
 
   shared_utils.io.require_dir( save_p );
-  save( fullfile(save_p, e_filename), 'edf' );
+  save( full_filename, 'edf' );
 end
 
 end

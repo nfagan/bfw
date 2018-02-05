@@ -2,12 +2,11 @@ function make_events(varargin)
 
 import shared_utils.logical.find_starts;
 
-defaults = struct();
+defaults = bfw.get_common_make_defaults();
+
 defaults.duration = NaN;
 defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
-defaults.files = [];
-defaults.files_containing = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -31,6 +30,10 @@ for i = 1:numel(bound_mats)
   m2 = bounds.m2.bounds;
   
   unified_filename = bounds.m1.unified_filename;
+  
+  full_filename = fullfile( save_p, unified_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   m1t = bounds.m1.time;
   m2t = bounds.m2.time;
@@ -101,7 +104,7 @@ for i = 1:numel(bound_mats)
   
   events.adjustments = containers.Map();
   
-  save( fullfile(save_p, unified_filename), 'events' );
+  save( full_filename, 'events' );
 end
 
 end

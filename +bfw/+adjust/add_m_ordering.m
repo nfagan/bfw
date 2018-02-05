@@ -1,9 +1,8 @@
 function add_m_ordering(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
-defaults.max_lag = 1; % s -- how far ahead can m2's event 
+defaults = bfw.get_common_make_defaults();
+
+defaults.max_lag = 1; % s -- how far ahead can m2's event
 
 params = bfw.parsestruct( defaults, varargin );
 

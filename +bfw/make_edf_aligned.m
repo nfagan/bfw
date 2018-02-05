@@ -1,8 +1,7 @@
 function make_edf_aligned(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
+
 defaults.fs = 1e3;
 defaults.N = 400;
 
@@ -21,6 +20,8 @@ N = params.N;
 
 copy_fields = { 'unified_filename' };
 
+allow_overwrite = params.overwrite;
+
 parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
@@ -28,10 +29,19 @@ parfor i = 1:numel(mats)
   
   current_meta = shared_utils.io.fload( fullfile(unified_p, current.m1.unified_filename) );
   
+  full_filename = fullfile( save_p, a_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, allow_overwrite) ), continue; end
+  
   m1 = current.m1;
   m2 = current.m2;
   
   if ( isempty(m1.edf) ), continue; end
+  
+  mat_dir = current_meta.m1.mat_directory_name;
+  m_filename = current_meta.m1.mat_filename;
+  
+  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
   m1_edf = m1.edf;
   m2_edf = m2.edf;
@@ -96,11 +106,6 @@ parfor i = 1:numel(mats)
     , 'time', t ...
   );
 
-  mat_dir = current_meta.m1.mat_directory_name;
-  m_filename = current_meta.m1.mat_filename;
-  
-  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
-
   aligned = struct();
   aligned.m1 = m1_aligned;
   aligned.m2 = m2_aligned;
@@ -115,7 +120,7 @@ parfor i = 1:numel(mats)
     aligned.(fields{j}).aligned_directory = save_p;
   end
   
-  do_save( aligned, fullfile(save_p, a_filename) );
+  do_save( aligned, full_filename );
 end
 
 end

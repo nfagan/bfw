@@ -78,6 +78,8 @@ for i = 1:numel(event_files)
   N = size(C, 1);
   
   for j = 1:N
+    fprintf( '\n\t %d of %d', j, N );
+    
     roi = C{j, 1};
     monk = C{j, 2};
     unit_index = C{j, 3};

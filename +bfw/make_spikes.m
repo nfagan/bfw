@@ -1,8 +1,6 @@
 function make_spikes(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defalts = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -30,6 +28,10 @@ for i = 1:numel(un_mats)
   un_filename = unified.(firstf).unified_filename;
   
   un0 = unified.(firstf);
+  
+  full_filename = fullfile( save_p, un0.unified_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   pl2_file = un0.plex_filename;
   pl2_dir_components = un0.plex_directory(1:end-1);
@@ -112,7 +114,7 @@ for i = 1:numel(un_mats)
   spikes.data = all_units;
   spikes.unified_filename = un0.unified_filename;
   
-  do_save( spikes, fullfile(save_p, un0.unified_filename) );
+  do_save( spikes, full_filename );
 end
 
 end

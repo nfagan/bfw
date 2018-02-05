@@ -1,8 +1,6 @@
 function make_rois(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -40,6 +38,9 @@ for i = 1:numel(mats)
   m_filename = meta.(fields{1}).mat_filename;
   
   r_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
+  full_filename = fullfile( save_p, r_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   for j = 1:numel(fields)
     rect_map = containers.Map();
@@ -59,7 +60,7 @@ for i = 1:numel(mats)
   end  
   
   shared_utils.io.require_dir( save_p );
-  save( fullfile(save_p, r_filename), 'rois' );
+  save( full_filename, 'rois' );
 end
 
 end
