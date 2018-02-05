@@ -191,6 +191,10 @@ for i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
+    event_times = event_times( event_times >= spike_times(1) & event_times <= spike_times(end) );
+    
+    if ( isempty(event_times) ), continue; end
+    
     [psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
     raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, fs );
     
