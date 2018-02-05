@@ -166,6 +166,7 @@ parfor i = 1:numel(event_files)
   spike_struct.zpsth = current_z_psth;
   spike_struct.psth = current_psth;
   spike_struct.unified_filename = unified_filename;
+  spike_struct.params = params;
   
   shared_utils.io.require_dir( spike_save_p );
   

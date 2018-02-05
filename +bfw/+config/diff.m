@@ -26,7 +26,7 @@ import shared_utils.assertions.*;
 if ( nargin < 1 )
   saved_conf = bfw.config.load();
 else
-  assert__isa( saved_conf, 'struct', 'the config file' );
+  bfw.util.assertions.assert__is_config( saved_conf );
 end
 if ( nargin < 2 )
   if ( nargout == 0 )
@@ -35,7 +35,7 @@ if ( nargin < 2 )
     display = false;
   end
 else
-  assert__isa( display, 'logical', 'the display flag' );
+  assert( isa(display, 'logical'), 'Display flag must be logical scalar.' );
 end
 
 created_conf = bfw.config.create( false ); % false to not save conf
