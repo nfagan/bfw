@@ -72,16 +72,6 @@ for i = 1:numel(bound_mats)
     
     mutual = find_starts( mutual_bounds, adjusted_duration );
     
-%     switch ( params.mutual_method )
-%       case 'duration'
-%         mutual = find_starts( mutual_bounds, duration );
-%       case 'plus-minus'
-%         m2_bounds2 = b_plus_minus( m1_bounds, m2_bounds, adjusted_mutual_duration );
-%         mutual = mutual_plus_minus( m1_evts, m2_evts, adjusted_mutual_duration );
-%       otherwise
-%         error( 'Unrecognized mutual method "%s".', params.mutual_method );
-%     end
-    
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
     mutual_evt_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual );
@@ -106,6 +96,10 @@ for i = 1:numel(bound_mats)
   events.monk_key = monk_key;
   events.unified_filename = unified_filename;
   events.params = params;
+  events.window_size = bounds.window_size;
+  events.step_size = bounds.step_size;
+  
+  events.adjustments = containers.Map();
   
   save( fullfile(save_p, unified_filename), 'events' );
 end

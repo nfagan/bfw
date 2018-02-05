@@ -25,8 +25,7 @@ rects = percell( @shared_utils.io.fload, roi_mats );
 
 save_p = bfw.get_intermediate_directory( 'bounds' );
 
-copy_fields = { 'unified_filename', 'unified_directory' ...
-  , 'aligned_filename', 'aligned_directory' };
+copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 
 window_size = params.window_size;
 step_size = params.step_size;
@@ -52,7 +51,10 @@ for i = 1:numel(aligned_mats)
   bounds = struct();
   
   meta = shared_utils.io.fload( fullfile(unified_p, un_f) );
-  blinks = shared_utils.io.fload( fullfile(blink_p, un_f) );
+  
+  if ( params.remove_blink_nans )
+    blinks = shared_utils.io.fload( fullfile(blink_p, un_f) );
+  end
   
   m_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;
@@ -69,7 +71,12 @@ for i = 1:numel(aligned_mats)
       t = aligned.(fields{k}).time;
       
       m_rect = rect.(fields{k}).rects(key);
-      m_blink_thresh = round( median(blinks.(fields{k}).durations) );
+      
+      m_blink_thresh = NaN;
+      
+      if ( params.remove_blink_nans )
+        m_blink_thresh = round( median(blinks.(fields{k}).durations) );
+      end
       
       %   if there are no blinks ... (unlikely)
       if ( isnan(m_blink_thresh) ), m_blink_thresh = Inf; end

@@ -7,7 +7,6 @@ unified_p = bfw.get_intermediate_directory( 'unified' );
 bounds_p = bfw.get_intermediate_directory( 'bounds' );
 
 event_files = shared_utils.io.find( event_p, '.mat' );
-% event_files = { fullfile(event_p, 'test_position_1.mat') };
 
 first_event_file = fload( event_files{1} );
 first_bounds_file = fload( fullfile(bounds_p, first_event_file.unified_filename) );

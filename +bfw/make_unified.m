@@ -21,6 +21,7 @@ else
 end
 
 for idx = 1:numel(outerdirs)
+  fprintf( '\n %d of %d', idx, numel(outerdirs) );
   
   outerdir = outerdirs{idx};
   
