@@ -184,6 +184,10 @@ raster = Container();
 for i = 1:numel(event_mats)
   spikes = shared_utils.io.fload( event_mats{i} );
   
+  if ( i == 1 )
+    bint = spikes.psth_t;
+  end
+  
   cont = cont.append( spikes.psth );
   zpsth = zpsth.append( spikes.zpsth );
   raster = raster.append( spikes.raster );
