@@ -7,6 +7,7 @@ defaults.look_back = -0.5;
 defaults.look_ahead = 0.5;
 defaults.psth_bin_size = 0.05;
 defaults.raster_fs = 1e3;
+defaults.per_event_psth = true;
 
 defaults.compute_null = true;
 defaults.null_fs = 40e3;
@@ -79,6 +80,7 @@ for i = 1:numel(event_files)
   current_psth = Container();
   current_z_psth = Container();
   current_null_psth = Container();
+  current_psth_event_ids = Container();
   
   for j = 1:N
     fprintf( '\n\t %d of %d', j, N );
@@ -118,13 +120,20 @@ for i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
+    event_times = bfw.clock_a_to_b( event_times, clock_b, clock_a );
+    
     %   discard events that occur before the first spike, or after the
     %   last spike
     in_bounds_evts = event_times >= mat_spikes(1) & event_times <= mat_spikes(end);
     
     event_times = event_times( in_bounds_evts );
     event_ids = event_ids( in_bounds_evts );
-    looked_first_indices = looked_first_indices( in_bounds_evts );
+    
+    if ( strcmp(monk, 'mutual') )
+      looked_first_indices = looked_first_indices( in_bounds_evts );
+    else
+      looked_first_indices = NaN;
+    end
     
     if ( isempty(event_times) ), continue; end
     
@@ -134,20 +143,44 @@ for i = 1:numel(event_files)
     if ( isempty(mat_spikes) ), continue; end
     
     %   actual spike measures -- psth
-    [psth, psth_t] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
+    if ( ~params.per_event_psth )
+      [psth, psth_t] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
+      looked_first_indices = NaN;
+    else
+      for k = 1:numel(event_times)
+        [c_psth, psth_t] = looplessPSTH( mat_spikes, event_times(k), look_back, look_ahead, psth_bin_size );
+        if ( k == 1 )
+          psth = zeros( numel(event_times), numel(psth_t) );
+        end
+        psth(k, :) = c_psth;
+      end
+    end
     
     %   raster
     [raster, raster_t] = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, raster_fs );
     
     %   null psth
     if ( compute_null )
-      null_psth_ = bfw.generate_null_psth( mat_spikes, event_times ...
-        , look_back, look_ahead, psth_bin_size, null_n_iterations, null_fs );
-      null_mean = mean( null_psth_, 1 );
-      null_dev = std( null_psth_, [], 1 );
-      z_psth_ = (psth - null_mean) ./ null_dev;
+      if ( ~params.per_event_psth )
+        null_psth_ = bfw.generate_null_psth( mat_spikes, event_times ...
+          , look_back, look_ahead, psth_bin_size, null_n_iterations, null_fs );
+        null_mean = mean( null_psth_, 1 );
+        null_dev = std( null_psth_, [], 1 );
+        z_psth_ = (nanmean(psth) - null_mean) ./ null_dev;
+      else
+        z_psth_ = zeros( size(psth) );
+        null_mean = zeros( size(psth) );
+        for k = 1:numel(event_times)
+          null_psth_ = bfw.generate_null_psth( mat_spikes, event_times(k) ...
+            , look_back, look_ahead, psth_bin_size, null_n_iterations, null_fs );
+          null_mean_ = nanmean( null_psth_, 1 );
+          null_dev = nanstd( null_psth_, [], 1 );
+          z_psth_(k, :) = (psth(k, :) - null_mean_) ./ null_dev;
+          null_mean(k, :) = null_mean_;
+        end
+      end
     else
-      z_psth_ = nan( 1, numel(psth_t) );
+      z_psth_ = nan( size(psth) );
       null_mean = nan( size(z_psth_) ); 
     end
     
@@ -161,13 +194,43 @@ for i = 1:numel(event_files)
       , 'session_name', mat_directory_name ...
       );
     
+    psth_ = psth_.require_fields( 'look_order' );
+    
+    %   add labels for which monkey looked first.
+    
+    looked_first_labels = cell( numel(looked_first_indices), 1 );
+    
+    for k = 1:numel(looked_first_indices)
+      ind = looked_first_indices(k);
+      if ( isnan(ind) )
+        lab = 'look_order__NaN';
+      elseif ( ind == 0 )
+        lab = 'look_order__simultaneous';
+      elseif ( ind == 1 )
+        lab = 'look_order__m1';
+      else
+        assert( ind == 2, 'Unrecognized index %d".', ind )
+        lab = 'look_order__m2';
+      end
+      looked_first_labels{k} = lab;
+    end
+    
+    psth_( 'look_order' ) = looked_first_labels;
+    
     current_psth = current_psth.append( psth_ );
     
-    unqs = psth_.field_label_pairs();
+    multi_trial_labels = psth_.labels;
     
-    current_raster = current_raster.append( Container(raster, unqs{:}) );
-    current_z_psth = current_z_psth.append( Container(z_psth_, unqs{:}) );
-    current_null_psth = current_null_psth.append( Container(null_mean, unqs{:}) );
+    if ( ~params.per_event_psth )
+      raster_and_evt_labels = multi_trial_labels.repeat( numel(event_ids) );
+    else
+      raster_and_evt_labels = multi_trial_labels;
+    end
+    
+    current_raster = current_raster.append( Container(raster, raster_and_evt_labels) );
+    current_z_psth = current_z_psth.append( Container(z_psth_, multi_trial_labels) );
+    current_null_psth = current_null_psth.append( Container(null_mean, multi_trial_labels) );
+    current_psth_event_ids = current_psth_event_ids.append( Container(event_ids(:), raster_and_evt_labels) );
   end
   
   spike_struct = struct();
@@ -175,6 +238,7 @@ for i = 1:numel(event_files)
   spike_struct.zpsth = current_z_psth;
   spike_struct.psth = current_psth;
   spike_struct.null = current_null_psth;
+  spike_struct.psth_event_ids = current_psth_event_ids;
   spike_struct.psth_t = psth_t;
   spike_struct.raster_t = raster_t;
   spike_struct.unified_filename = unified_filename;

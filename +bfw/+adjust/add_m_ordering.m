@@ -18,6 +18,8 @@ for i = 1:numel(event_mats)
   
   events = shared_utils.io.fload( event_mats{i} );
   
+  un_filename = events.unified_filename;
+  
   m1_col = events.monk_key( 'm1' );
   m2_col = events.monk_key( 'm2' );
   
@@ -59,6 +61,8 @@ for i = 1:numel(event_mats)
     events.monk_key(m1_leads_key) = m1_leads_m2_col;
     events.monk_key(m2_leads_key) = m2_leads_m1_col;
   end
+  
+  events.identifiers = bfw.get_event_identifiers( events.times, un_filename );
   
   events.adjustments('m_ordering') = struct( 'params', params );
   

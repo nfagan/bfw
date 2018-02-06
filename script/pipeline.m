@@ -49,6 +49,11 @@ bfw.adjust.add_m_ordering( shared_inputs{:} ...
 
 bfw.make_spikes( shared_inputs{:} );
 
+%%  event aligned spikes
+
+bfw.make_event_aligned_spikes( shared_inputs{:} ...
+  
+
 %%  lfp
 
 bfw.make_lfp( shared_inputs{:} );
