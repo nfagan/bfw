@@ -43,6 +43,8 @@ for i = 1:numel(bound_mats)
   all_events = cell( numel(roi_names), 3 );
   all_event_lengths = cell( size(all_events) );
   all_event_durations = cell( size(all_events) );
+  all_looked_first_indices = cell( numel(roi_names), 1 );
+  all_looked_first_distances = cell( size(all_looked_first_indices) );
   
   event_roi_key = containers.Map();
   monk_key = containers.Map();
@@ -75,6 +77,8 @@ for i = 1:numel(bound_mats)
     
     mutual = find_starts( mutual_bounds, adjusted_duration );
     
+    [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
+    
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
     mutual_evt_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual );
@@ -86,6 +90,9 @@ for i = 1:numel(bound_mats)
     all_events(j, :) = { m1_evts, m2_evts, mutual };
     all_event_lengths(j, :) = { m1_evt_length, m2_evt_length, mutual_evt_length };
     all_event_durations(j, :) = all_event_lengths(j, :);
+    
+    all_looked_first_indices{j, 1} = looked_first_index;
+    all_looked_first_distances{j, 1} = looked_first_distance;
     
     event_roi_key(roi_name) = j;
   end
@@ -109,6 +116,46 @@ end
 
 end
 
+function [out, distance] = who_looked_first( mutual_evts, bounds_a, bounds_b )
+
+starts_a = arrayfun( @(x) find_start_looking_back_from(x, bounds_a), mutual_evts );
+starts_b = arrayfun( @(x) find_start_looking_back_from(x, bounds_b), mutual_evts );
+
+out = zeros( size(mutual_evts) );
+distance = zeros( size(mutual_evts) );
+
+for i = 1:numel(out)
+  a = starts_a(i);
+  b = starts_b(i);
+  
+  if ( a == b )
+    %   both initiate simultaneously
+    continue;
+  elseif ( a < b )
+    %   m1 initiates
+    out(i) = 1;
+    distance(i) = mutual_evts(i) - a;
+  else
+    %   m2 initiates
+    out(i) = 2;
+    distance(i) = mutual_evts(i) - b;
+  end
+end
+
+end
+
+function evt = find_start_looking_back_from( evt, bounds )
+
+while ( evt > 0 && bounds(evt) )
+  evt = evt - 1;
+end
+
+if ( evt == 0 ), return; end
+
+evt = evt + 1;
+
+end
+
 function b = b_plus_minus( a, b, duration )
 
 N = numel( a );
@@ -123,21 +170,6 @@ for i = duration+1:N-duration
     end
   end
 end
-
-end
-
-function mut = mutual_plus_minus( a, b, duration )
-
-mut = [];
-
-for i = 1:numel(a)
-  evt = a(i);
-  less = b < evt & abs(b-evt) <= duration;
-  more = b >= evt & abs(b-evt) <= duration;
-  mut(end+1:end+sum(less | more)) = b(less | more);
-end
-
-mut = unique( mut );
 
 end
 
