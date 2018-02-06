@@ -2,178 +2,6 @@ import shared_utils.io.fload;
 
 conf = bfw.config.load();
 
-event_p = bfw.get_intermediate_directory( 'events' );
-unified_p = bfw.get_intermediate_directory( 'unified' );
-bounds_p = bfw.get_intermediate_directory( 'bounds' );
-sync_p = bfw.get_intermediate_directory( 'sync' );
-spike_p = bfw.get_intermediate_directory( 'spikes' );
-event_files = shared_utils.io.find( event_p, '.mat' );
-
-first_event_file = fload( event_files{1} );
-first_bounds_file = fload( fullfile(bounds_p, first_event_file.unified_filename) );
-first_event_params = first_event_file.params;
-
-event_param_str = sprintf( 'event_%s_%d', first_event_params.mutual_method, first_event_params.duration );
-window_param_str = sprintf( 'window_%d_step_%d', first_bounds_file.window_size, first_bounds_file.step_size );
-event_subdir = sprintf( '%s_%s', event_param_str, window_param_str );
-
-psth = Container();
-z_psth = Container();
-evt_info = Container();
-all_event_lengths = Container();
-all_event_distances = Container();
-rasters = Container();
-
-spike_map = containers.Map();
-
-look_back = -0.5;
-look_ahead = 0.5;
-psth_bin_size = 0.01;
-
-raster_fs = 1e3;
-
-compute_null = true;
-null_fs = 40e3;
-null_n_iterations = 1e3;
-
-for i = 1:numel(event_files)
-  fprintf( '\n %d of %d', i, numel(event_files) );
-  
-  events = fload( event_files{i} );
-  unified = fload( fullfile(unified_p, events.unified_filename) );
-  plex_file = unified.m1.plex_filename;
-  
-  sync_file = fullfile( sync_p, events.unified_filename );
-  spike_file = fullfile( spike_p, events.unified_filename );
-  
-  if ( exist(sync_file, 'file') == 0 || exist(spike_file, 'file') == 0 )
-    fprintf( '\n Missing sync or spike file for "%s".', events.unified_filename );
-    continue;
-  end
-  
-  sync = fload( sync_file );
-  spikes = fload( spike_file );
-  
-  if ( ~spikes.is_link )
-    spike_map( plex_file ) = spikes;
-  elseif ( ~spike_map.isKey(plex_file) )
-    spikes = fload( fullfile(spike_p, spikes.data_file) );
-    spike_map( plex_file ) = spikes;
-  else
-    spikes = spike_map( plex_file );
-  end
-  
-  %   convert spike times in plexon time (a) to matlab time (b)
-  clock_a = sync.plex_sync(:, strcmp(sync.sync_key, 'plex'));
-  clock_b = sync.plex_sync(:, strcmp(sync.sync_key, 'mat'));
-  
-  rois = events.roi_key.keys();
-  monks = events.monk_key.keys();
-  unit_indices = arrayfun( @(x) x, 1:numel(spikes.data), 'un', false );
-  
-  C = bfw.allcomb( {rois, monks, unit_indices} );
-  
-  %   then get spike info
-  
-  N = size(C, 1);
-  
-  for j = 1:N
-    fprintf( '\n\t %d of %d', j, N );
-    
-    roi = C{j, 1};
-    monk = C{j, 2};
-    unit_index = C{j, 3};
-    
-    row = events.roi_key(roi);
-    col = events.monk_key(monk);
-    
-    unit = spikes.data(unit_index);
-    
-    unit_start = unit.start;
-    unit_stop = unit.stop;
-    spike_times = unit.times;
-    channel_str = unit.channel_str;
-    region = unit.region;
-    unit_name = unit.name;
-    unified_filename = spikes.unified_filename;
-    mat_directory_name = unified.m1.mat_directory_name;    
-    
-    event_times = events.times{row, col};
-    
-    if ( isempty(event_times) || isempty(spike_times) ), continue; end
-    
-    if ( unit_start == -1 ), unit_start = spike_times(1); end
-    if ( unit_stop == -1 ), unit_stop = spike_times(end); end
-    
-    within_time_bounds = spike_times >= unit_start & spike_times <= unit_stop;
-    
-    spike_times = spike_times(within_time_bounds);
-    
-    if ( isempty(spike_times) ), continue; end
-    
-    mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
-    
-    %   discard events that occur before the first spike, or after the
-    %   last spike
-    event_times = event_times( event_times >= mat_spikes(1) & event_times <= mat_spikes(end) );
-    
-    if ( isempty(event_times) ), continue; end
-    
-    in_bounds_spikes = mat_spikes > event_times(1) - look_back & mat_spikes < event_times(end) + look_ahead;
-    mat_spikes = mat_spikes( in_bounds_spikes );
-    
-    if ( isempty(mat_spikes) ), continue; end
-    
-    %   actual spike measures -- psth
-    [psth_, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
-    %   raster
-    raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, raster_fs );
-    %   null psth
-    if ( compute_null )
-      null_psth_ = bfw.generate_null_psth( mat_spikes, event_times ...
-        , look_back, look_ahead, psth_bin_size, null_n_iterations, null_fs );
-      null_mean = mean( null_psth_, 1 );
-      null_dev = std( null_psth_, [], 1 );
-      z_psth_ = (psth_ - null_mean) ./ null_dev;
-    else
-      z_psth_ = nan( 1, numel(bint) );
-    end
-    
-    cont_ = Container( psth_, ...
-        'channel', channel_str ...
-      , 'region', region ...
-      , 'unit_name', unit_name ...
-      , 'looks_to', roi ...
-      , 'looks_by', monk ...
-      , 'unified_filename', unified_filename ...
-      , 'session_name', mat_directory_name ...
-      );
-    
-    psth = psth.append( cont_ );
-    
-    unqs = cont_.field_label_pairs();
-    
-    rasters = rasters.append( Container(raster, unqs{:}) );
-    z_psth = z_psth.append( Container(z_psth_, unqs{:}) );
-  end
-end
-
-[psth, ~, C] = bfw.add_unit_id( psth );
-
-rasters = rasters.require_fields( 'unit_id' );
-for i = 1:size(C, 1)
-  ind = rasters.where(C(i, :));
-  rasters('unit_id', ind) = sprintf( 'unit__%d', i );
-end
-
-z_psth = z_psth.require_fields( 'unit_id' );
-for i = 1:size(C, 1)
-  ind = z_psth.where(C(i, :));
-  z_psth('unit_id', ind) = sprintf( 'unit__%d', i );
-end
-
-%%
-
 event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
 event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 
@@ -206,7 +34,6 @@ for i = 1:size(C, 1)
 end
 
 psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
-
 
 %%  plot population response matrix
 
@@ -334,12 +161,14 @@ fname = strjoin( res.flat_uniques({'session_name'}), '_' );
 fname = sprintf( 'population_matrix_%s', fname );
 date_dir = datestr( now, 'mmddyy' );
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
-save_plot_p = fullfile( save_plot_p, date_dir, kind, event_subdir );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
 shared_utils.io.require_dir( save_plot_p );
 
 shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
 
 %%  per unit
+
+pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
@@ -354,7 +183,7 @@ kind = 'per_unit_z';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
-save_plot_p = fullfile( save_plot_p, event_subdir );
+save_plot_p = fullfile( save_plot_p, psth_info_str );
 
 shared_utils.io.require_dir( save_plot_p );
 
@@ -373,10 +202,48 @@ for i = 1:numel(I)
   figure(1); clf();
   
 %   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
-  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );  
   
-  matching_raster = rasters(C(i, :));
+  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
+  saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
+  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  
+end
+
+%%  per unit z
+
+pl = ContainerPlotter();
+
+date_dir = datestr( now, 'mmddyy' );
+
+plt = zpsth({'01162018', '01172018'});
+
+kind = 'per_unit_z';
+
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind );
+save_plot_p = fullfile( save_plot_p, psth_info_str );
+
+shared_utils.io.require_dir( save_plot_p );
+
+[I, C] = plt.get_indices( {'unit_id'} );
+
+f = figure(1);
+
+for i = 1:numel(I)
+  subset = plt(I{i});
+  
+  pl.default();
+  pl.summary_function = @nanmean;
+  pl.x = bint;
+  pl.vertical_lines_at = 0;
+  pl.shape = [3, 2];
+  pl.order_panels_by = { 'mutual', 'm1' };
+  
+  clf( f );
+  
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );  
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   

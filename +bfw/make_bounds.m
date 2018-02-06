@@ -120,6 +120,7 @@ for i = 1:numel(aligned_mats)
   
   bounds.window_size = window_size;
   bounds.step_size = step_size;
+  bounds.adjustments = containers.Map(); 
 
   shared_utils.io.require_dir( save_p );
   do_save( full_filename, bounds );

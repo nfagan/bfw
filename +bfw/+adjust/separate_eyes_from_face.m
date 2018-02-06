@@ -31,6 +31,12 @@ for i = 1:numel(bounds)
     bound.(fields{j}).bounds = c_bounds;    
   end
   
+  if ( ~isfield(bound, 'adjustments') )
+    bound.adjustments = containers.Map();
+  end
+  
+  bound.adjustments('separate_eyes_from_face') = params;
+  
   save( bounds{i}, 'bound' );
 end
 
