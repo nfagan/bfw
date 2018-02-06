@@ -1,15 +1,15 @@
-function make_lfp()
+function make_lfp(varargin)
 
-conf = bfw.config.load();
+defaults = bfw.get_common_make_defaults();
 
-data_root = conf.PATHS.data_root;
+params = bfw.parsestruct( defaults, varargin );
 
 unified_p = bfw.get_intermediate_directory( 'unified' );
 save_p = bfw.get_intermediate_directory( 'lfp' );
 
 shared_utils.io.require_dir( save_p );
 
-un_mats = shared_utils.io.find( unified_p, '.mat' );
+un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 pl2_visited_files = containers.Map();
 
@@ -22,6 +22,10 @@ for i = 1:numel(un_mats)
   firstf = fields{1};
   
   un_filename = unified.(firstf).unified_filename;
+  
+  full_filename = fullfile( save_p, un_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   un0 = unified.(firstf);
   
@@ -41,13 +45,12 @@ for i = 1:numel(un_mats)
     fprintf( '\n Using cached data for "%s".', pl2_fullfile );
     lfp = struct();
     lfp.is_link = true;
-    lfp.data_file = un_filename;
-    
+    lfp.data_file = pl2_visited_files( pl2_fullfile );
     do_save( lfp, fullfile(save_p, un_filename) );
     continue;
   end
   
-  pl2_visited_files(pl2_fullfile) = true;
+  pl2_visited_files(pl2_fullfile) = un_filename;
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
@@ -110,7 +113,7 @@ for i = 1:numel(un_mats)
   lfp.sample_rate = sample_rate;
   lfp.id_times = (0:size(lfp_mat, 2)-1) * (1/sample_rate);
   
-  do_save( lfp, fullfile(save_p, un_filename) );
+  do_save( lfp, full_filename );
 end
 
 end
