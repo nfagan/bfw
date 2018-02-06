@@ -170,7 +170,7 @@ parfor i = 1:numel(event_files)
   spike_struct.psth = current_psth;
   spike_struct.null = current_null_psth;
   spike_struct.psth_t = psth_t;
-  spike_struct.raster_t = raseter_t;
+  spike_struct.raster_t = raster_t;
   spike_struct.unified_filename = unified_filename;
   spike_struct.params = params;
   
