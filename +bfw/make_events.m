@@ -102,6 +102,12 @@ for i = 1:numel(bound_mats)
   events.times = all_events;
   events.lengths = all_event_lengths;
   events.durations = cellfun( @(x) x .* bounds.step_size, all_event_durations, 'un', false );
+  events.looked_first_indices = all_looked_first_indices;
+  events.looked_first_distances = all_looked_first_distances;
+  events.looked_first_durations = cellfun( @(x) x .* bounds.step_size, all_looked_first_distances, 'un', false );
+  
+  events.identifiers = get_event_identifiers( events.times, unified_filename );
+  
   events.roi_key = event_roi_key;
   events.monk_key = monk_key;
   events.unified_filename = unified_filename;
@@ -112,6 +118,26 @@ for i = 1:numel(bound_mats)
   events.adjustments = containers.Map();
   
   save( full_filename, 'events' );
+end
+
+end
+
+function ids = get_event_identifiers( events, name_space )
+
+import shared_utils.char.string2hash;
+
+ids = cell( size(events) );
+
+stp = 1;
+
+for i = 1:numel(events)
+  subset_evts = events{i};
+  ids{i} = zeros( size(subset_evts), 'uint64' );
+  for j = 1:numel(subset_evts)
+    id_str = sprintf( '%s__%d', name_space, stp );
+    ids{i}(j) = uint64( string2hash(id_str) );
+    stp = stp + 1;
+  end
 end
 
 end

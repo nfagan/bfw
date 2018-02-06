@@ -36,7 +36,7 @@ null_n_iterations = params.null_n_iterations;
 
 allow_overwrite = params.overwrite;
 
-parfor i = 1:numel(event_files)
+for i = 1:numel(event_files)
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );
@@ -102,6 +102,8 @@ parfor i = 1:numel(event_files)
     mat_directory_name = unified.m1.mat_directory_name;    
     
     event_times = events.times{row, col};
+    event_ids = events.identifiers{row, col};
+    looked_first_indices = events.looked_first_indices{row, 1};
     
     if ( isempty(event_times) || isempty(spike_times) ), continue; end
     
@@ -118,7 +120,11 @@ parfor i = 1:numel(event_files)
     
     %   discard events that occur before the first spike, or after the
     %   last spike
-    event_times = event_times( event_times >= mat_spikes(1) & event_times <= mat_spikes(end) );
+    in_bounds_evts = event_times >= mat_spikes(1) & event_times <= mat_spikes(end);
+    
+    event_times = event_times( in_bounds_evts );
+    event_ids = event_ids( in_bounds_evts );
+    looked_first_indices = looked_first_indices( in_bounds_evts );
     
     if ( isempty(event_times) ), continue; end
     
