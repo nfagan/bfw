@@ -8,6 +8,7 @@ event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 zpsth = Container();
 psth = Container();
 raster = Container();
+null_psth = Container();
 
 for i = 1:numel(event_mats)
   spikes = shared_utils.io.fload( event_mats{i} );
@@ -19,18 +20,24 @@ for i = 1:numel(event_mats)
   psth = psth.append( spikes.psth );
   zpsth = zpsth.append( spikes.zpsth );
   raster = raster.append( spikes.raster );
+  null_psth = null_psth.append( spikes.null );
 end
 
 [psth, ~, C] = bfw.add_unit_id( psth );
 
 zpsth = zpsth.require_fields( 'unit_id' );
 raster = raster.require_fields( 'unit_id' );
+null_psth = null_psth.require_fields( 'unit_id' );
 
 for i = 1:size(C, 1)
   ind_z = zpsth.where( C(i, :) );
   ind_r = raster.where( C(i, :) );
-  zpsth('unit_id', ind_z) = sprintf( 'unit__%d', i );
-  raster('unit_id', ind_r) = sprintf( 'unit__%d', i );
+  ind_n = null_psth.where( C(i, :) );
+  
+  unit_id_str = sprintf( 'unit__%d', i );
+  zpsth('unit_id', ind_z) = unit_id_str;
+  raster('unit_id', ind_r) = unit_id_str;
+  null_psth('unit_id', ind_n) = unit_id_str;
 end
 
 psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
@@ -40,11 +47,19 @@ psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
 pre_bin_t = -0.2;
 post_bin_t = 0.2;
 
+use_z = true;
+
 pre_ind = bint >= pre_bin_t & bint < 0;
 post_ind = bint > 0 & bint <= post_bin_t;
 
-psth_pre = set_data( psth, nanmean(psth.data(:, pre_ind), 2) );
-psth_post = set_data( psth, nanmean(psth.data(:, post_ind), 2) );
+if ( use_z )
+  psth_cont = zpsth;
+else
+  psth_cont = psth;
+end
+
+psth_pre = set_data( psth_cont, nanmean(psth_cont.data(:, pre_ind), 2) );
+psth_post = set_data( psth_cont, nanmean(psth_cont.data(:, post_ind), 2) );
 
 psth_modulation = (psth_post.data - psth_pre.data) ./ (psth_post.data + psth_pre.data);
 
@@ -74,50 +89,45 @@ res = Container();
 legend_components = containers.Map();
 
 for i = 1:numel(I)
-  subset_ = psth_modulation(I{i});
+  subset = psth_modulation(I{i});
   
-  regs = subset_('region');
+  regs = subset('region');
+  
+  assert( numel(regs) == 1 );
   
   reg = char( regs );
   
   current_color = colors( reg );
-  
-%   if ( i == 1 ), legend( gca, '-dynamiclegend' ); end
-  legend( '-dynamiclegend' );
-  
-  for j = 1:numel(regs)
-    subset = subset_(regs(j));
-    
-    ind_face = subset.where( 'face' );
-    ind_eyes = subset.where( 'eyes' );
-    ind_mut = subset.where( 'mutual' );
-    ind_excl = subset.where( {'m1'} );
 
-    if ( ~any(ind_face) || ~any(ind_eyes) || ~any(ind_mut) || ~any(ind_excl) )
-      fprintf( '\n skipping "%s"', strjoin([regs{j}, C(i, :)], ', ') );
-      continue;
-    end
+  ind_face = subset.where( 'face' );
+  ind_eyes = subset.where( 'eyes' );
+  ind_mut = subset.where( 'mutual' );
+  ind_excl = subset.where( {'m1'} );
 
-    face = subset.data(ind_face);
-    eyes = subset.data(ind_eyes);
-    mut = subset.data(ind_mut);
-    excl = subset.data(ind_excl);
+  if ( ~any(ind_face) || ~any(ind_eyes) || ~any(ind_mut) || ~any(ind_excl) )
+    fprintf( '\n skipping "%s"', strjoin([regs{j}, C(i, :)], ', ') );
+    continue;
+  end
 
-    eyes_over_face = (eyes-face) ./ (face + eyes);
-    mut_over_excl = (mut-excl) ./ (mut + excl);
+  face = subset.data(ind_face);
+  eyes = subset.data(ind_eyes);
+  mut = subset.data(ind_mut);
+  excl = subset.data(ind_excl);
 
-    x_coord = eyes_over_face * x_range;
-    y_coord = mut_over_excl * y_range;
-    
-    pairs = field_label_pairs( one(subset) );
-    
-    res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
+  eyes_over_face = (eyes-face) ./ (face + eyes);
+  mut_over_excl = (mut-excl) ./ (mut + excl);
 
-    h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
-    
-    if ( ~legend_components.isKey(regs{j}) )
-      legend_components(regs{j}) = h;
-    end
+  x_coord = eyes_over_face * x_range;
+  y_coord = mut_over_excl * y_range;
+
+  pairs = field_label_pairs( one(subset) );
+
+  res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
+
+  h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+
+  if ( ~legend_components.isKey(reg) )
+    legend_components(reg) = h;
   end
 end
 
@@ -157,6 +167,11 @@ legend( leg_elements, leg_keys );
 
 %   save
 kind = 'population_matrix';
+
+if ( use_z )
+  kind = sprintf( '%s_z', kind );
+end
+
 fname = strjoin( res.flat_uniques({'session_name'}), '_' );
 fname = sprintf( 'population_matrix_%s', fname );
 date_dir = datestr( now, 'mmddyy' );
@@ -166,60 +181,16 @@ shared_utils.io.require_dir( save_plot_p );
 
 shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
 
-%%  per unit
+%%  per unit non-z
 
 pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-% plt = cont({'01162018', '01172018'});
-% plt = cont;
-plt = zpsth({'01162018', '01172018'});
+selectors = { '01162018', '01172018' };
+plt = psth.only( selectors );
 
-% plt = plt.replace( 'm1', 'zm1' );
-% plt = plt.replace( 'm2', 'zm2' );
-
-kind = 'per_unit_z';
-
-save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
-save_plot_p = fullfile( save_plot_p, date_dir, kind );
-save_plot_p = fullfile( save_plot_p, psth_info_str );
-
-shared_utils.io.require_dir( save_plot_p );
-
-[I, C] = plt.get_indices( {'unit_id'} );
-
-for i = 1:numel(I)
-  subset = plt(I{i});
-  
-  pl.default();
-  pl.summary_function = @nanmean;
-  pl.x = bint;
-  pl.vertical_lines_at = 0;
-  pl.shape = [3, 2];
-  pl.order_panels_by = { 'mutual', 'm1' };
-  
-  figure(1); clf();
-  
-%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
-  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );  
-  
-  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
-  
-  saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
-  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
-  
-end
-
-%%  per unit z
-
-pl = ContainerPlotter();
-
-date_dir = datestr( now, 'mmddyy' );
-
-plt = zpsth({'01162018', '01172018'});
-
-kind = 'per_unit_z';
+kind = 'per_unit';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
@@ -232,6 +203,61 @@ shared_utils.io.require_dir( save_plot_p );
 f = figure(1);
 
 for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  subset = plt(I{i});
+  
+  unqs = subset.flat_uniques();
+  
+  matching_null = null_psth.only( unqs );
+  
+  subset = subset.require_fields( 'kind' );
+  matching_null = matching_null.require_fields( 'kind' );
+  
+  subset('kind') = 'real';
+  matching_null('kind') = 'null';
+  
+  subset = subset.append( matching_null );
+  
+  pl.default();
+  pl.summary_function = @nanmean;
+  pl.x = bint;
+  pl.vertical_lines_at = 0;
+  pl.shape = [3, 2];
+  pl.order_panels_by = { 'mutual', 'm1' };
+  pl.y_label = 'sp/s';
+  
+	clf( f );
+  
+  h = subset.plot( pl, 'kind', {'looks_by', 'looks_to', 'region', 'unit_id'} );  
+  
+  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
+  
+  shared_utils.plot.save_fig( f, fullfile(save_plot_p, filename), {'epsc', 'png', 'fig'}, true );  
+end
+
+%%  per unit z
+
+pl = ContainerPlotter();
+
+date_dir = datestr( now, 'mmddyy' );
+
+selectors = { '01162018', '01172018' };
+
+plt = zpsth.only( selectors );
+
+kind = 'per_unit_z';
+
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
+
+shared_utils.io.require_dir( save_plot_p );
+
+[I, C] = plt.get_indices( {'unit_id'} );
+
+f = figure(1);
+
+for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  
   subset = plt(I{i});
   
   pl.default();
@@ -240,15 +266,19 @@ for i = 1:numel(I)
   pl.vertical_lines_at = 0;
   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
+  pl.y_label = 'z-scored firing rate';
+  pl.add_legend = false;
   
   clf( f );
   
   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );  
+%   
+%   f_ = FigureEdits( f );
+%   f_.one_legend();
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
-  saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
-  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  shared_utils.plot.save_fig( f, fullfile(save_plot_p, filename), {'epsc', 'png', 'fig'}, true );
   
 end
 
@@ -258,18 +288,11 @@ pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-% plt = cont({'01162018', '01172018'});
-% plt = cont;
 plt = psth({'01162018', '01172018'});
-plt = plt({'m1_leads_m2','m2_leads_m1'});
-
-% plt = plt.replace( 'm1', 'zm1' );
-% plt = plt.replace( 'm2', 'zm2' );
 
 kind = 'per_unit_rasters';
 
-save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
-save_plot_p = fullfile( save_plot_p, date_dir, kind, event_subdir );
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
 
 shared_utils.io.require_dir( save_plot_p );
 
@@ -285,12 +308,10 @@ for i = 1:numel(I)
   pl.default();
   pl.x = bint;
   pl.vertical_lines_at = 0;
-%   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
   
   clf(fig);
   
-%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
   matching_raster = rasters(C(i, :));
   
