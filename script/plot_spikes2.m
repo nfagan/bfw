@@ -187,10 +187,12 @@ pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-selectors = { '01162018', '01172018' };
+selectors = { '01162018', '01172018', 'm1', 'm2', 'mutual' };
 plt = psth.only( selectors );
 
 kind = 'per_unit';
+
+append_null = false;
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
@@ -206,20 +208,24 @@ for i = 1:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
   subset = plt(I{i});
   
-  unqs = subset.flat_uniques();
-  
-  matching_null = null_psth.only( unqs );
-  
   subset = subset.require_fields( 'kind' );
-  matching_null = matching_null.require_fields( 'kind' );
-  
   subset('kind') = 'real';
-  matching_null('kind') = 'null';
   
-  subset = subset.append( matching_null );
+  if ( append_null )
+    unqs = subset.flat_uniques();
+
+    matching_null = null_psth.only( unqs );
+
+    matching_null = matching_null.require_fields( 'kind' );
+
+    matching_null('kind') = 'null';
+
+    subset = subset.append( matching_null );
+  end
   
   pl.default();
   pl.summary_function = @nanmean;
+  pl.add_ribbon = true;
   pl.x = bint;
   pl.vertical_lines_at = 0;
   pl.shape = [3, 2];
