@@ -8,6 +8,8 @@ save_dir = bfw.get_intermediate_directory( 'unified' );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
+data_root = conf.PATHS.data_root;
+
 base_dir = fullfile( conf.PATHS.data_root, 'raw' );
 
 outerdirs = cellfun( @(x) fullfile(base_dir, x), sub_dirs, 'un', false );
@@ -163,6 +165,39 @@ for idx = 1:numel(outerdirs)
       end
     end
     
+    %
+    %   attach mountain sort filename to data, if it exists
+    %
+    
+    ms_firings_filemap_file = '';
+    ms_firings_channel_map_file = '';
+    
+    ms_firings_filemap_directory_path = fullfile( outerdir, 'mountain_sort' );
+
+    if ( shared_utils.io.dexists(ms_firings_filemap_directory_path) )
+      file_map_full_file = fullfile( ms_firings_filemap_directory_path, 'file_map.json' );
+      if ( shared_utils.io.fexists(file_map_full_file) )
+        ms_firings_filemap_file = 'file_map.json';
+      else 
+        fprintf( ['\n Warning: "moutain_sort" directory exists in "%s", but no' ...
+          , ' file_map.json file was found within.'], outerdir );
+      end
+    end
+    
+    mountain_sort_directory_path = fullfile( data_root, 'mountain_sort' );
+    
+    if ( shared_utils.io.dexists(mountain_sort_directory_path) )
+      ms_firings_channel_map_files = shared_utils.io.dirnames( mountain_sort_directory_path, '.xlsx', false );
+      if ( numel(ms_firings_channel_map_files) == 0 )
+        fprintf( ['\n Warning: moutain sort directory "%s" exists, but' ...
+          , ' no channel map excel file exists.'] );
+      else
+        assert__n_files( ms_firings_channel_map_files, 1 ...
+          , 'mountain sort channel map file', mountain_sort_directory_path );
+        ms_firings_channel_map_file = ms_firings_channel_map_files{1};
+      end
+    end
+    
     for j = 1:numel(m_data)
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
@@ -170,6 +205,10 @@ for idx = 1:numel(outerdirs)
       m_data(j).plex_filename = pl2_file;
       m_data(j).plex_region_map_filename = 'regions.json';
       m_data(j).plex_unit_map_filename = 'units.json';
+      m_data(j).ms_firings_file_map_filename = ms_firings_filemap_file;
+      m_data(j).ms_firings_file_map_directory = [ all_dir_components, 'mountain_sort' ];
+      m_data(j).ms_firings_channel_map_filename = ms_firings_channel_map_file;
+      m_data(j).ms_firings_directory = { 'mountain_sort' };
       m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
@@ -182,6 +221,7 @@ for idx = 1:numel(outerdirs)
     
     n_last_mats = numel( m_mats );
   end
+  
   
   for i = 1:numel(data_.(m_dirs{1}))
     data = struct();
