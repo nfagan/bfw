@@ -78,6 +78,7 @@ parfor i = 1:numel(event_files)
   current_raster = Container();
   current_psth = Container();
   current_z_psth = Container();
+  current_null_psth = Container();
   
   for j = 1:N
     fprintf( '\n\t %d of %d', j, N );
@@ -127,10 +128,10 @@ parfor i = 1:numel(event_files)
     if ( isempty(mat_spikes) ), continue; end
     
     %   actual spike measures -- psth
-    [psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
+    [psth, psth_t] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
     
     %   raster
-    raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, raster_fs );
+    [raster, raster_t] = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, raster_fs );
     
     %   null psth
     if ( compute_null )
@@ -140,7 +141,8 @@ parfor i = 1:numel(event_files)
       null_dev = std( null_psth_, [], 1 );
       z_psth_ = (psth - null_mean) ./ null_dev;
     else
-      z_psth_ = nan( 1, numel(bint) );
+      z_psth_ = nan( 1, numel(psth_t) );
+      null_mean = nan( size(z_psth_) ); 
     end
     
     psth_ = Container( psth, ...
@@ -159,12 +161,16 @@ parfor i = 1:numel(event_files)
     
     current_raster = current_raster.append( Container(raster, unqs{:}) );
     current_z_psth = current_z_psth.append( Container(z_psth_, unqs{:}) );
+    current_null_psth = current_null_psth.append( Container(null_mean, unqs{:}) );
   end
   
   spike_struct = struct();
   spike_struct.raster = current_raster;
   spike_struct.zpsth = current_z_psth;
   spike_struct.psth = current_psth;
+  spike_struct.null = current_null_psth;
+  spike_struct.psth_t = psth_t;
+  spike_struct.raster_t = raseter_t;
   spike_struct.unified_filename = unified_filename;
   spike_struct.params = params;
   

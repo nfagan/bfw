@@ -28,7 +28,7 @@ spike_map = containers.Map();
 
 look_back = -0.5;
 look_ahead = 0.5;
-psth_bin_size = 0.05;
+psth_bin_size = 0.01;
 
 raster_fs = 1e3;
 
@@ -172,6 +172,36 @@ for i = 1:size(C, 1)
   z_psth('unit_id', ind) = sprintf( 'unit__%d', i );
 end
 
+%%
+
+event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
+
+zpsth = Container();
+cont = Container();
+raster = Container();
+
+for i = 1:numel(event_mats)
+  spikes = shared_utils.io.fload( event_mats{i} );
+  
+  cont = cont.append( spikes.psth );
+  zpsth = zpsth.append( spikes.zpsth );
+  raster = raster.append( spikes.raster );
+end
+
+[cont, ~, C] = bfw.add_unit_id( cont );
+
+zpsth = zpsth.require_fields( 'unit_id' );
+raster = raster.require_fields( 'unit_id' );
+
+for i = 1:size(C, 1)
+  ind_z = zpsth.where( C(i, :) );
+  ind_r = raster.where( C(i, :) );
+  zpsth('unit_id', ind_z) = sprintf( 'unit__%d', i );
+  raster('unit_id', ind_r) = sprintf( 'unit__%d', i );
+end
+
+
 %%  plot population response matrix
 
 psth = cont;
@@ -310,12 +340,13 @@ shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', '
 date_dir = datestr( now, 'mmddyy' );
 
 % plt = cont({'01162018', '01172018'});
-plt = cont;
+% plt = cont;
+plt = zpsth({'01162018', '01172018'});
 
 % plt = plt.replace( 'm1', 'zm1' );
 % plt = plt.replace( 'm2', 'zm2' );
 
-kind = 'per_unit';
+kind = 'per_unit_z';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
@@ -329,6 +360,7 @@ for i = 1:numel(I)
   subset = plt(I{i});
   
   pl.default();
+  pl.summary_function = @nanmean;
   pl.x = bint;
   pl.vertical_lines_at = 0;
   pl.shape = [3, 2];
