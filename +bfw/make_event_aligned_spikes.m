@@ -76,6 +76,9 @@ parfor i = 1:numel(event_files)
   
   N = size(C, 1);
   
+  psth_t = NaN;
+  raster_t = NaN;
+  
   current_raster = Container();
   current_psth = Container();
   current_z_psth = Container();
