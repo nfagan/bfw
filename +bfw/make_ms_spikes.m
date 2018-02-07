@@ -3,6 +3,7 @@ function make_ms_spikes(varargin)
 import shared_utils.char.containsi;
 
 defaults = bfw.get_common_make_defaults();
+defaults.sample_rate = 40e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -88,10 +89,11 @@ for i = 1:numel(un_mats)
   
   ms_unit_numbers = cellfun( @(x) x, ms_channel_map(2:end, unit_n_ind) );
   ms_unit_ids = cellfun( @(x) x, ms_channel_map(2:end, unit_id_ind) );
+  ms_unit_ratings = cellfun( @(x) x, ms_channel_map(2:end, rating_ind) );
   
-  matching_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );
+  c_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );
   
-  if ( ~any(matching_day_ind) )
+  if ( ~any(c_day_ind) )
     fprintf( '\n Warning: No mountain sort units were defined for "%s"', un0.mat_directory_name );
     continue;
   end
@@ -109,8 +111,17 @@ for i = 1:numel(un_mats)
     continue;
   end
   
+  pl2_file = un0.plex_filename;
+  
+  if ( isempty(pl2_file) )
+    fprintf( '\n No .pl2 file defined for "%s".', un_filename );
+    continue;
+  end
+  
   pl2_dir_components = un0.plex_directory(1:end-1);
   pl2_dir = fullfile( data_root, pl2_dir_components{:} );
+  sorted_subdir = un0.plex_directory{end};
+  pl2_fullfile = fullfile( pl2_dir, sorted_subdir, pl2_file );
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
@@ -120,7 +131,11 @@ for i = 1:numel(un_mats)
   unit_map = all_maps.units;
   region_map = all_maps.regions;
   
+  all_units = {};
+  stp = 1;
+  
   for j = 1:numel(firings_file_map)
+    fprintf( '\n\t %d of %d', j, numel(firings_file_map) );
     
     %   pre-2017a json parser returns cell array of struct
     if ( iscell(firings_file_map) )
@@ -131,6 +146,7 @@ for i = 1:numel(un_mats)
     
     firings_filename = current_file_map.file_name;
     firings_channels = bfw.parse_json_channel_numbers( current_file_map.channels );
+    firings_channels = sort( firings_channels );
     
     firings_full_file = fullfile( data_root, un0.ms_firings_directory{:}, firings_filename );
     
@@ -145,56 +161,81 @@ for i = 1:numel(un_mats)
     channel_ids = spike_data(1, :);
     spike_times = spike_data(2, :);
     unit_ids = spike_data(3, :);
-
-    current_unit.times = spikes;
-    current_unit.channel = channel;
-    current_unit.channel_str = channel_str;
-    current_unit.region = units_this_channel_set.region;
-  end
-  
-  ms_visited_files(ms_firings_fullfile) = un_filename;
-  
-  all_units = {};
-  stp = 1;
     
-  for j = 1:numel(unit_map)
-    units_this_channel_set = unit_map(j);
+    complete_ms_index = false( size(spike_times) );
     
-    regions = unique( units_this_channel_set.channels );
-    units = units_this_channel_set.units;
-    
-    n_units = numel( units );
-    unit_ids = 1:n_units;
-    
-    C = combvec( regions(:)', unit_ids );
-    
-    for k = 1:size(C, 2)
+    for k = 1:numel(firings_channels)
+      fprintf( '\n\t\t %d of %d', k, numel(firings_channels) );
       
-      channel = C(1, k);
-      unit_id_index = C(2, k);
-      current_unit = units(unit_id_index);
-      %   non-native json parser (pre r2017a) loads array of structs as
-      %   cell arrays
-      if ( iscell(current_unit) ), current_unit = current_unit{1}; end
+      xls_channel_id = firings_channels(k);
+      xls_channel_ind = ms_channel_map_ids == xls_channel_id;
+      xls_channel_ind = xls_channel_ind & c_day_ind;
       
-      unit_id = current_unit.number;
-      channel_str = channel_n_to_str( channel );
-      spikes = PL2Ts( pl2_fullfile, channel_str, unit_id );
-      
-      current_unit.times = spikes;
-      current_unit.channel = channel;
-      current_unit.channel_str = channel_str;
-      current_unit.region = units_this_channel_set.region;
-      
-      if ( stp == 1 )
-        all_units = current_unit;
-      else
-        all_units(stp) = current_unit;
+      if ( ~any(xls_channel_ind) )
+        fprintf( '\n Warning: No channels matched %d for "%s" in the excel file.', xls_channel_id, un_filename );
+        continue;
       end
-      stp = stp + 1;
+      
+      region_name = get_region_name_from_channel_n( region_map, xls_channel_id );
+      
+      if ( isempty(region_name) )
+        fprintf( '\n Warning: No region was defined for channel %d in "%s".', xls_channel_id, un_filename );
+        continue;
+      end
+      
+      ms_channel_id = xls_channel_id - firings_channels(1) + 1;
+      ms_channel_id_ind = channel_ids == ms_channel_id;
+      ms_unit_ids_from1 = unit_ids( ms_channel_id_ind );
+      %   ms unit ids increment from 1 -> N such that each unit id is unique
+      %   across channels. our unit ids restart from 1 at each channel.
+      ms_unit_ids_from1 = ms_unit_ids_from1 - min(ms_unit_ids_from1) + 1;
+      
+      unit_ids_this_channel = ms_unit_ids( xls_channel_ind );
+      unit_ns_this_channel = ms_unit_numbers( xls_channel_ind );
+      unit_ratings_this_channel = ms_unit_ratings( xls_channel_ind );
+      
+      if ( numel(unique(unit_ns_this_channel)) ~= numel(unit_ns_this_channel) )
+        fprintf( '\n Warning: Unit numbers must be unique for each channel. Skipping "%s, %d".' ...
+          , un_filename, xls_channel_id );
+        continue;
+      end
+      
+      complete_ms_index(:) = false;
+      
+      for h = 1:numel(unit_ns_this_channel)
+        fprintf( '\n\t\t\t %d of %d', h, numel(unit_ns_this_channel) );
+        
+        unit_n_this_channel = unit_ns_this_channel(h);
+        ms_unit_id_ind = ms_unit_ids_from1 == unit_n_this_channel;
+        
+        complete_ms_index( ms_channel_id_ind ) = ms_unit_id_ind;
+        
+        if ( ~any(ms_unit_id_ind) )
+          fprintf( '\n Warning: No units matched id %d for "%s".', unit_ids_this_channel, un_filename );
+          continue;
+        end
+        
+        current_unit = struct();
+        
+        current_unit.times = spike_times(complete_ms_index) / params.sample_rate;
+        current_unit.channel = xls_channel_id;
+        current_unit.channel_str = channel_n_to_str( xls_channel_id );
+        current_unit.rating = unit_ratings_this_channel(h);
+        current_unit.uuid = unit_ids_this_channel(h);
+        current_unit.region = region_name;
+        
+        if ( stp == 1 )
+          all_units = current_unit;
+        else
+          all_units(stp) = current_unit;
+        end
+        stp = stp + 1;
+      end
     end
   end
   
+  ms_visited_files(ms_firings_fullfile) = un_filename;
+    
   spikes = struct();
   
   spikes.is_link = false;
@@ -203,6 +244,20 @@ for i = 1:numel(un_mats)
   
   do_save( spikes, full_filename );
 end
+
+end
+
+function out = get_region_name_from_channel_n( region_map, n )
+
+for i = 1:numel(region_map)
+  chans = region_map(i).channels;
+  if ( any(chans == n) )
+    out = region_map(i).name;
+    return;
+  end
+end
+
+out = [];
 
 end
 

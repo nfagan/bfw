@@ -97,14 +97,33 @@ parfor i = 1:numel(event_files)
     
     unit = spikes.data(unit_index);
     
-    unit_start = unit.start;
-    unit_stop = unit.stop;
+    unit_start = -1;
+    unit_stop = -1;
+    unit_rating = NaN;
+    unit_uuid = NaN;
+    unit_name = 'name__undefined';
+    
+    if ( isfield(unit, 'start') )
+      unit_start = unit.start;
+    end
+    if ( isfield(unit, 'stop') )
+      unit_stop = unit.stop;
+    end
+    if ( isfield(unit, 'rating') )
+      unit_rating = unit.rating;
+    end
+    if ( isfield(unit, 'uuid') )
+      unit_uuid = unit.uuid;
+    end
+    if ( isfield(unit, 'name') )
+      unit_name = unit.name;
+    end
+    
     spike_times = unit.times;
     channel_str = unit.channel_str;
     region = unit.region;
-    unit_name = unit.name;
     unified_filename = spikes.unified_filename;
-    mat_directory_name = unified.m1.mat_directory_name;    
+    mat_directory_name = unified.m1.mat_directory_name;
     
     event_times = events.times{row, col};
     event_ids = events.identifiers{row, col};
@@ -190,6 +209,8 @@ parfor i = 1:numel(event_files)
     psth_ = Container( psth, ...
         'channel', channel_str ...
       , 'region', region ...
+      , 'unit_uuid', sprintf( 'unit_uuid__%d', unit_uuid ) ...
+      , 'unit_rating', sprintf( 'unit_rating__%d', unit_rating ) ...
       , 'unit_name', unit_name ...
       , 'looks_to', roi ...
       , 'looks_by', monk ...

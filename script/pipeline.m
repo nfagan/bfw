@@ -52,7 +52,9 @@ bfw.make_spikes( shared_inputs{:} );
 %%  event aligned spikes
 
 bfw.make_event_aligned_spikes( shared_inputs{:} ...
-  
+  , 'psth_bin_size', 0.05 ...
+  , 'compute_null', false ...
+  );
 
 %%  lfp
 

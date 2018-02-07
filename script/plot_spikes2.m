@@ -47,7 +47,7 @@ psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
 pre_bin_t = -0.2;
 post_bin_t = 0.2;
 
-use_z = true;
+use_z = false;
 
 pre_ind = bint >= pre_bin_t & bint < 0;
 post_ind = bint > 0 & bint <= post_bin_t;
@@ -192,7 +192,7 @@ plt = psth.only( selectors );
 
 kind = 'per_unit';
 
-append_null = false;
+append_null = true;
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind );
@@ -212,7 +212,8 @@ for i = 1:numel(I)
   subset('kind') = 'real';
   
   if ( append_null )
-    unqs = subset.flat_uniques();
+    unqs = C(i, :);
+    unqs = union( unqs, subset.flat_uniques({'looks_by', 'looks_to', 'region'}) );
 
     matching_null = null_psth.only( unqs );
 
@@ -247,7 +248,7 @@ pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-selectors = { '01162018', '01172018' };
+selectors = { '01162018', '01172018', 'm1', 'm2', 'mutual' };
 
 plt = zpsth.only( selectors );
 
@@ -273,6 +274,7 @@ for i = 1:numel(I)
   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
   pl.y_label = 'z-scored firing rate';
+  pl.add_ribbon = true;
   pl.add_legend = false;
   
   clf( f );
@@ -294,7 +296,7 @@ pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-plt = psth({'01162018', '01172018'});
+plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
 
 kind = 'per_unit_rasters';
 
@@ -315,11 +317,12 @@ for i = 1:numel(I)
   pl.x = bint;
   pl.vertical_lines_at = 0;
   pl.order_panels_by = { 'mutual', 'm1' };
+  pl.add_ribbon = true;
   
   clf(fig);
   
   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
-  matching_raster = rasters(C(i, :));
+  matching_raster = raster(C(i, :));
   
   y_lims = get( gca, 'ylim' );
   x_lims = get( gca, 'xlim' );

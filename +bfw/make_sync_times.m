@@ -20,6 +20,8 @@ pl2_map = bfw.get_plex_channel_map();
 copy_fields = { 'unified_filename', 'plex_filename', 'plex_directory' };
 
 for i = 1:numel(mats)
+  fprintf( '\n %d of %d', i, numel(mats) );
+  
   unified = shared_utils.io.fload( mats{i} );
   
   fields = fieldnames( unified );
