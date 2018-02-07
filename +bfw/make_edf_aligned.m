@@ -70,7 +70,7 @@ parfor i = 1:numel(mats)
     edf_sync_m2 = edf_sync_m2(1:n);
     sync_m1 = sync_m1(1:n);
     sync_m1_m2 = sync_m1_m2(1:n);
-    sync_m2(1:n);
+    sync_m2 = sync_m2(1:n);
 %     continue;
   end
   
