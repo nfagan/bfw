@@ -1,5 +1,7 @@
 function make_ms_spikes(varargin)
 
+import shared_utils.char.containsi;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
@@ -54,21 +56,38 @@ for i = 1:numel(un_mats)
     continue;
   end
   
-  [~, ~, ms_channel_map] = xlsread( ms_channel_map_file, 'Redone' );
+  [~, ~, ms_channel_map] = xlsread( ms_channel_map_file, 'Sheet1' );
   
   header = ms_channel_map(1, :);
   
-  channel_ind = strcmp( header, 'channel' );
-  unit_ind = strcmp( header, 'unit' );
-  rating_ind = strcmp( header, 'rating' );
-  day_ind = strcmp( header, 'day' );
+  channel_ind = cellfun( @(x) containsi(x, 'channel'), header );
+  unit_n_ind = cellfun( @(x) containsi(x, 'unit'), header );
+  rating_ind = cellfun( @(x) containsi(x, 'rating'), header );
+  day_ind = cellfun( @(x) containsi(x, 'day'), header );
+  unit_id_ind = cellfun( @(x) containsi(x, 'id'), header );
   
-  assert__any_header_indices( channel_ind, unit_ind, rating_ind, day_ind );
+  assert__any_header_indices( channel_ind, unit_n_ind, unit_id_ind, rating_ind, day_ind );
   
   %   get rid of header
   ms_channel_map_ids = cellfun( @(x) x, ms_channel_map(2:end, channel_ind) );
-  ms_day_ids = cellfun( @(x) num2str(x), ms_channel_map(2:end, day_ind), 'un', false );
-  ms_unit_ids = cellfun( @(x) x, ms_channel_map(2:end, unit_ind) );
+  
+  ms_day_ids = cell( size(ms_channel_map_ids) );
+  for j = 1:numel(ms_day_ids)
+    day_id = ms_channel_map{j+1, day_ind};
+    if ( ~ischar(day_id) )
+      day_id = num2str( day_id );
+    end
+    %   excel truncates leading zeros; add them back in if necessary.
+    if ( numel(day_id) ~= 8 )
+      assert( numel(day_id) == 7, ['Expected a date format like this:' ...
+        , ' 01042018, or this: 1042018, but got this: %s'], day_id );
+      day_id = [ '0', day_id ];
+    end
+    ms_day_ids{j} = day_id;
+  end
+  
+  ms_unit_numbers = cellfun( @(x) x, ms_channel_map(2:end, unit_n_ind) );
+  ms_unit_ids = cellfun( @(x) x, ms_channel_map(2:end, unit_id_ind) );
   
   matching_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );
   
@@ -89,6 +108,17 @@ for i = 1:numel(un_mats)
     do_save( spikes, fullfile(save_p, un_filename) );
     continue;
   end
+  
+  pl2_dir_components = un0.plex_directory(1:end-1);
+  pl2_dir = fullfile( data_root, pl2_dir_components{:} );
+  
+  unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
+  region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
+  
+  all_maps = bfw.get_plex_region_and_unit_maps( region_map_file, unit_map_file );
+  
+  unit_map = all_maps.units;
+  region_map = all_maps.regions;
   
   for j = 1:numel(firings_file_map)
     
@@ -115,10 +145,6 @@ for i = 1:numel(un_mats)
     channel_ids = spike_data(1, :);
     spike_times = spike_data(2, :);
     unit_ids = spike_data(3, :);
-    
-    unit_id = current_unit.number;
-    channel_str = channel_n_to_str( channel );
-    spikes = PL2Ts( pl2_fullfile, channel_str, unit_id );
 
     current_unit.times = spikes;
     current_unit.channel = channel;
@@ -127,14 +153,6 @@ for i = 1:numel(un_mats)
   end
   
   ms_visited_files(ms_firings_fullfile) = un_filename;
-  
-  unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
-  region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
-  
-  all_maps = bfw.get_plex_region_and_unit_maps( region_map_file, unit_map_file );
-  
-  unit_map = all_maps.units;
-  region_map = all_maps.regions;
   
   all_units = {};
   stp = 1;
