@@ -142,8 +142,6 @@ parfor i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
-    event_times = bfw.clock_a_to_b( event_times, clock_b, clock_a );
-    
     %   discard events that occur before the first spike, or after the
     %   last spike
     in_bounds_evts = event_times >= mat_spikes(1) & event_times <= mat_spikes(end);
