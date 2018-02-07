@@ -24,23 +24,23 @@ for i = 1:numel(event_mats)
   raster = raster.append( spikes.raster );
   null_psth = null_psth.append( spikes.null );
 end
-
-[psth, ~, C] = bfw.add_unit_id( psth );
-
-zpsth = zpsth.require_fields( 'unit_id' );
-raster = raster.require_fields( 'unit_id' );
-null_psth = null_psth.require_fields( 'unit_id' );
-
-for i = 1:size(C, 1)
-  ind_z = zpsth.where( C(i, :) );
-  ind_r = raster.where( C(i, :) );
-  ind_n = null_psth.where( C(i, :) );
-  
-  unit_id_str = sprintf( 'unit__%d', i );
-  zpsth('unit_id', ind_z) = unit_id_str;
-  raster('unit_id', ind_r) = unit_id_str;
-  null_psth('unit_id', ind_n) = unit_id_str;
-end
+% 
+% [psth, ~, C] = bfw.add_unit_id( psth );
+% 
+% zpsth = zpsth.require_fields( 'unit_id' );
+% raster = raster.require_fields( 'unit_id' );
+% null_psth = null_psth.require_fields( 'unit_id' );
+% 
+% for i = 1:size(C, 1)
+%   ind_z = zpsth.where( C(i, :) );
+%   ind_r = raster.where( C(i, :) );
+%   ind_n = null_psth.where( C(i, :) );
+%   
+%   unit_id_str = sprintf( 'unit__%d', i );
+%   zpsth('unit_id', ind_z) = unit_id_str;
+%   raster('unit_id', ind_r) = unit_id_str;
+%   null_psth('unit_id', ind_n) = unit_id_str;
+% end
 
 psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
 
@@ -324,17 +324,38 @@ for i = 1:numel(I)
   pl.add_ribbon = true;
   pl.add_legend = false;
   
-  clf(fig);
+  clf( fig );
   
-  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'} );
+%   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'} );
+% 
+  title_str = strjoin( flat_uniques(subset, {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'}), ' | ' );
+  meaned_data = nanmean( subset.data, 1 );
+  err_data = ContainerPlotter.sem_1d( subset.data );
+  
+  smooth_amt = 7;
+  
+  meaned_data = smooth( meaned_data, smooth_amt );
+  err_data = smooth( err_data, smooth_amt );
+  
+  hold off;
+  plot( bint, meaned_data, 'b', 'linewidth', 2 ); hold on;
+  
+%   plot( bint, meaned_data+err_data, 'b' );
+%   plot( bint, meaned_data-err_data, 'b' );
+  
+  title( title_str );
+
   matching_raster = raster(C(i, :));
   
   y_lims = get( gca, 'ylim' );
   x_lims = get( gca, 'xlim' );
   
+  
   offset_y = (y_lims(2) - y_lims(1)) / 5;
   y_lims = [y_lims(1) - offset_y, y_lims(2) + offset_y ];
   set( gca, 'ylim', y_lims );
+  
+   plot( [0; 0], y_lims, 'k' );
   
   min_x_lim = x_lims(1);
   max_x_lim = x_lims(2);

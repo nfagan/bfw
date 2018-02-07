@@ -603,7 +603,7 @@ shared_utils.io.require_dir( save_plot_p );
 
 fig = figure(1);
 
-for i = 1:numel(I)
+for i = 185:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
   
   subset = plt(I{i});
@@ -616,8 +616,13 @@ for i = 1:numel(I)
   
   clf(fig);
   
-%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
-  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+%   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+  
+  title_str = strjoin( flat_uniques(subset, {'looks_by', 'looks_to', 'region', 'unit_id'}), ' | ' );
+  
+  meaned_data = nanmean( subset.data, 1 );
+  sem_data = ContainerPlotter.nansem( subset.data );
+  
   matching_raster = rasters(C(i, :));
   
   y_lims = get( gca, 'ylim' );
