@@ -22,10 +22,6 @@ for i = 1:numel(event_files)
   sync_file = fullfile( sync_p, events.unified_filename );
   spike_file = fullfile( spike_p, events.unified_filename );
   
-  full_filename = fullfile( spike_save_p, events.unified_filename );
-  
-  if ( bfw.conditional_skip_file(full_filename, allow_overwrite) ), continue; end
-  
   if ( exist(sync_file, 'file') == 0 || exist(spike_file, 'file') == 0 )
     fprintf( '\n Missing sync or spike file for "%s".', events.unified_filename );
     continue;
