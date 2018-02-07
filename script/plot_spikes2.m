@@ -11,6 +11,8 @@ raster = Container();
 null_psth = Container();
 
 for i = 1:numel(event_mats)
+  fprintf( '\n %d of %d', i, numel(event_mats) );
+  
   spikes = shared_utils.io.fload( event_mats{i} );
   
   if ( i == 1 )
@@ -296,7 +298,9 @@ pl = ContainerPlotter();
 
 date_dir = datestr( now, 'mmddyy' );
 
-plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
+% plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
+plt = psth({'m1', 'm2', 'mutual'});
+plt = plt.rm( 'unit_uuid__NaN' );
 
 kind = 'per_unit_rasters';
 
@@ -304,7 +308,7 @@ save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, p
 
 shared_utils.io.require_dir( save_plot_p );
 
-[I, C] = plt.get_indices( {'unit_id', 'looks_to', 'looks_by', 'region'} );
+[I, C] = plt.get_indices( {'unit_uuid', 'looks_to', 'looks_by', 'region'} );
 
 fig = figure(1);
 
@@ -318,14 +322,19 @@ for i = 1:numel(I)
   pl.vertical_lines_at = 0;
   pl.order_panels_by = { 'mutual', 'm1' };
   pl.add_ribbon = true;
+  pl.add_legend = false;
   
   clf(fig);
   
-  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'} );
   matching_raster = raster(C(i, :));
   
   y_lims = get( gca, 'ylim' );
   x_lims = get( gca, 'xlim' );
+  
+  offset_y = (y_lims(2) - y_lims(1)) / 5;
+  y_lims = [y_lims(1) - offset_y, y_lims(2) + offset_y ];
+  set( gca, 'ylim', y_lims );
   
   min_x_lim = x_lims(1);
   max_x_lim = x_lims(2);
@@ -344,12 +353,12 @@ for i = 1:numel(I)
       y_coord = ((max_y_lim - min_y_lim) * perc_y) + min_y_lim;
       if ( raster_data(j, k) )
         hold on;
-        plot( x_coord, y_coord, 'k*', 'markersize', 1 );
+        plot( x_coord, y_coord, 'k*', 'markersize', 0.2 );
       end
     end
   end
   
-  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
+  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_uuid'}), '_' );
   
   shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, filename), {'png', 'epsc', 'fig'}, true );
   

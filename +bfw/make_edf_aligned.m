@@ -29,6 +29,10 @@ parfor i = 1:numel(mats)
   
   current_meta = shared_utils.io.fload( fullfile(unified_p, current.m1.unified_filename) );
   
+  mat_dir = current_meta.m1.mat_directory_name;
+  m_filename = current_meta.m1.mat_filename;
+  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
+  
   full_filename = fullfile( save_p, a_filename );
   
   if ( bfw.conditional_skip_file(full_filename, allow_overwrite) ), continue; end
@@ -37,11 +41,6 @@ parfor i = 1:numel(mats)
   m2 = current.m2;
   
   if ( isempty(m1.edf) ), continue; end
-  
-  mat_dir = current_meta.m1.mat_directory_name;
-  m_filename = current_meta.m1.mat_filename;
-  
-  a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
   m1_edf = m1.edf;
   m2_edf = m2.edf;
