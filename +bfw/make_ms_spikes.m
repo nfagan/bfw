@@ -211,8 +211,9 @@ for i = 1:numel(un_mats)
         complete_ms_index( ms_channel_id_ind ) = ms_unit_id_ind;
         
         if ( ~any(ms_unit_id_ind) )
-          fprintf( '\n Warning: No units matched id %d for "%s".', unit_ids_this_channel, un_filename );
-          continue;
+%           fprintf( '\n Warning: No units matched id %d for "%s".', unit_n_this_channel, un_filename );
+          error( 'No units matched id %d for "%s".', unit_n_this_channel, un_filename );
+%           continue;
         end
         
         current_unit = struct();

@@ -26,7 +26,7 @@ PATHS.plots = '/Volumes/My Passport/NICK/Chang Lab 2016/brains/free_viewing/plot
 %   DEPENDENCIES
 DEPENDS = struct();
 DEPENDS.repositories = { 'shared_utils', 'spike_helpers', 'plexon' ...
-  , 'jsonlab-1.5' };
+  , 'jsonlab-1.5', 'chronux_2_11' };
 DEPENDS.classes = { 'Edf2Mat' };
 
 %   CLUSTER
