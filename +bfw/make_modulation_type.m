@@ -1,10 +1,9 @@
 function make_modulation_type(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.psth_bin_size = 0.05;
 defaults.look_back = -0.5;
 defaults.look_ahead = 0.5;
-defaults.psth_bin_size = 0.05;
+defaults.psth_bin_size = 0.01;
 defaults.window_pre = [ -0.2, 0 ];
 defaults.window_post = [ 0, 0.2 ];
 defaults.raster_fs = 1e3;
@@ -96,6 +95,7 @@ all_indices = bfw.allcomb( {unit_indices, event_indices} );
 rasters = cell(1, size(all_indices, 1));
 psth = cell( size(rasters) );
 null_psth = cell( size(psth) );
+to_remove = false( size(psth) );
 
 final_raster_t = cell( size(psth) );
 final_psth_t = cell( size(psth) );
@@ -120,7 +120,10 @@ parfor i = 1:size(all_indices, 1)
   evts = evts(ind);
   event_times = event_times(ind);
   
-  if ( numel(event_times) == 0 ), continue; end
+  if ( numel(event_times) == 0 )
+    to_remove(i) = true;
+    continue; 
+  end
     
   [real_psth, psth_t] = looplessPSTH( spike_times, event_times ...
     , look_back, look_ahead, psth_bin_size );
@@ -186,6 +189,7 @@ parfor i = 1:size(all_indices, 1)
   end
   
   [raster, raster_t] = bfw.make_raster( spike_times, event_times, look_back, look_ahead, raster_fs );
+  raster = double( raster );
   
   final_raster_t{i} = raster_t;
   final_psth_t{i} = psth_t;
@@ -195,9 +199,14 @@ parfor i = 1:size(all_indices, 1)
   rasters{i} = Container( raster, raster_labels.labels );
 end
 
+psth( to_remove ) = [];
+null_psth( to_remove ) = [];
+rasters( to_remove )  = [];
+
 psth = Container.concat( psth );
 null_psth = Container.concat( null_psth );
 rasters = Container.concat( rasters );
+rasters.data = rasters.data == 1; % convert back to logical
 
 spike_struct = struct();
 spike_struct.is_link = false;
