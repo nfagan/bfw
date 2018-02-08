@@ -55,7 +55,7 @@ parfor i = 1:numel(event_files)
     continue;
   end
   
-  if ( events.adjustments.hasKey('to_plex_time') )
+  if ( events.adjustments.isKey('to_plex_time') )
     fprintf( ['\n Warning: This function expects events to be in .mat time,' ...
       , ' but they are in plexon time.'] );
     continue;

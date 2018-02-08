@@ -7,6 +7,10 @@ shared_inputs = { 'files_containing', file_spec, 'overwrite', false };
 
 bfw.make_unified( folders );
 
+%%  sync times
+
+bfw.make_sync_times( shared_inputs{:} );
+
 %%  edfs
 
 bfw.make_edfs( shared_inputs{:} );
@@ -57,9 +61,8 @@ bfw.make_spikes( shared_inputs{:} );
 
 %%  event aligned spikes
 
-bfw.make_event_aligned_spikes( shared_inputs{:} ...
-  , 'psth_bin_size', 0.05 ...
-  , 'compute_null', false ...
+bfw.make_aligned_spikes( shared_inputs{:} ...
+  , 'psth_bin_size', 0.01 ...
   );
 
 %%  lfp

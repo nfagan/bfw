@@ -4,6 +4,9 @@ defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
+conf = bfw.config.load();
+data_root = conf.PATHS.data_root;
+
 unified_p = bfw.get_intermediate_directory( 'unified' );
 save_p = bfw.get_intermediate_directory( 'lfp' );
 
