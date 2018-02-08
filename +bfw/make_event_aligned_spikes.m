@@ -55,6 +55,12 @@ parfor i = 1:numel(event_files)
     continue;
   end
   
+  if ( events.adjustments.hasKey('to_plex_time') )
+    fprintf( ['\n Warning: This function expects events to be in .mat time,' ...
+      , ' but they are in plexon time.'] );
+    continue;
+  end
+  
   sync = fload( sync_file );
   spikes = fload( spike_file );
   

@@ -2,7 +2,8 @@ import shared_utils.io.fload;
 
 conf = bfw.config.load();
 
-event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+% event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
 event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 
 zpsth = Container();
@@ -14,6 +15,10 @@ for i = 1:numel(event_mats)
   fprintf( '\n %d of %d', i, numel(event_mats) );
   
   spikes = shared_utils.io.fload( event_mats{i} );
+  
+  if ( isfield(spikes, 'is_link') && spikes.is_link ), continue; end
+  
+  spk_params = spikes.params;
   
   if ( i == 1 )
     bint = spikes.psth_t;
@@ -42,7 +47,9 @@ end
 %   null_psth('unit_id', ind_n) = unit_id_str;
 % end
 
-psth_info_str = sprintf( 'step_%d_ms', spikes.params.psth_bin_size * 1e3 );
+psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
+
+%%
 
 %%  plot population response matrix
 

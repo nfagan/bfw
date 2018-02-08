@@ -45,6 +45,12 @@ bfw.adjust.add_m_ordering( shared_inputs{:} ...
   , 'max_lag', 2 ...
 );
 
+%   convert to plexon time
+bfw.adjust.events_to_plex_time( shared_inputs{:} );
+
+%   concatenate events within day
+bfw.make_events_per_day( shared_inputs{:} );
+
 %%  spikes
 
 bfw.make_spikes( shared_inputs{:} );
