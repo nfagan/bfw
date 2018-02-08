@@ -1,8 +1,6 @@
 function make_sync_times(varargin)
 
-defaults = struct();
-defaults.files = [];
-defaults.files_containing = [];
+defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -27,11 +25,24 @@ for i = 1:numel(mats)
   fields = fieldnames( unified );
   first = fields{1};
   
+  unified_filename = unified.(first).unified_filename;
+  output_filename = fullfile( save_p, unified_filename );
+  
+  if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
+    continue;
+  end
+  
   pl2_file = unified.(first).plex_filename;
   pl2_dir = fullfile( unified.(first).plex_directory{:} );
   pl2_dir = fullfile( data_root, pl2_dir );
   
   pl2_file = fullfile( pl2_dir, pl2_file );
+  
+  if ( ~shared_utils.io.fexists(pl2_file) )
+    fprintf( '\n Skipping "%s" because the .pl2 file "%s" does not exist.' ...
+      , unified_filename, pl2_file );
+    continue;
+  end
   
   sync_pulse_raw = PL2Ad( pl2_file, pl2_map('sync_pulse') );
   start_pulse_raw = PL2Ad( pl2_file, pl2_map('session_start') );
@@ -89,10 +100,7 @@ for i = 1:numel(mats)
   end
   
   shared_utils.io.require_dir( save_p );
-  mat_dir_name = unified.(first).mat_directory_name;
-  mat_filename = unified.(first).mat_filename;
-  filename = bfw.make_intermediate_filename( mat_dir_name, mat_filename );
-  save( fullfile(save_p, filename), 'sync' );
+  save( output_filename, 'sync' );
 end
 
 end

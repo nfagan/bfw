@@ -123,6 +123,7 @@ parfor i = 1:numel(event_files)
   raster_cont = set_data( event_info, raster_matrix );
   
   spike_struct = struct();
+  spike_struct.event_info = event_info;
   spike_struct.raster = raster_cont;
   spike_struct.zpsth = Container();
   spike_struct.psth = psth_cont;

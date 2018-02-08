@@ -2,8 +2,8 @@ import shared_utils.io.fload;
 
 conf = bfw.config.load();
 
-% event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
-event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
+event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+% event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
 event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 
 zpsth = Container();
@@ -24,10 +24,11 @@ for i = 1:numel(event_mats)
     bint = spikes.psth_t;
   end
   
-  psth = psth.append( spikes.psth );
+%   psth = psth.append( spikes.psth );
+  psth = psth.append( spikes.psth.each1d({'looks_to', 'looks_by', 'look_order', 'unit_uuid'}, @rowops.nanmean) );
   zpsth = zpsth.append( spikes.zpsth );
   raster = raster.append( spikes.raster );
-  null_psth = null_psth.append( spikes.null );
+%   null_psth = null_psth.append( spikes.null );
 end
 % 
 % [psth, ~, C] = bfw.add_unit_id( psth );
@@ -465,7 +466,8 @@ pl = ContainerPlotter();
 date_dir = datestr( now, 'mmddyy' );
 
 % plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
-plt = psth({'m1', 'm2', 'mutual'});
+% plt = psth({'m1', 'm2', 'mutual'});
+plt = psth({ 'mutual'} );
 plt = plt.rm( 'unit_uuid__NaN' );
 
 kind = 'per_unit_rasters';
@@ -474,7 +476,10 @@ save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, p
 
 shared_utils.io.require_dir( save_plot_p );
 
-[I, C] = plt.get_indices( {'unit_uuid', 'looks_to', 'looks_by', 'region'} );
+figs_are = { 'unit_uuid', 'looks_to', 'looks_by', 'region', 'look_order' };
+title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
+
+[I, C] = plt.get_indices( figs_are );
 
 fig = figure(1);
 
@@ -494,7 +499,7 @@ for i = 1:numel(I)
   
 %   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'} );
 % 
-  title_str = strjoin( flat_uniques(subset, {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'}), ' | ' );
+  title_str = strjoin( flat_uniques(subset, title_is), ' | ' );
   meaned_data = nanmean( subset.data, 1 );
   err_data = ContainerPlotter.sem_1d( subset.data );
   

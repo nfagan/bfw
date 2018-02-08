@@ -69,6 +69,10 @@ for i = 1:numel(un_mats)
   total_number_of_channels = sum( arrayfun(@(x) numel(x.channels), region_map) );
   identifiers = cell( total_number_of_channels, 2 );
   rejects = false( total_number_of_channels, 1 );
+  
+  key_cols = containers.Map();
+  key_cols('channel') = 1;
+  key_cols('region') = 2;
     
   for j = 1:numel(region_map)
     
@@ -113,6 +117,7 @@ for i = 1:numel(un_mats)
   lfp.data = lfp_mat;
   lfp.unified_filename = un_filename;
   lfp.key = identifiers;
+  lfp.key_column_map = key_cols;
   lfp.sample_rate = sample_rate;
   lfp.id_times = (0:size(lfp_mat, 2)-1) * (1/sample_rate);
   
