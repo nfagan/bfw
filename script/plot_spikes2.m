@@ -49,7 +49,166 @@ end
 
 psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 
-%%
+%%  population response matrix, vs. null
+
+specificity = { 'unit_uuid', 'looks_by', 'looks_to' };
+
+pop_null_psth = null_psth.each1d( specificity, @rowops.nanmean );
+pop_psth = psth;
+
+pop_psth = pop_psth.rm( {'unit_uuid__NaN'} );
+pop_null_psth = pop_null_psth.rm( {'unit_uuid__NaN'} );
+
+window_pre = spk_params.window_pre;
+window_post = spk_params.window_post;
+
+window_pre_ind = bint >= window_pre(1) & bint < window_pre(2);
+window_post_ind = bint >= window_post(1) & bint < window_post(2);
+
+modulated_psth = Container();
+
+[I, C] = pop_psth.get_indices( specificity );
+
+for i = 1:numel(I)
+  subset_psth = pop_psth(I{i});
+  subset_null = pop_null_psth(C(i, :));
+  
+  assert( shape(subset_psth, 1) == 1 && shapes_match(subset_psth, subset_null) );
+  
+  cell_type = char( subset_psth('cell_type') );
+  
+  real_mean_pre = nanmean( subset_psth.data(:, window_pre_ind), 2 );
+  real_mean_post = nanmean( subset_psth.data(:, window_post_ind), 2 );
+  
+  fake_mean_pre = nanmean( subset_null.data(:, window_pre_ind), 2 );
+  fake_mean_post = nanmean( subset_null.data(:, window_post_ind), 2 );
+    
+  switch ( cell_type )
+    case 'pre'
+      mod_amt = abs( real_mean_pre - fake_mean_pre );
+    case 'post'
+      mod_amt = abs( real_mean_post - fake_mean_post );
+    case { 'pre_and_post' }
+      mod_pre = abs( real_mean_pre - fake_mean_pre );
+      mod_post = abs( real_mean_post - fake_mean_post );
+      mod_amt = mean( [mod_pre, mod_post] );
+    case 'none'
+      mod_amt = NaN;
+    otherwise
+      error( 'Unrecognized cell type "%s".', cell_type );
+  end
+  
+  modulated_psth = modulated_psth.append( set_data(subset_psth, mod_amt) );
+        
+end
+
+modulated_psth = modulated_psth( {'m1', 'mutual'} );
+
+[I, C] = modulated_psth.get_indices( {'unit_uuid'} );
+
+fig = figure(1); clf( fig );
+
+x_range = 1;
+y_range = 1;
+
+colors = containers.Map();
+colors( 'bla' ) = 'r';
+colors( 'accg' ) = 'b';
+colors( 'ofc' ) = 'g';
+
+res = Container();
+
+legend_components = containers.Map();
+
+for i = 1:numel(I)
+  subset = modulated_psth(I{i});
+  
+  regs = subset('region');
+  
+  assert( numel(regs) == 1 );
+  
+  reg = char( regs );
+  
+  current_color = colors( reg );
+
+  ind_face = subset.where( 'face' );
+  ind_eyes = subset.where( 'eyes' );
+  ind_mut = subset.where( 'mutual' );
+  ind_excl = subset.where( {'m1'} );
+
+  if ( ~any(ind_face) || ~any(ind_eyes) || ~any(ind_mut) || ~any(ind_excl) )
+    fprintf( '\n skipping "%s"', strjoin([regs{j}, C(i, :)], ', ') );
+    continue;
+  end
+
+  face = subset.data(ind_face);
+  eyes = subset.data(ind_eyes);
+  mut = subset.data(ind_mut);
+  excl = subset.data(ind_excl);
+
+  eyes_over_face = (eyes-face) ./ (face + eyes);
+  mut_over_excl = (mut-excl) ./ (mut + excl);
+
+  x_coord = eyes_over_face * x_range;
+  y_coord = mut_over_excl * y_range;
+
+  pairs = field_label_pairs( one(subset) );
+
+  res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
+
+  h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+
+  if ( ~legend_components.isKey(reg) )
+    legend_components(reg) = h;
+  end
+end
+
+[I, C] = res.get_indices( 'region' );
+
+corred = Container();
+
+for i = 1:numel(I)
+  reg = res(I{i});
+  reg( any(isnan(reg.data), 2) ) = [];
+  [r, p] = corr( reg.data(:, 1), reg.data(:, 2) );
+  corred = corred.append( set_data(one(reg), [r, p]) );
+end
+
+% title( 'ACCg' );
+
+hold on;
+plot( [-1, 1], [0, 0], 'k-' );
+plot( [0, 0], [-1, 1], 'k-' );
+
+xlabel( 'eyes over face' );
+ylabel( 'mutual over exclusive' );
+
+ylim( [-1, 1] );
+xlim( [-1, 1] );
+
+axis( 'square' );
+
+leg_keys = legend_components.keys();
+leg_elements = gobjects( 1, numel(leg_keys) );
+
+for i = 1:numel(leg_keys)
+  leg_elements(i) = legend_components(leg_keys{i}); 
+end
+
+legend( leg_elements, leg_keys );
+
+%   save
+kind = 'population_matrix_from_null';
+
+fname = strjoin( res.flat_uniques({'session_name'}), '_' );
+fname = sprintf( 'population_matrix_%s', fname );
+date_dir = datestr( now, 'mmddyy' );
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
+shared_utils.io.require_dir( save_plot_p );
+
+shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
+
 
 %%  plot population response matrix
 

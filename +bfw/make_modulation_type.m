@@ -195,7 +195,7 @@ parfor i = 1:size(all_indices, 1)
   final_psth_t{i} = psth_t;
   
   psth{i} = Container( real_psth, psth_labels.labels );
-  null_psth{i} = Container( fake_psth, psth_labels.labels );
+  null_psth{i} = Container( nanmean(fake_psth, 1), psth_labels.labels );
   rasters{i} = Container( raster, raster_labels.labels );
 end
 

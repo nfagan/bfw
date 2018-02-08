@@ -15,8 +15,16 @@ defaults.null_n_iterations = 1e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-event_p = bfw.get_intermediate_directory( 'events' );
+look_back = params.look_back;
+look_ahead = params.look_ahead;
+psth_bin_size = params.psth_bin_size;
+
+raster_fs = params.raster_fs;
+
+spike_p = bfw.get_intermediate_directory( 'spikes' );
+event_p = bfw.get_intermediate_directory( 'events_per_day' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
+output_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 
@@ -26,28 +34,88 @@ for i = 1:numel(event_files)
   events = fload( event_files{i} );
   un_filename = events.unified_filename;
   
+  output_file = fullfile( output_p, un_filename );
+  
+  if ( bfw.conditional_skip_file(output_file, params.overwrite) )
+    continue; 
+  end
+  
   unified = fload( fullfile(unified_p, un_filename) );
   
-  if ( ~events.adjustments.isKey('to_plex_time') )
-    fprintf( '\n Events have not yet been converted to plexon time for "%s".', un_filename );
+  if ( events.is_link )
+    events = fload( fullfile(event_p, events.data_file) );
+  end
+  
+  spike_file = fullfile( spike_p, un_filename );
+  
+  if ( ~shared_utils.io.fexists(spike_file) )
+    fprintf( '\n Spike file for "%s" does not exist.', un_filename );
     continue;
   end
   
-  session_name = unified.m1.mat_directory_name;
+  spikes = fload( spike_file );
   
-  if ( ~session_map.isKey(session_name) )
-    session_map(session_name) = events;
-  else
-    current = session_map(session_name);
-    session_map(session_name) = [ current; events ];
+  if ( spikes.is_link )
+    spikes = fload( fullfile(spike_p, spikes.data_file) );
   end
-end
+  
+  event_info = events.event_info;
+  event_times = event_info.data(:, events.event_info_key('times'));
+  
+  units = spikes.data;
+  
+  if ( numel(units) == 0 ), continue; end
+  
+  unit_inds = arrayfun( @(x) x, 1:numel(units), 'un', false );
+  event_inds = arrayfun( @(x) x, 1:numel(event_times), 'un', false );
+  all_inds = bfw.allcomb( {unit_inds, event_inds} );
+  
+  eg_labels = bfw.get_unit_labels( units(1) );
+  
+  new_cats = setdiff( eg_labels.categories(), event_info.categories() );
+  event_info = event_info.require_fields( new_cats );
+  
+  unit_labs = cell( 1, numel(units) );
+  unit_labs{1} = eg_labels;
+  
+  for j = 2:numel(units)
+    unit_labs{j} = bfw.get_unit_labels( units(j) );
+  end
+  
+  conts = cell( size(all_inds, 1), 1 );
+  
+  for j = 1:size(all_inds, 1)
+    unit_ind = all_inds{j, 1};
+    event_ind = all_inds{j, 2};
+    
+    unit = units(unit_ind);
+    event = event_times(event_ind);
+    
+    [c_psth, psth_t] = looplessPSTH( unit.times, event, look_back, look_ahead, psth_bin_size );
+    [c_raster, raster_t] = bfw.make_raster( unit.times, event, look_back, look_ahead, raster_fs );
+    
+    if ( j == 1 )
+      psth_matrix = zeros( size(all_inds, 1), numel(psth_t) );
+      raster_matrix = zeros( size(all_inds, 1), numel(raster_t) );
+    end
+    
+    conts{j} = unit_labs{unit_ind};
+    
+    psth_matrix(j, :) = c_psth;
+    raster_matrix(j, :) = c_raster;
+  end
+  
+  event_inds = all_inds(:, 2);
+  event_inds = [ event_inds{:} ];
+  unit_inds = all_inds(:, 1);
+  unit_inds = [ unit_inds{:} ];
+  u_unit_inds = unique( unit_inds );
+  
+  event_info = event_info(event_inds);
+  psth_cont = set_data( event_info, psth_matrix );
+  
+  d = 10;  
 
-session_names = session_map.keys();
-
-for i = 1:numel(session_names)
-  events = session_map(session_names{i});
-  one_session( events, params );
 end
 
 end
