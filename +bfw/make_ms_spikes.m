@@ -212,7 +212,8 @@ for i = 1:numel(un_mats)
         
         if ( ~any(ms_unit_id_ind) )
 %           fprintf( '\n Warning: No units matched id %d for "%s".', unit_n_this_channel, un_filename );
-          error( 'No units matched id %d for "%s".', unit_n_this_channel, un_filename );
+          error( 'No units matched id %d for channel %d in "%s".' ...
+            , unit_n_this_channel, xls_channel_id, un_filename );
 %           continue;
         end
         

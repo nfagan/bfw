@@ -57,7 +57,8 @@ bfw.make_events_per_day( shared_inputs{:} );
 
 %%  spikes
 
-bfw.make_spikes( shared_inputs{:} );
+% bfw.make_spikes( shared_inputs{:} );
+bfw.make_ms_spikes( shared_inputs{:} );
 
 %%  event aligned spikes
 
