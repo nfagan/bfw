@@ -17,6 +17,7 @@ lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_
 step_size = params.step_size;
 
 for i = 1:numel(lfp_mats)
+  fprintf( '\n %d of %d', i, numel(lfp_mats) );
   
   lfp = fload( lfp_mats{i} );
   
