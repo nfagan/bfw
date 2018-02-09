@@ -11,6 +11,8 @@ psth = Container();
 raster = Container();
 null_psth = Container();
 
+got_bin_t = false;
+
 for i = 1:numel(event_mats)
   fprintf( '\n %d of %d', i, numel(event_mats) );
   
@@ -20,15 +22,17 @@ for i = 1:numel(event_mats)
   
   spk_params = spikes.params;
   
-  if ( i == 1 )
+  if ( ~got_bin_t )
     bint = spikes.psth_t;
+    raster_t = spikes.raster_t;
+    got_bin_t = true;
   end
   
-%   psth = psth.append( spikes.psth );
-  psth = psth.append( spikes.psth.each1d({'looks_to', 'looks_by', 'look_order', 'unit_uuid'}, @rowops.nanmean) );
+  psth = psth.append( spikes.psth );
+%   psth = psth.append( spikes.psth.each1d({'looks_to', 'looks_by', 'unit_uuid'}, @rowops.nanmean) );
   zpsth = zpsth.append( spikes.zpsth );
   raster = raster.append( spikes.raster );
-%   null_psth = null_psth.append( spikes.null );
+  null_psth = null_psth.append( spikes.null );
 end
 % 
 % [psth, ~, C] = bfw.add_unit_id( psth );
@@ -56,9 +60,13 @@ specificity = { 'unit_uuid', 'looks_by', 'looks_to' };
 
 pop_null_psth = null_psth.each1d( specificity, @rowops.nanmean );
 pop_psth = psth;
+pop_raster = raster;
+
+n_event_thresh = 10;
 
 pop_psth = pop_psth.rm( {'unit_uuid__NaN'} );
 pop_null_psth = pop_null_psth.rm( {'unit_uuid__NaN'} );
+pop_raster = pop_raster.rm( {'unit_uuid__NaN'} );
 
 window_pre = spk_params.window_pre;
 window_post = spk_params.window_post;
@@ -70,13 +78,26 @@ modulated_psth = Container();
 
 [I, C] = pop_psth.get_indices( specificity );
 
+is_sig = true( numel(I), 1 );
+too_few_events = false( size(is_sig) );
+
 for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  
   subset_psth = pop_psth(I{i});
   subset_null = pop_null_psth(C(i, :));
+  subset_raster = pop_raster(C(i, :));
   
   assert( shape(subset_psth, 1) == 1 && shapes_match(subset_psth, subset_null) );
   
   cell_type = char( subset_psth('cell_type') );
+  
+  sum_spikes = sum( any(subset_raster.data, 2) );
+  
+  if ( ~any(sum_spikes >= n_event_thresh) || shape(subset_raster, 1) < n_event_thresh )
+    cell_type = 'none';
+    too_few_events(i) = true;
+  end
   
   real_mean_pre = nanmean( subset_psth.data(:, window_pre_ind), 2 );
   real_mean_post = nanmean( subset_psth.data(:, window_post_ind), 2 );
@@ -94,7 +115,11 @@ for i = 1:numel(I)
       mod_post = abs( real_mean_post - fake_mean_post );
       mod_amt = mean( [mod_pre, mod_post] );
     case 'none'
-      mod_amt = NaN;
+%       mod_amt = NaN;
+      mod_pre = abs( real_mean_pre - fake_mean_pre );
+      mod_post = abs( real_mean_post - fake_mean_post );
+      mod_amt = mean( [mod_pre, mod_post] );
+      is_sig(i) = false;
     otherwise
       error( 'Unrecognized cell type "%s".', cell_type );
   end
@@ -102,6 +127,49 @@ for i = 1:numel(I)
   modulated_psth = modulated_psth.append( set_data(subset_psth, mod_amt) );
         
 end
+
+%%  n sig
+
+stats_each = { 'looks_to', 'looks_by', 'region' };
+
+to_stats = pop_psth;
+to_stats = to_stats( {'mutual', 'm1', 'm2'} );
+
+n_sig = to_stats.for_each( stats_each, @counts, 'cell_type', to_stats('cell_type') );
+p_sig = to_stats.for_each( stats_each, @percentages, 'cell_type', to_stats('cell_type') );
+
+for i = 2
+
+figure(1); clf();
+
+pl = ContainerPlotter();
+pl.y_lim = [0, 100];
+
+if ( i == 1 )
+  plt = p_sig;
+  base_fname = 'population_percent_significant';
+else
+  plt = n_sig;
+  base_fname = 'population_n_significant';
+end
+
+plt.bar( pl, 'region', {'cell_type'}, {'looks_by', 'looks_to'} );
+
+%   save
+kind = 'significant_per_region';
+
+fname = strjoin( plt.flat_uniques({'session_name'}), '_' );
+fname = sprintf( '%s_%s', base_fname, fname );
+date_dir = datestr( now, 'mmddyy' );
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
+shared_utils.io.require_dir( save_plot_p );
+
+end
+
+shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
+
+%%
 
 modulated_psth = modulated_psth( {'m1', 'mutual'} );
 
@@ -124,6 +192,8 @@ legend_components = containers.Map();
 for i = 1:numel(I)
   subset = modulated_psth(I{i});
   
+  subset_is_sig = is_sig(I{i});
+  
   regs = subset('region');
   
   assert( numel(regs) == 1 );
@@ -141,11 +211,20 @@ for i = 1:numel(I)
     fprintf( '\n skipping "%s"', strjoin([regs{j}, C(i, :)], ', ') );
     continue;
   end
+  
+  all_is_sig = any(subset_is_sig(ind_face)) && any(subset_is_sig(ind_eyes)) && ...
+    any(subset_is_sig(ind_mut)) && any(subset_is_sig(ind_excl));
+  all_is_sig = all( all_is_sig );
 
   face = subset.data(ind_face);
   eyes = subset.data(ind_eyes);
   mut = subset.data(ind_mut);
   excl = subset.data(ind_excl);
+  
+  face = mean( face );
+  eyes = mean( eyes );
+  mut = mean( mut );
+  excl = mean( excl );
 
   eyes_over_face = (eyes-face) ./ (face + eyes);
   mut_over_excl = (mut-excl) ./ (mut + excl);
@@ -157,7 +236,11 @@ for i = 1:numel(I)
 
   res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
 
-  h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+  h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
+  
+  if ( all_is_sig )
+    h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+  end
 
   if ( ~legend_components.isKey(reg) )
     legend_components(reg) = h;
@@ -463,14 +546,18 @@ end
 
 pl = ContainerPlotter();
 
+n_event_thresh = 10;
+
 date_dir = datestr( now, 'mmddyy' );
 
 % plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
 % plt = psth({'m1', 'm2', 'mutual'});
-plt = psth({ 'mutual'} );
+plt = psth({ 'mutual', 'm1', 'm2'} );
 plt = plt.rm( 'unit_uuid__NaN' );
 
-kind = 'per_unit_rasters';
+% plt = psth({'m1', 'eyes', 'unit_uuid__101'});
+
+kind = 'per_unit_rasters_300_500';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
 
@@ -494,8 +581,16 @@ for i = 1:numel(I)
   pl.order_panels_by = { 'mutual', 'm1' };
   pl.add_ribbon = true;
   pl.add_legend = false;
+  pl.x_lim = [-0.3, 0.5];
   
   clf( fig );
+  
+  matching_raster = raster(C(i, :));
+  
+  if ( shape(matching_raster, 1) < n_event_thresh || ...
+      ~any(sum(any(matching_raster.data, 2)) >= n_event_thresh) )
+    continue;
+  end
   
 %   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_uuid', 'unit_rating'} );
 % 
@@ -511,12 +606,12 @@ for i = 1:numel(I)
   hold off;
   plot( bint, meaned_data, 'b', 'linewidth', 2 ); hold on;
   
+  xlim( [-0.3, 0.5] );
+  
 %   plot( bint, meaned_data+err_data, 'b' );
 %   plot( bint, meaned_data-err_data, 'b' );
   
   title( title_str );
-
-  matching_raster = raster(C(i, :));
   
   y_lims = get( gca, 'ylim' );
   x_lims = get( gca, 'xlim' );
@@ -537,6 +632,8 @@ for i = 1:numel(I)
   
   raster_data = matching_raster.data;
   
+  raster_data = raster_data(:, raster_t >= -0.3);
+  
   for j = 1:size(raster_data, 1)
     for k = 1:size(raster_data, 2)
       perc_y = (j-1) / size(raster_data, 1);
@@ -550,7 +647,7 @@ for i = 1:numel(I)
     end
   end
   
-  filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_uuid'}), '_' );
+  filename = strjoin( subset.flat_uniques(figs_are), '_' );
   
   shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, filename), {'png', 'epsc', 'fig'}, true );
   
