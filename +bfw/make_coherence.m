@@ -67,8 +67,6 @@ for i = 1:numel(lfp_mats)
   
   combinations = bfw.allcombn( {1:numel(channels_reg_a), 1:numel(channels_reg_b)} );
   
-  combinations = combinations(1:4, :);
-  
   is_valid = true( 1, size(combinations, 1) );  
   res = cell( 1, size(combinations, 1) );
   freqs = cell( size(res) );
