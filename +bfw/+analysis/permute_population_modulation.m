@@ -1,5 +1,8 @@
 function permute_population_modulation( psth, null_psth, psth_t, N, window_pre, window_post )
 
+psth = psth({'mutual', 'm1'});
+psth = psth({'eyes', 'face'});
+
 specificity = { 'unit_uuid', 'looks_by', 'looks_to' };
 
 window_pre_ind = psth_t >= window_pre(1) & psth_t < window_pre(2);
@@ -52,6 +55,11 @@ end
 
 %%
 
+ind_eyes = psth.where( 'eyes' );
+ind_face = psth.where( 'face' );
+ind_excl = psth.where( 'm1' );
+ind_
+
 [I, C] = psth.get_indices( 'unit_uuid' );
 
 for i = 1:numel(I)
@@ -61,8 +69,9 @@ for i = 1:numel(I)
   one_unit_labels = psth.labels.keep(index);
   
   
-    
 end
+
+
 
 for i = 1:numel(I)
   subset = modulated_psth(I{i});
