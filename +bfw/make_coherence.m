@@ -122,6 +122,7 @@ for i = 1:numel(lfp_mats)
   coh_struct.frequencies = freqs{1};
   coh_struct.unified_filename = un_filename;
   coh_struct.params = params;
+  coh_struct.align_params = lfp.params;
   
   do_save( output_filename, coh_struct, '-v7.3' );
 end

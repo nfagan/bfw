@@ -74,14 +74,13 @@ info_key = events.event_info_key;
 
 event_times_cont = set_data( event_info, event_info.data(:, info_key('times')) );
 
-% [I, C] = event_times_cont.get_indices( {'looks_to', 'looks_by'} );
+[I, C] = event_times_cont.get_indices( {'looks_to', 'looks_by'} );
 
 event_times_cont = event_times_cont({'mutual', 'm1', 'm2'});
 
-roi_indices = event_times_cont.get_indices( {'looks_to'} );
-mut_indices = event_times_cont.get_indices( {'looks_by'} );
-
-I = [ roi_indices; mut_indices ];
+% roi_indices = event_times_cont.get_indices( {'looks_to'} );
+% mut_indices = event_times_cont.get_indices( {'looks_by'} );
+% I = [ roi_indices; mut_indices ];
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;

@@ -2,8 +2,8 @@ import shared_utils.io.fload;
 
 conf = bfw.config.load();
 
-event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
-% event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
+% event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
 event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 
 zpsth = Container();
