@@ -24,7 +24,11 @@ for i = 1:numel(I)
   subset_psth = psth.data(I{i}, :);
   subset_null = null_psth(C(i, :));
   
-  assert( shape(subset_null, 1) == 1, 'Null must be a single value.' );
+  try
+    assert( shape(subset_null, 1) == 1, 'Null must be a single value.' );
+  catch
+    d = 10;
+  end
   
   cell_type = char( subset_null('cell_type') );
   

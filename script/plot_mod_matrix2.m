@@ -287,6 +287,12 @@ for j = 1:size(all_c, 1)
     
     if ( hist_sig1 <= 0.05 )
       plot( ax2, med1+0.05, ylims(2), 'k*' );
+      if ( hist_sig1 < .001 )
+        p_str = sprintf( 'p < .001' );
+      else
+        p_str = sprintf( 'p = %0.3f', hist_sig1 );
+      end
+      text( med1+0.1, ylims(2), p_str, 'parent', ax2 );    
     end
     
     histogram( ax3, Y, n_bins, 'facecolor', colors(reg) );
@@ -297,6 +303,12 @@ for j = 1:size(all_c, 1)
     
     if ( hist_sig2 <= 0.05 )
       plot( ax3, med2+0.05, ylims(2), 'k*' );
+      if ( hist_sig2 < .001 )
+        p_str = sprintf( 'p < .001' );
+      else
+        p_str = sprintf( 'p = %0.3f', hist_sig2 );
+      end
+      text( med2+0.1, ylims(2), p_str, 'parent', ax3 );
     end
     
     legend( ax2, reg );

@@ -74,7 +74,8 @@ info_key = events.event_info_key;
 
 event_times_cont = set_data( event_info, event_info.data(:, info_key('times')) );
 
-event_times_cont = event_times_cont({'mutual', 'm1', 'm2'});
+% event_times_cont = event_times_cont({'mutual', 'm1', 'm2'});
+event_times_cont = event_times_cont.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
 [I, C] = event_times_cont.get_indices( {'looks_to', 'looks_by'} );
 
