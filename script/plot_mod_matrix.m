@@ -180,7 +180,7 @@ res = Container();
 legend_components = containers.Map();
 
 % require_significant = 'any_eyes_face';
-require_significant = 'mut_excl';
+require_significant = 'any';
 
 for i = 1:numel(I)
   subset = plt_psth(I{i});
@@ -203,14 +203,16 @@ for i = 1:numel(I)
   is_sig_mut = subset_is_sig(ind_mut);
   is_sig_excl = subset_is_sig(ind_excl);
   
-  all_is_sig = is_sig_eyes && is_sig_face && is_sig_mut && is_sig_excl;
-  mut_excl_is_sig = is_sig_mut && is_sig_excl;
-  eyes_face_is_sig = is_sig_eyes && is_sig_face;
+%   all_is_sig = is_sig_eyes && is_sig_face && is_sig_mut && is_sig_excl;
+%   mut_excl_is_sig = is_sig_mut && is_sig_excl;
+%   eyes_face_is_sig = is_sig_eyes && is_sig_face;
+%   
+%   all_is_sig = true;
   
-  eyes = get_data( subset(ind_eyes) );
-  face = get_data( subset(ind_face) );
-  mut = get_data( subset(ind_mut) );
-  excl = get_data( subset(ind_excl) );
+  eyes = get_data( nanmean(subset(ind_eyes)) );
+  face = get_data( nanmean(subset(ind_face)) );
+  mut = get_data( nanmean(subset(ind_mut)) );
+  excl = get_data( nanmean(subset(ind_excl)) );
 
   eyes_over_face = (eyes-face) ./ (face + eyes);
   mut_over_excl = (mut-excl) ./ (mut + excl);
@@ -224,24 +226,26 @@ for i = 1:numel(I)
 
   h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
   
-  switch ( require_significant )
-    case 'any'
-      current_is_sig = is_sig_eyes || is_sig_face || is_sig_mut || is_sig_excl;
-    case 'any_mut_excl'
-      current_is_sig = is_sig_mut || is_sig_excl;
-    case 'any_eyes_face'
-      current_is_sig = is_sig_eyes || is_sig_face;
-    case 'or'
-      current_is_sig = mut_excl_is_sig || eyes_face_is_sig;
-    case 'and'
-      current_is_sig = all_is_sig;
-    case 'eyes_face'
-      current_is_sig = eyes_face_is_sig;
-    case 'mut_excl'
-      current_is_sig = mut_excl_is_sig;      
-    otherwise
-      error( 'Unrecognized require_significant type "%s".', require_significant );
-  end
+  current_is_sig = true;
+  
+%   switch ( require_significant )
+%     case 'any'
+%       current_is_sig = is_sig_eyes || is_sig_face || is_sig_mut || is_sig_excl;
+%     case 'any_mut_excl'
+%       current_is_sig = is_sig_mut || is_sig_excl;
+%     case 'any_eyes_face'
+%       current_is_sig = is_sig_eyes || is_sig_face;
+%     case 'or'
+%       current_is_sig = mut_excl_is_sig || eyes_face_is_sig;
+%     case 'and'
+%       current_is_sig = all_is_sig;
+%     case 'eyes_face'
+%       current_is_sig = eyes_face_is_sig;
+%     case 'mut_excl'
+%       current_is_sig = mut_excl_is_sig;      
+%     otherwise
+%       error( 'Unrecognized require_significant type "%s".', require_significant );
+%   end
   
   if ( current_is_sig )
     h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
@@ -296,4 +300,4 @@ save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
 shared_utils.io.require_dir( save_plot_p );
 
-shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
+% shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
