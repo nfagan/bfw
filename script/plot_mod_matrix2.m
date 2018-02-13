@@ -49,6 +49,13 @@ psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 c_psth = full_psth.rm( 'unit_uuid__NaN' );
 c_null_psth = null_psth.rm( 'unit_uuid__NaN' );
 
+missing_unit_ids = setdiff( full_psth('unit_uuid'), c_null_psth('unit_uuid') );
+
+if ( ~isempty(missing_unit_ids) )
+  fprintf( '\n Warning: %d units did not have events associated with them.', numel(missing_unit_ids) );
+  c_psth = c_psth.rm( missing_unit_ids );
+end
+
 window_pre = spk_params.window_pre;
 window_post = spk_params.window_post;
 
@@ -57,9 +64,122 @@ N = 1000;
 [modulation, sig] = ...
   bfw.analysis.permute_population_modulation( c_psth, c_null_psth, psth_t, N, window_pre, window_post );
 
+%%  subtract null
+
+to_sub = c_psth.rm( {'m1_leads_m2', 'm2_leads_m1'} );
+psth_sub_null = bfw.subtract_null_psth( to_sub, c_null_psth, psth_t, window_pre, window_post, false );
+
+%%  anova -- subtract null
+
+to_anova = psth_sub_null({'m1', 'mutual'});
+to_anova = to_anova.replace( 'm1', 'exclusive' );
+
+groups_are = { 'looks_by', 'looks_to' };
+[I, C] = to_anova.get_indices( {'unit_uuid', 'channel'} );
+
+to_anova = to_anova.require_fields( {'anova_factor'} );
+
+anova_results = Container();
+
+for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  
+  one_unit = to_anova(I{i});
+  groups = cellfun( @(x) one_unit(x, :), groups_are, 'un', false );
+  [p, t, stats] = anovan( one_unit.data, groups, 'model', 'full', 'display', 'off' );
+  [c, means, ~, gnames] = multcompare( stats, 'dimension', 1:2, 'display', 'on' );
+  
+  gnames = strrep( gnames, 'X1=', '' );
+  gnames = strrep( gnames, 'X2=', '' );
+  
+  subset_c = arrayfun( @(x) gnames{x}, c(:, 1:2), 'un', false );
+  rest_c = arrayfun( @(x) x, c(:, 3:end), 'un', false );
+  recombined_c = [ subset_c, rest_c ];
+  
+  x1_sig = p(1) <= .05;
+  x2_sig = p(2) <= .05;
+  x1_x2_sig = p(3) <= .05;
+  
+  base_cont = one( one_unit );
+  
+  post_comparisons_sig = c(:, end) <= .05;
+  
+  if ( ~any(p <= .05) )
+    base_cont('anova_factor') = 'anova__none';
+    anova_results = anova_results.append( base_cont );
+    continue;
+  end
+  
+  x1_str = strjoin( one_unit(groups_are{1}), ' vs. ' );
+  x2_str = strjoin( one_unit(groups_are{2}), ' vs. ' );
+  x1_x2_str = strjoin( groups_are, ' X ' );
+  
+  if ( x1_sig )
+    x1_cont = base_cont;
+    x1_cont('anova_factor') = x1_str;
+    anova_results = anova_results.append( x1_cont );
+  end
+  
+  if ( x2_sig )
+    x1_cont = base_cont;
+    x1_cont('anova_factor') = x2_str;
+    anova_results = anova_results.append( x1_cont );
+  end
+  
+  if ( x1_x2_sig )
+    x1_cont = base_cont;
+    x1_cont('anova_factor') = x1_x2_str;
+    anova_results = anova_results.append( x1_cont );
+  end
+  
+  if ( ~any(post_comparisons_sig) )
+    continue;
+  end
+  
+  subset_sig = recombined_c(post_comparisons_sig, :);
+  
+  for j = 1:size(subset_sig, 1)
+    subset_gnames = subset_sig(j, 1:2);
+    x1_cont = base_cont;
+    x1_cont('anova_factor') = strjoin( subset_gnames, '__' );
+    anova_results = anova_results.append( x1_cont );
+  end
+end
+
+%%
+factor_ids = { x1_str, x2_str, x1_x2_str, 'anova__none' };
+to_stats = anova_results;
+to_stats = to_stats(factor_ids);
+
+f = figure(1); 
+clf( f );
+
+pl = ContainerPlotter();
+pl.add_legend = false;
+
+count_cat = 'anova_factor';
+count_labs = to_stats.pcombs( count_cat );
+
+N = to_stats.for_each( {'region'}, @counts, count_cat, count_labs );
+P = to_stats.for_each( {'region'}, @percentages, count_cat, count_labs );
+
+N.labels.labels = strrep( N.labels.labels, 'exclusive', 'excl' );
+N.labels.labels = strrep( N.labels.labels, 'mutual', 'mut' );
+
+pl.bar( N, 'anova_factor', 'looks_to', 'region' );
+
+f2 = figure(2);
+clf( f2 );
+
+to_stats = anova_results.rm( factor_ids );
+count_cat = 'anova_factor';
+count_labs = to_stats.pcombs( count_cat );
+N = to_stats.for_each( {'region'}, @counts, count_cat, count_labs );
+
+pl.bar( N, 'anova_factor', 'looks_to', 'region' );
 %%  n + percent cells by type
 
-to_stats = psth;
+to_stats = psth.rm( 'unit_uuid__NaN' );
 
 percs_for = { 'cell_type' };
 percs_c = to_stats.pcombs( percs_for );
@@ -136,6 +256,7 @@ all_c = modulation.pcombs( {'region'} );
 corr_results = Container();
 
 for j = 1:size(all_c, 1)
+  fprintf( '\n %d of %d', j, size(all_c, 1) );
 
   plt_psth = modulation(all_c(j, :));
   plt_sig = sig(all_c(j, :));
@@ -157,7 +278,7 @@ for j = 1:size(all_c, 1)
   require_significant = '';
   
   sig_data = zeros( numel(I), 2 );
-  c_is_sig = false( numel(I), 1 );
+  c_is_sig = true( numel(I), 1 );
 
   for i = 1:numel(I)
     subset = plt_psth(I{i});
@@ -174,28 +295,29 @@ for j = 1:size(all_c, 1)
     x_coord = subset.data(2);
     y_coord = subset.data(1);
 
-%     h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
-
     ef_is_sig = subset_is_sig.data(1) <= alpha;
     me_is_sig = subset_is_sig.data(2) <= alpha;
+    
+    sig_data(i, :) = [ x_coord, y_coord ];
     
     current_is_sig = ef_is_sig || me_is_sig;
     
     if ( current_is_sig )
-      sig_data(i, :) = [ x_coord, y_coord ];
-      c_is_sig(i) = true;
-    end
-    
-    if ( ~(ef_is_sig || me_is_sig) )
+      h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+    else
       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
     end
-    if ( ef_is_sig || me_is_sig )
-      h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
-    elseif ( ef_is_sig )
-      plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 2 ); hold on;
-    elseif ( me_is_sig )
-      plot( x_coord, y_coord, sprintf('%s+', current_color), 'MarkerFaceColor', 'k', 'markersize', 6 ); hold on;
-    end
+    
+%     if ( ~(ef_is_sig || me_is_sig) )
+%       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
+%     end
+%     if ( ef_is_sig || me_is_sig )
+%       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+%     elseif ( ef_is_sig )
+%       plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 2 ); hold on;
+%     elseif ( me_is_sig )
+%       plot( x_coord, y_coord, sprintf('%s+', current_color), 'MarkerFaceColor', 'k', 'markersize', 6 ); hold on;
+%     end
 
     if ( ~legend_components.isKey(reg) )
       legend_components(reg) = h;
@@ -215,6 +337,14 @@ for j = 1:size(all_c, 1)
   
   if ( corr_p <= 0.05 )
     plot( 1, res(2) + 0.05, 'k*' );
+    if ( corr_p < .001 )
+      p_str = sprintf( 'p < .001' );
+    else
+      p_str = sprintf( 'p = %0.3f', corr_p );
+    end
+    r_str = sprintf( 'r = %0.3f', corr_r );
+    full_str = sprintf( '(%s, %s)', r_str, p_str );
+    text( 0.75, res(2) - 0.1, full_str );    
   end
   
   corr_results = corr_results.append( set_data(one(plt_psth), [corr_r, corr_p]) );
@@ -257,7 +387,7 @@ for j = 1:size(all_c, 1)
   
 %   n_bins = 20; 
   n_bins = -1:0.1:1;
-  ylims = [0, 30];
+  ylims = [0, 35];
   
   for i = 1:size(reg_combs, 1)
     ind = plt_psth.where( reg_combs(i, :) );

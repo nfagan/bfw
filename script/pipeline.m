@@ -70,6 +70,10 @@ bfw.make_aligned_spikes( shared_inputs{:} ...
 
 bfw.make_lfp( shared_inputs{:} );
 
+%%  event aligned lfp
+
+bfw.make_aligned_lfp( shared_inputs{:} );
+
 %%  modulation type
 
 bfw.make_modulation_type( shared_inputs{:} ...

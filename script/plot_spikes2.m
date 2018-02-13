@@ -546,7 +546,7 @@ end
 
 pl = ContainerPlotter();
 
-n_event_thresh = 10;
+n_event_thresh = -Inf();
 
 date_dir = datestr( now, 'mmddyy' );
 
@@ -554,16 +554,17 @@ date_dir = datestr( now, 'mmddyy' );
 % plt = psth({'m1', 'm2', 'mutual'});
 plt = psth({ 'mutual', 'm1', 'm2'} );
 plt = plt.rm( 'unit_uuid__NaN' );
+plt = plt({'mutual'});
 
 % plt = psth({'m1', 'eyes', 'unit_uuid__101'});
 
-kind = 'per_unit_rasters_300_500';
+kind = 'per_unit_rasters';
 
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
 
 shared_utils.io.require_dir( save_plot_p );
 
-figs_are = { 'unit_uuid', 'looks_to', 'looks_by', 'region', 'look_order' };
+figs_are = { 'unit_uuid', 'looks_to', 'looks_by', 'region' };
 title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
 
 [I, C] = plt.get_indices( figs_are );
@@ -587,8 +588,7 @@ for i = 1:numel(I)
   
   matching_raster = raster(C(i, :));
   
-  if ( shape(matching_raster, 1) < n_event_thresh || ...
-      ~any(sum(any(matching_raster.data, 2)) >= n_event_thresh) )
+  if ( shape(matching_raster, 1) < n_event_thresh )
     continue;
   end
   
