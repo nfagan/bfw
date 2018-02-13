@@ -113,7 +113,7 @@ to_remove = false( size(psth) );
 final_raster_t = cell( size(psth) );
 final_psth_t = cell( size(psth) );
 
-for i = 1:size(all_indices, 1)
+parfor i = 1:size(all_indices, 1)
   unit_index = all_indices{i, 1};
   event_index = all_indices{i, 2};
   
