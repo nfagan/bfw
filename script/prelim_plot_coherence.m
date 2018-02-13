@@ -1,5 +1,9 @@
+conf = bfw.config.load();
+
 coh_mats = bfw.require_intermediate_mats( [], bfw.get_intermediate_directory('at_coherence') );
 lfp_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
+
+plot_p = fullfile( conf.PATHS.data_root, 'plots', 'coherence', datestr(now, 'mmddyy') );
 
 coh = Container();
 
@@ -52,14 +56,53 @@ specificity = { 'looks_to', 'looks_by', 'region' };
 
 meaned_coh = coh.each1d( specificity, @rowops.nanmean );
 
-%%
+%%  plot regular
 
-plt = meaned_coh;
-plt = plt({'mutual'}) - plt({'m1'});
+to_plt = meaned_coh;
+
+[I, C] = to_plt.get_indices( {'looks_by'} );
+
+for i = 1:numel(I)
+  
+plt = to_plt(I{i});
 
 figure(1); clf();
 
 plt.spectrogram( specificity ...
   , 'shape', [2, 3] ...
-  , 'frequencies', [15, 100] ...
+  , 'frequencies', [0, 100] ...
   );
+
+kind = 'non_subtracted_coherence';
+fnames_are = { 'region', 'looks_to', 'looks_by' };
+fname = strjoin( flat_uniques(plt, fnames_are), '_' );
+full_plotp = fullfile( plot_p, kind );
+full_fname = fullfile( full_plotp, fname );
+
+shared_utils.io.require_dir( full_plotp );
+shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'} );
+
+end
+
+%%  plot subtracted
+
+plt = meaned_coh;
+plt = plt({'mutual'}) - plt({'m1'});
+plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
+
+figure(1); clf();
+
+plt.spectrogram( specificity ...
+  , 'shape', [2, 3] ...
+  , 'frequencies', [0, 100] ...
+  );
+
+kind = 'subtracted_coherence';
+fnames_are = { 'region', 'looks_to', 'looks_by' };
+fname = strjoin( flat_uniques(plt, fnames_are), '_' );
+full_plotp = fullfile( plot_p, kind );
+full_fname = fullfile( full_plotp, fname );
+
+shared_utils.io.require_dir( full_plotp );
+shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'} );
+

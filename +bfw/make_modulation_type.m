@@ -10,6 +10,7 @@ defaults.raster_fs = 1e3;
 defaults.null_fs = 40e3;
 defaults.null_n_iterations = 1e3;
 defaults.alpha = 0.025;
+defaults.sig_test_type = 'z';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -92,6 +93,10 @@ raster_fs = params.raster_fs;
 window_pre = params.window_pre;
 window_post = params.window_post;
 alpha = params.alpha;
+sig_method = params.sig_test_type;
+
+assert( any(strcmp({'z', 'gt'}, sig_method)), 'Unrecognized `sig_test_type` "%s".' ...
+  , sig_method );
 
 output_p = params.output_p;
 
@@ -102,6 +107,7 @@ all_indices = bfw.allcomb( {unit_indices, event_indices} );
 rasters = cell(1, size(all_indices, 1));
 psth = cell( size(rasters) );
 null_psth = cell( size(psth) );
+zpsths = cell( size(psth) );
 to_remove = false( size(psth) );
 
 final_raster_t = cell( size(psth) );
@@ -146,21 +152,17 @@ parfor i = 1:size(all_indices, 1)
   
   fake_pre = nanmean( fake_psth(:, window_pre_ind), 2 );
   fake_post = nanmean( fake_psth(:, window_post_ind), 2 );
-  
-  n_greater_pre = 0;
-  n_greater_post = 0;
-  
-  for j = 1:n_iterations
-    if ( real_pre > fake_pre(j) )
-      n_greater_pre = n_greater_pre + 1;
-    end
-    if ( real_post > fake_post(j) )
-      n_greater_post = n_greater_post + 1;
-    end
+ 
+  if ( strcmp(sig_method, 'gt') )
+    p_pre = test_gt( real_pre, fake_pre );
+    p_post = test_gt( real_pre, fake_pre );
+    z_pre = NaN;
+    z_post = NaN;
+  elseif ( strcmp(sig_method, 'z') )
+    [z_pre, p_pre] = test_z( real_pre, fake_pre );
+    [z_post, p_post] = test_z( real_post, fake_post );
+    %   end test-z
   end
-  
-  p_pre = 1 - (n_greater_pre / n_iterations);
-  p_post = 1 - (n_greater_post / n_iterations);
   
   sig_pre = p_pre <= alpha;
   sig_post = p_post <= alpha;
@@ -168,7 +170,6 @@ parfor i = 1:size(all_indices, 1)
   is_pre_only = sig_pre && ~sig_post;
   is_post_only = sig_post && ~sig_pre;
   is_pre_and_post = sig_pre && sig_post;
-  is_none = ~sig_pre && ~sig_post;
   
   if ( is_pre_only )
     cell_type = 'pre';
@@ -180,7 +181,32 @@ parfor i = 1:size(all_indices, 1)
     cell_type = 'none';
   end
   
-  unit_labels = bfw.get_unit_labels( unit, 'cell_type', cell_type );
+  mean_fake_pre = nanmean( fake_pre, 1 );
+  mean_fake_post = nanmean( fake_post, 1 );
+  
+  if ( strcmp(cell_type, 'pre') )
+    mod_sign = sign( real_pre - mean_fake_pre );
+  elseif ( strcmp(cell_type, 'post') )
+    mod_sign = sign( real_post - mean_fake_post );
+  else
+    if ( abs(mean_fake_pre) >= abs(mean_fake_post) )
+      mod_sign = sign( real_pre - mean_fake_pre );
+    else
+      mod_sign = sign( real_post - mean_fake_post );
+    end
+  end
+  
+  if ( mod_sign == -1 )
+    mod_direction = 'suppress';
+  elseif ( mod_sign == 1 )
+    mod_direction = 'enhance';
+  else
+    assert( mod_sign == 0, 'Mod sign was %d', mod_sign );
+    mod_direction = 'direction__null';
+  end
+  
+  unit_labels = bfw.get_unit_labels( unit ...
+    , 'cell_type', cell_type, 'modulation_direction', mod_direction );
   
   psth_labels = one( evts );
   raster_labels = evts;
@@ -204,13 +230,16 @@ parfor i = 1:size(all_indices, 1)
   psth{i} = Container( real_psth, psth_labels.labels );
   null_psth{i} = Container( nanmean(fake_psth, 1), psth_labels.labels );
   rasters{i} = Container( raster, raster_labels.labels );
+  zpsths{i} = Container( [z_pre, z_post], psth_labels.labels );
 end
 
 psth( to_remove ) = [];
 null_psth( to_remove ) = [];
 rasters( to_remove )  = [];
+zpsths( to_remove) = [];
 
 psth = Container.concat( psth );
+zpsth = Container.concat( zpsths );
 null_psth = Container.concat( null_psth );
 rasters = Container.concat( rasters );
 rasters.data = rasters.data == 1; % convert back to logical
@@ -218,7 +247,7 @@ rasters.data = rasters.data == 1; % convert back to logical
 spike_struct = struct();
 spike_struct.is_link = false;
 spike_struct.raster = rasters;
-spike_struct.zpsth = Container();
+spike_struct.zpsth = zpsth;
 spike_struct.psth = psth;
 spike_struct.null = null_psth;
 spike_struct.psth_t = final_psth_t{1};
@@ -231,3 +260,36 @@ shared_utils.io.require_dir( output_p );
 save( fullfile(output_p, events.unified_filename), 'spike_struct' );
 
 end
+
+function [z, p] = test_z( real, fake )
+
+means = nanmean( fake, 1 );
+devs = std( fake, [], 1 );
+z = (real - means) ./ devs;
+p = 1 - normcdf( z );
+
+end
+
+function p = test_gt( real, fake )
+
+n_iters = numel( fake );
+n_greater = sum( real > fake );
+p = 1 - ( n_greater / n_iters );
+
+end
+
+%   n_greater_pre = 0;
+%   n_greater_post = 0;
+%   
+%   for j = 1:n_iterations
+%     if ( real_pre > fake_pre(j) )
+%       n_greater_pre = n_greater_pre + 1;
+%     end
+%     if ( real_post > fake_post(j) )
+%       n_greater_post = n_greater_post + 1;
+%     end
+%   end
+%   
+%   p_pre = 1 - (n_greater_pre / n_iterations);
+%   p_post = 1 - (n_greater_post / n_iterations);
+  % end test one direction: >

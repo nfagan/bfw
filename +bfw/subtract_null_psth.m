@@ -13,6 +13,8 @@ modulation_amount = zeros( size(psth.data, 1), 1 );
 
 mod_amount = Container();
 
+null_psth = null_psth.require_fields( 'modulation_direction' );
+
 for i = 1:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
   
@@ -36,24 +38,51 @@ for i = 1:numel(I)
     
   switch ( cell_type )
     case 'pre'
-      mod_amt = abs( real_mean_pre - fake_mean_pre );
+      signed_mod_amount = real_mean_pre - fake_mean_pre;
+      mod_amt = abs( signed_mod_amount );
+      signed_mod_amount = sign( signed_mod_amount );
     case 'post'
-      mod_amt = abs( real_mean_post - fake_mean_post );
+      signed_mod_amount = real_mean_post - fake_mean_post;
+      mod_amt = abs( signed_mod_amount );
+      signed_mod_amount = sign( signed_mod_amount );
     case { 'pre_and_post' }
       mod_pre = abs( real_mean_pre - fake_mean_pre );
       mod_post = abs( real_mean_post - fake_mean_post );
       mod_amt = nanmean( [mod_pre, mod_post], 2 );
+      
+      if ( take_mean )
+        pre_gt = mod_pre >= mod_post;
+        signed_mod_amount = zeros( size(mod_pre) );
+        signed_mod_amount(pre_gt) = sign( real_mean_pre(pre_gt) - fake_mean_pre(pre_gt) );
+        signed_mod_amount(~pre_gt) = sign( real_mean_post(~pre_gt) - fake_mean_post(~pre_gt) );
+      end
     case 'none'
       mod_pre = abs( real_mean_pre - fake_mean_pre );
       mod_post = abs( real_mean_post - fake_mean_post );
       mod_amt = nanmean( [mod_pre, mod_post], 2 );
       is_sig(i) = false;
+      
+      if ( take_mean )
+        pre_gt = mod_pre >= mod_post;
+        signed_mod_amount = zeros( size(mod_pre) );
+        signed_mod_amount(pre_gt) = sign( real_mean_pre(pre_gt) - fake_mean_pre(pre_gt) );
+        signed_mod_amount(~pre_gt) = sign( real_mean_post(~pre_gt) - fake_mean_post(~pre_gt) );
+      end
     otherwise
       error( 'Unrecognized cell type "%s".', cell_type );
   end
   
   if ( take_mean )
-    mod_amount = mod_amount.append( set_data(one(subset_null), mod_amt) );
+    current = set_data( one(subset_null), mod_amt );
+    if ( signed_mod_amount == 1 )
+      direction = 'enhance';
+    elseif ( signed_mod_amount == -1 )
+      direction = 'suppress';
+    else
+      direction = 'direction__null';
+    end
+    current('modulation_direction') = direction;
+    mod_amount = mod_amount.append( current );
   else
     modulation_amount(I{i}) = mod_amt;       
   end

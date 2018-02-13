@@ -44,10 +44,11 @@ end
 
 psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 
-%%
+%%  remove non-existent units
 
 c_psth = full_psth.rm( 'unit_uuid__NaN' );
 c_null_psth = null_psth.rm( 'unit_uuid__NaN' );
+c_at_psth = psth.rm( 'unit_uuid__NaN' );
 
 missing_unit_ids = setdiff( full_psth('unit_uuid'), c_null_psth('unit_uuid') );
 
@@ -55,6 +56,8 @@ if ( ~isempty(missing_unit_ids) )
   fprintf( '\n Warning: %d units did not have events associated with them.', numel(missing_unit_ids) );
   c_psth = c_psth.rm( missing_unit_ids );
 end
+
+%%  calculate modulation index
 
 window_pre = spk_params.window_pre;
 window_post = spk_params.window_post;
@@ -66,8 +69,104 @@ N = 1000;
 
 %%  subtract null
 
-to_sub = c_psth.rm( {'m1_leads_m2', 'm2_leads_m1'} );
-psth_sub_null = bfw.subtract_null_psth( to_sub, c_null_psth, psth_t, window_pre, window_post, false );
+to_sub_full = c_psth.rm( {'m1_leads_m2', 'm2_leads_m1'} );
+to_sub_at = c_at_psth.rm( {'m1_leads_m2', 'm2_leads_m2'} );
+
+psth_sub_null = bfw.subtract_null_psth( to_sub_full, c_null_psth, psth_t, window_pre, window_post, false );
+psth_sub_null_at = bfw.subtract_null_psth( to_sub_at, c_null_psth, psth_t, window_pre, window_post, true );
+
+%%  n cells by area
+
+[I, C] = modulation.get_indices({'looks_to', 'looks_by', 'unit_uuid', 'channel'});
+%   ensure all indices refer to a single unit
+cellfun( @(x) assert(sum(x) == 1), I );
+
+to_count = modulation.each1d( {'looks_to', 'looks_by', 'unit_uuid', 'channel'}, @(x) x(1) );
+to_count = to_count.counts( 'region' );
+
+%%  plot cell types by category
+
+by_type = c_null_psth;
+by_type = by_type({'mutual', 'm1'});
+by_type = by_type.replace( 'm1', 'exclusive' );
+
+[I, C] = by_type.get_indices({'looks_to', 'looks_by', 'unit_uuid', 'channel'});
+
+%   ensure all indices refer to a single unit
+cellfun( @(x) assert(sum(x) == 1), I );
+
+stats_each = { 'looks_to', 'looks_by', 'region' };
+percs_for = { 'cell_type' };
+percs_of = by_type.pcombs( percs_for );
+
+N = by_type.for_each( stats_each, @counts, percs_for, percs_of );
+P = by_type.for_each( stats_each, @percentages, percs_for, percs_of );
+
+P = P.rm( 'none' );
+
+pl = ContainerPlotter();
+f = figure(1); clf( f );
+
+pl.order_by = { 'pre', 'post', 'pre_and_post', 'none' };
+
+bar( pl, P, 'cell_type', {'looks_to', 'looks_by'}, 'region' );
+
+f2 = FigureEdits( f );
+f2.one_legend();
+
+kind = 'Cell-type';
+date_dir = datestr( now, 'mmddyy' );
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
+shared_utils.io.require_dir( save_plot_p );
+fname = kind;
+
+formats = { 'epsc', 'png', 'fig' };
+
+shared_utils.plot.save_fig( f, fullfile(save_plot_p, fname), formats, true );
+
+%%  plot cell modulation direction by category
+
+by_mod_dir = psth_sub_null_at;
+by_mod_dir = by_mod_dir({'mutual', 'm1'});
+% by_mod_dir = by_mod_dir.rm( 'none' );
+
+[I, C] = by_mod_dir.get_indices({'looks_to', 'looks_by', 'unit_uuid', 'channel'});
+
+%   ensure all indices refer to a single unit
+cellfun( @(x) assert(sum(x) == 1), I );
+
+stats_each = { 'looks_to', 'looks_by', 'region', 'cell_type' };
+percs_for = { 'modulation_direction' };
+percs_of = by_mod_dir.pcombs( percs_for );
+
+N = by_mod_dir.for_each( stats_each, @counts, percs_for, percs_of );
+P = by_mod_dir.for_each( stats_each, @percentages, percs_for, percs_of );
+
+P = P.rm( 'none' );
+
+pl = ContainerPlotter();
+f = figure(1); clf( f );
+colormap( 'default' );
+
+pl.order_by = { 'pre', 'post', 'pre_and_post', 'none' };
+
+bar( pl, P, 'modulation_direction', {'looks_to', 'looks_by', 'cell_type'}, {'region'} );
+
+f2 = FigureEdits( f );
+f2.one_legend();
+
+kind = 'Cell-type';
+date_dir = datestr( now, 'mmddyy' );
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
+save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
+shared_utils.io.require_dir( save_plot_p );
+fname = kind;
+
+formats = { 'epsc', 'png', 'fig' };
+
+% shared_utils.plot.save_fig( f, fullfile(save_plot_p, fname), formats, true );
+
 
 %%  anova -- subtract null
 

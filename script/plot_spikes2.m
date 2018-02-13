@@ -546,7 +546,7 @@ end
 
 pl = ContainerPlotter();
 
-n_event_thresh = -Inf();
+n_event_thresh = 10;
 
 date_dir = datestr( now, 'mmddyy' );
 
@@ -554,7 +554,7 @@ date_dir = datestr( now, 'mmddyy' );
 % plt = psth({'m1', 'm2', 'mutual'});
 plt = psth({ 'mutual', 'm1', 'm2'} );
 plt = plt.rm( 'unit_uuid__NaN' );
-plt = plt({'mutual'});
+plt = plt({'m1', 'm2'});
 
 % plt = psth({'m1', 'eyes', 'unit_uuid__101'});
 
