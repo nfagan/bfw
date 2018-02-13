@@ -113,7 +113,7 @@ to_remove = false( size(psth) );
 final_raster_t = cell( size(psth) );
 final_psth_t = cell( size(psth) );
 
-parfor i = 1:size(all_indices, 1)
+for i = 1:size(all_indices, 1)
   unit_index = all_indices{i, 1};
   event_index = all_indices{i, 2};
   
@@ -191,20 +191,21 @@ parfor i = 1:size(all_indices, 1)
   elseif ( strcmp(cell_type, 'post') )
     mod_sign = sign( real_post - mean_fake_post );
   else
-    if ( abs(mean_fake_pre) >= abs(mean_fake_post) )
-      mod_sign = sign( real_pre - mean_fake_pre );
+    mod_sign_pre = sign( real_pre - mean_fake_pre );
+    mod_sign_post = sign( real_post - mean_fake_post );
+    if ( mod_sign_pre == mod_sign_post )
+      mod_sign = mod_sign_pre;
     else
-      mod_sign = sign( real_post - mean_fake_post );
+      mod_sign = 2;
     end
   end
   
-  if ( mod_sign == -1 )
-    mod_direction = 'suppress';
-  elseif ( mod_sign == 1 )
-    mod_direction = 'enhance';
+  if ( mod_sign ~= 2 )
+    mod_direction = get_string_modulation_direction( mod_sign );
   else
-    assert( mod_sign == 0, 'Mod sign was %d', mod_sign );
-    mod_direction = 'direction__null';
+    mod_pre = get_string_modulation_direction( mod_sign_pre );
+    mod_post = get_string_modulation_direction( mod_sign_post );
+    mod_direction = strjoin( {mod_pre, mod_post}, '_' );
   end
   
   unit_labels = bfw.get_unit_labels( unit ...
@@ -260,6 +261,20 @@ spike_struct.params = params;
 shared_utils.io.require_dir( output_p );
 
 save( fullfile(output_p, events.unified_filename), 'spike_struct' );
+
+end
+
+function mod_direction = get_string_modulation_direction( mod_sign )
+
+if ( mod_sign == -1 )
+  mod_direction = 'suppress';
+elseif ( mod_sign == 1 )
+  mod_direction = 'enhance';
+elseif ( mod_sign == 0 )
+  mod_direction = 'direction__null';
+else
+  error( 'Mod sign was %d', mod_sign );
+end
 
 end
 
