@@ -162,6 +162,8 @@ parfor i = 1:size(all_indices, 1)
     [z_pre, p_pre] = test_z( real_pre, fake_pre );
     [z_post, p_post] = test_z( real_post, fake_post );
     %   end test-z
+  else
+    assert( false );
   end
   
   sig_pre = p_pre <= alpha;
