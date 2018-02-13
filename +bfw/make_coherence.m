@@ -44,6 +44,8 @@ for i = 1:numel(lfp_mats)
   
   if ( params.reference_subtract )
     lfp_cont = bfw.ref_subtract( lfp_cont );
+  else
+    lfp_cont = lfp_cont.rm( 'ref' );
   end
   
   regions = lfp_cont('region');

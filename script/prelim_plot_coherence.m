@@ -87,8 +87,12 @@ end
 %%  plot subtracted
 
 plt = meaned_coh;
-plt = plt({'mutual'}) - plt({'m1'});
-plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
+% plt = plt({'mutual'}) - plt({'m1'});
+% plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
+
+plt = plt({'mutual', 'm1'});
+plt = plt({'eyes'}) - plt({'face'});
+plt = plt.replace( 'eyes_minus_face', 'eyes-face' );
 
 figure(1); clf();
 

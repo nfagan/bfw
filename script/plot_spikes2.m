@@ -571,7 +571,7 @@ title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
 
 fig = figure(1);
 
-for i = 1:numel(I)
+for i = 1150:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
   
   subset = plt(I{i});
@@ -634,18 +634,28 @@ for i = 1:numel(I)
   
   raster_data = raster_data(:, raster_t >= -0.3);
   
-  for j = 1:size(raster_data, 1)
-    for k = 1:size(raster_data, 2)
-      perc_y = (j-1) / size(raster_data, 1);
-      perc_x = (k-1) / size(raster_data, 2);
-      x_coord = ((max_x_lim - min_x_lim) * perc_x) + min_x_lim;
-      y_coord = ((max_y_lim - min_y_lim) * perc_y) + min_y_lim;
-      if ( raster_data(j, k) )
-        hold on;
-        plot( x_coord, y_coord, 'k*', 'markersize', 0.2 );
-      end
-    end
-  end
+  [row, col] = find( raster_data );
+  
+  perc_y = row ./ size(raster_data, 1);
+  perc_x = col ./ size(raster_data, 2);
+  
+  x_coords = (max_x_lim - min_x_lim) .* perc_x + min_x_lim;
+  y_coords = (max_y_lim - min_y_lim) .* perc_y + min_y_lim;
+  
+  scatter( x_coords, y_coords, 0.2 );
+  
+%   for j = 1:size(raster_data, 1)
+%     for k = 1:size(raster_data, 2)
+%       perc_y = (j-1) / size(raster_data, 1);
+%       perc_x = (k-1) / size(raster_data, 2);
+%       x_coord = ((max_x_lim - min_x_lim) * perc_x) + min_x_lim;
+%       y_coord = ((max_y_lim - min_y_lim) * perc_y) + min_y_lim;
+%       if ( raster_data(j, k) )
+%         hold on;
+%         plot( x_coord, y_coord, 'k*', 'markersize', 0.2 );
+%       end
+%     end
+%   end
   
   filename = strjoin( subset.flat_uniques(figs_are), '_' );
   
