@@ -283,7 +283,7 @@ function [z, p] = test_z( real, fake )
 means = nanmean( fake, 1 );
 devs = std( fake, [], 1 );
 z = (real - means) ./ devs;
-p = 1 - normcdf( z );
+p = 1 - normcdf( abs(z) );
 
 end
 

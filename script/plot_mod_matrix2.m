@@ -10,6 +10,7 @@ psth = Container();
 full_psth = Container();
 raster = Container();
 null_psth = Container();
+zpsth = Container();
 
 got_t = false;
 
@@ -40,6 +41,7 @@ for i = 1:numel(spike_mats)
   psth = psth.append( spikes.psth );
   raster = raster.append( spikes.raster );
   null_psth = null_psth.append( spikes.null );
+  zpsth = zpsth.append( spikes.zpsth );
 end
 
 psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
@@ -49,23 +51,48 @@ psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 c_psth = full_psth.rm( 'unit_uuid__NaN' );
 c_null_psth = null_psth.rm( 'unit_uuid__NaN' );
 c_at_psth = psth.rm( 'unit_uuid__NaN' );
+c_z_psth = zpsth.rm( 'unit_uuid__NaN' );
 
 missing_unit_ids = setdiff( full_psth('unit_uuid'), c_null_psth('unit_uuid') );
 
 if ( ~isempty(missing_unit_ids) )
-  fprintf( '\n Warning: %d units did not have events associated with them.', numel(missing_unit_ids) );
+  fprintf( '\n Warning: %d units did not have events associated with them.' ...
+    , numel(missing_unit_ids) );
   c_psth = c_psth.rm( missing_unit_ids );
 end
+
 
 %%  calculate modulation index
 
 window_pre = spk_params.window_pre;
 window_post = spk_params.window_post;
 
+new_labs = bfw.reclassify_cells( c_at_psth, c_null_psth, c_z_psth, psth_t, window_pre, window_post, 0.025/2 );
+
 N = 1000;
 
 [modulation, sig] = ...
   bfw.analysis.permute_population_modulation( c_psth, c_null_psth, psth_t, N, window_pre, window_post );
+
+save_p = fullfile( conf.PATHS.data_root, 'analyses', 'population_modulation_index', datestr(now, 'mmddyy') );
+
+to_save = struct();
+to_save.modulation = modulation;
+to_save.sig = sig;
+to_save.params = spk_params;
+
+shared_utils.io.require_dir( save_p );
+
+full_fname = fullfile( save_p, 'modulation.mat' );
+
+if ( shared_utils.io.fexists(full_fname) )
+  fprintf( '\nNot saving because "%s" already exists.', full_fname );
+  all_mods = shared_utils.io.fload( full_fname );
+  modulation = all_mods.modulation;
+  sig = all_mods.sig;
+else
+  save( full_fname, 'to_save' );
+end
 
 %%  subtract null
 
@@ -86,7 +113,7 @@ to_count = to_count.counts( 'region' );
 
 %%  plot cell types by category
 
-by_type = c_null_psth;
+by_type = set_labels( c_null_psth, new_labs );
 by_type = by_type({'mutual', 'm1'});
 by_type = by_type.replace( 'm1', 'exclusive' );
 
@@ -114,12 +141,12 @@ bar( pl, P, 'cell_type', {'looks_to', 'looks_by'}, 'region' );
 f2 = FigureEdits( f );
 f2.one_legend();
 
-kind = 'Cell-type';
+kind = 'cell-type';
 date_dir = datestr( now, 'mmddyy' );
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
 shared_utils.io.require_dir( save_plot_p );
-fname = kind;
+fname = strjoin( flat_uniques(P, stats_each) );
 
 formats = { 'epsc', 'png', 'fig' };
 
@@ -127,7 +154,8 @@ shared_utils.plot.save_fig( f, fullfile(save_plot_p, fname), formats, true );
 
 %%  plot cell modulation direction by category
 
-by_mod_dir = psth_sub_null_at;
+% by_mod_dir = psth_sub_null_at;
+by_mod_dir = set_labels( c_null_psth, new_labs );
 by_mod_dir = by_mod_dir({'mutual', 'm1'});
 % by_mod_dir = by_mod_dir.rm( 'none' );
 
@@ -145,28 +173,37 @@ P = by_mod_dir.for_each( stats_each, @percentages, percs_for, percs_of );
 
 P = P.rm( 'none' );
 
+[I, C] = P.get_indices( {'looks_to', 'looks_by'} );
+
+for i = 1:numel(I)
+  
+plt = P(I{i});
+
 pl = ContainerPlotter();
 f = figure(1); clf( f );
 colormap( 'default' );
 
 pl.order_by = { 'pre', 'post', 'pre_and_post', 'none' };
 
-bar( pl, P, 'modulation_direction', {'looks_to', 'looks_by', 'cell_type'}, {'region'} );
+bar( pl, plt, 'modulation_direction', {'looks_to', 'looks_by', 'cell_type'}, {'region'} );
+
+pl.y_lim = [0, 100];
 
 f2 = FigureEdits( f );
 f2.one_legend();
 
-kind = 'Cell-type';
+kind = 'Cell-Direction';
 date_dir = datestr( now, 'mmddyy' );
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
 save_plot_p = fullfile( save_plot_p, date_dir, kind, psth_info_str );
 shared_utils.io.require_dir( save_plot_p );
-fname = kind;
+fname = strjoin( flat_uniques(plt, stats_each) );
 
 formats = { 'epsc', 'png', 'fig' };
 
-% shared_utils.plot.save_fig( f, fullfile(save_plot_p, fname), formats, true );
+shared_utils.plot.save_fig( f, fullfile(save_plot_p, fname), formats, true );
 
+end
 
 %%  anova -- subtract null
 

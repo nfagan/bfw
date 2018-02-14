@@ -9,6 +9,7 @@ coh = Container();
 
 got_freqs = false;
 got_time = false;
+did_ref_sub = true;
 
 for i = 1:numel(coh_mats)
   fprintf( '\n %d of %d', i, numel(coh_mats) );
@@ -35,6 +36,7 @@ for i = 1:numel(coh_mats)
   
   if ( ~got_freqs )
     frequencies = c_coh.frequencies;
+    did_ref_sub = c_coh.within_trial_params.reference_subtract;
     got_freqs = true;
   end
   
@@ -74,6 +76,11 @@ plt.spectrogram( specificity ...
   );
 
 kind = 'non_subtracted_coherence';
+
+if ( ~did_ref_sub )
+  kind = sprintf( 'non_ref_subtracted_%s', kind );
+end
+
 fnames_are = { 'region', 'looks_to', 'looks_by' };
 fname = strjoin( flat_uniques(plt, fnames_are), '_' );
 full_plotp = fullfile( plot_p, kind );
@@ -86,22 +93,39 @@ end
 
 %%  plot subtracted
 
+f = figure(1); 
+clf( f );
+
+for i = 1
+  
 plt = meaned_coh;
-% plt = plt({'mutual'}) - plt({'m1'});
-% plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
 
-plt = plt({'mutual', 'm1'});
-plt = plt({'eyes'}) - plt({'face'});
-plt = plt.replace( 'eyes_minus_face', 'eyes-face' );
+if ( i == 1 )
+  plt = plt({'mutual'}) - plt({'m1'});
+  plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
+else
+  plt = plt({'mutual', 'm1'});
+  plt = plt({'eyes'}) - plt({'face'});
+  plt = plt.replace( 'eyes_minus_face', 'eyes-face' );
+end
 
-figure(1); clf();
+set( f, 'units', 'normalized' );
+set( f, 'position', [0, 0, 1, 1] );
 
 plt.spectrogram( specificity ...
   , 'shape', [2, 3] ...
   , 'frequencies', [0, 100] ...
+  , 'time', [-200, 500] ...
   );
 
 kind = 'subtracted_coherence';
+
+if ( ~did_ref_sub )
+  kind = sprintf( 'non_ref_subtracted_%s', kind );
+else
+  kind = sprintf( 'ref_subtracted_%s', kind );
+end
+
 fnames_are = { 'region', 'looks_to', 'looks_by' };
 fname = strjoin( flat_uniques(plt, fnames_are), '_' );
 full_plotp = fullfile( plot_p, kind );
@@ -109,4 +133,6 @@ full_fname = fullfile( full_plotp, fname );
 
 shared_utils.io.require_dir( full_plotp );
 shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'} );
+
+end
 

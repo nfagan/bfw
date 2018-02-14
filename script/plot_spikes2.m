@@ -4,12 +4,14 @@ conf = bfw.config.load();
 
 % event_aligned_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
 event_aligned_p = bfw.get_intermediate_directory( 'modulation_type' );
+event_spike_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
 event_mats = shared_utils.io.find( event_aligned_p, '.mat' );
 
 zpsth = Container();
 psth = Container();
 raster = Container();
 null_psth = Container();
+full_psth = Container();
 
 got_bin_t = false;
 
@@ -19,6 +21,15 @@ for i = 1:numel(event_mats)
   spikes = shared_utils.io.fload( event_mats{i} );
   
   if ( isfield(spikes, 'is_link') && spikes.is_link ), continue; end
+  
+  c_full_psth = shared_utils.io.fload( fullfile(event_spike_p, spikes.unified_filename) );
+  
+  if ( isfield(c_full_psth, 'is_link') && c_full_psth.is_link )
+    c_full_psth = shared_utils.io.fload( fullfile(event_spike_p, c_full_psth.data_file) );
+  end
+  if ( ~full_psth.contains(spikes.psth('session_name')) )
+    full_psth = full_psth.append( c_full_psth.psth );
+  end
   
   spk_params = spikes.params;
   
@@ -34,23 +45,6 @@ for i = 1:numel(event_mats)
   raster = raster.append( spikes.raster );
   null_psth = null_psth.append( spikes.null );
 end
-% 
-% [psth, ~, C] = bfw.add_unit_id( psth );
-% 
-% zpsth = zpsth.require_fields( 'unit_id' );
-% raster = raster.require_fields( 'unit_id' );
-% null_psth = null_psth.require_fields( 'unit_id' );
-% 
-% for i = 1:size(C, 1)
-%   ind_z = zpsth.where( C(i, :) );
-%   ind_r = raster.where( C(i, :) );
-%   ind_n = null_psth.where( C(i, :) );
-%   
-%   unit_id_str = sprintf( 'unit__%d', i );
-%   zpsth('unit_id', ind_z) = unit_id_str;
-%   raster('unit_id', ind_r) = unit_id_str;
-%   null_psth('unit_id', ind_n) = unit_id_str;
-% end
 
 psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 
@@ -552,9 +546,11 @@ date_dir = datestr( now, 'mmddyy' );
 
 % plt = psth({'01162018', '01172018', 'm1', 'm2', 'mutual'});
 % plt = psth({'m1', 'm2', 'mutual'});
-plt = psth({ 'mutual', 'm1', 'm2'} );
-plt = plt.rm( 'unit_uuid__NaN' );
-plt = plt({'m1', 'm2'});
+% plt = psth({ 'mutual', 'm1', 'm2'} );
+% plt = plt.rm( 'unit_uuid__NaN' );
+% plt = plt({'m1', 'm2'});
+
+plt = psth({'unit_uuid__1555', 'm1', 'mutual', 'eyes', 'face'});
 
 % plt = psth({'m1', 'eyes', 'unit_uuid__101'});
 
@@ -571,7 +567,9 @@ title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
 
 fig = figure(1);
 
-for i = 1150:numel(I)
+figs = gobjects(1, 4);
+
+for i = 1:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
   
   subset = plt(I{i});
@@ -583,6 +581,10 @@ for i = 1150:numel(I)
   pl.add_ribbon = true;
   pl.add_legend = false;
   pl.x_lim = [-0.3, 0.5];
+  
+  fig = figure(i);
+  
+  figs(i) = fig;
   
   clf( fig );
   
@@ -628,13 +630,15 @@ for i = 1150:numel(I)
   max_y_lim = y_lims(2);
   min_y_lim = y_lims(1);
   
-  min_y_lim = max_y_lim - (max_y_lim - min_y_lim) / 8;
+  min_y_lim = max_y_lim - (max_y_lim - min_y_lim) / 1;
   
   raster_data = matching_raster.data;
   
   raster_data = raster_data(:, raster_t >= -0.3);
   
   [row, col] = find( raster_data );
+  
+  total_events_per_row = sum( raster_data, 2 );
   
   perc_y = row ./ size(raster_data, 1);
   perc_x = col ./ size(raster_data, 2);
@@ -643,6 +647,10 @@ for i = 1150:numel(I)
   y_coords = (max_y_lim - min_y_lim) .* perc_y + min_y_lim;
   
   scatter( x_coords, y_coords, 0.2 );
+  
+  for j = 1:numel(total_events_per_row)
+    text( 0.5, y_coords(j), sprintf('%d', total_events_per_row(j)), 'parent', gca );
+  end
   
 %   for j = 1:size(raster_data, 1)
 %     for k = 1:size(raster_data, 2)
@@ -659,6 +667,231 @@ for i = 1150:numel(I)
   
   filename = strjoin( subset.flat_uniques(figs_are), '_' );
   
-  shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, filename), {'png', 'epsc', 'fig'}, true );
+%   shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, filename), {'png', 'epsc', 'fig'}, true );
   
 end
+
+%%
+
+pl = ContainerPlotter();
+
+selectors = {'unit_uuid__1555', 'm1', 'mutual', 'eyes', 'face'};
+
+plot_null = false;
+plot_err = true;
+
+% plt = psth(selectors);
+plt = full_psth(selectors);
+
+figs_are = { 'unit_uuid', 'looks_to', 'looks_by', 'region' };
+title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
+
+[I, C] = plt.get_indices( figs_are );
+
+fig = figure(1);
+clf( fig );
+
+subplot(2, 4, 1);
+
+stp = 1;
+
+for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  
+  subset = plt(I{i});
+  subset_null = null_psth(C(i, :));
+  
+  assert( shape(subset_null, 1) == 1 );
+  
+  smooth_amt = 7;
+  meaned_data = smooth( nanmean(subset.data, 1), smooth_amt );
+  meaned_data = meaned_data(:)';
+  
+  smoothed_err = smooth( rowops.sem(subset.data), smooth_amt );
+  smoothed_err = smoothed_err(:)';
+  
+  meaned_null = smooth( nanmean(subset_null.data, 1), smooth_amt );
+  meaned_null = meaned_null(:)';
+  
+  ind = bint >= -0.3;
+  
+  subplot( 2, 4, stp );
+  plot( bint(ind), meaned_data(:, ind), 'b', 'linewidth', 2 );
+  
+  if ( plot_null )
+    hold on;
+    plot( bint(ind), meaned_null(:, ind), 'r' );
+  end
+  if ( plot_err )
+    hold on;
+    plot( bint(ind), meaned_data(:, ind) + smoothed_err(:, ind), 'b' );
+    plot( bint(ind), meaned_data(:, ind) - smoothed_err(:, ind), 'b' );
+  end
+  
+  xlim( [-0.3, 0.5] );
+  ylim( [0, 50] );
+  
+  title( strjoin(C(i, :), ' | ') );
+  
+  matching_raster = raster(C(i, :));
+  raster_data = matching_raster.data;
+  raster_data = raster_data(:, raster_t >= -0.3);
+  
+  subplot( 2, 4, stp + 1 ); hold on;
+  for j = 1:size(raster_data, 1)
+    inds = find( raster_data(j, :) );
+    if ( isempty(inds) ), continue; end
+    scatter( inds, repmat(j, 1, numel(inds)), 0.2, 'k' );
+  end
+  
+  ylim( [0, 300] );
+  
+  title( strjoin(C(i, :), ' | ') );
+  
+  stp = stp + 2;
+end
+
+%%  plot two panels
+
+kind = 'side_by_side_psth_raster';
+save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
+shared_utils.io.require_dir( save_plot_p );
+
+pl = ContainerPlotter();
+
+sub_psth = psth({'m1', 'mutual', 'eyes', 'face'});
+sub_psth = sub_psth.rm( 'unit_uuid__NaN' );
+
+[all_i, all_c] = sub_psth.get_indices( {'unit_uuid', 'channel'} );
+
+n_event_thresh = 10;
+
+fig = figure(1);
+
+for idx = 1:numel(all_i)
+  fprintf( '\n %d of %d', idx, numel(all_i) );
+
+  plot_null = false;
+  plot_err = true;
+
+  plt = sub_psth(all_i{idx});
+
+  figs_are = { 'unit_uuid', 'looks_to', 'looks_by', 'region' };
+  title_is = union( figs_are, {'unit_uuid', 'unit_rating'} );
+
+  [I, C] = plt.get_indices( figs_are );
+
+  clf( fig );
+
+  subplot(1, 2, 1);
+
+  cstp = 1;
+
+  colors = containers.Map();
+  colors('eyes, mutual') = [1, 0, 0];
+  colors('eyes, m1') = [0.75, 0, 0];
+  colors('face, mutual') = [0, 0.75, 0];
+  colors('face, m1') = [0, 0.3, 0];
+
+  current_max = 1;
+
+  color_strs = cell( 1, numel(I) );
+
+  h = gobjects( 1, numel(I) );
+  
+  should_save = true;
+  
+  t1 = tic();
+  for i = 1:numel(I)
+    if ( ~should_save ), continue; end
+
+    color_str = strjoin( C(i, 2:3), ', ' );
+    color_strs{i} = color_str;
+
+    subset = plt(I{i});
+    subset_null = null_psth(C(i, :));
+    subset_null = subset_null.only( all_c{idx, 2} );
+
+    assert( shape(subset_null, 1) == 1 );
+
+    smooth_amt = 7;
+    meaned_data = smooth( nanmean(subset.data, 1), smooth_amt );
+    meaned_data = meaned_data(:)';
+
+    smoothed_err = smooth( rowops.sem(subset.data), smooth_amt );
+    smoothed_err = smoothed_err(:)';
+
+    meaned_null = smooth( nanmean(subset_null.data, 1), smooth_amt );
+    meaned_null = meaned_null(:)';
+
+    ind = bint >= -0.3;
+
+    subplot( 1, 2, 1 ); hold on;
+    h(i) = plot( bint(ind), meaned_data(:, ind), 'k', 'linewidth', 2 );
+    set( h(i), 'color', colors(color_str) );
+
+    xlim( [-0.3, 0.5] );
+    ylim( [0, 50] );
+    
+    hold on;
+    plot( [0, 0], [0, 50], 'k--' );
+    ylabel( 'spikes / second' );
+    xlabel( 'time (s) from event onset' );
+
+    title( strjoin(C(i, :), ' | ') );
+
+    matching_raster = raster(C(i, :));
+    raster_data = matching_raster.data;
+    raster_data = raster_data(:, raster_t >= -0.3);
+    c_raster_t = raster_t( raster_t >= -0.3 );
+    
+    if ( size(raster_data, 1) < n_event_thresh )
+      should_save = false;
+      continue;
+    end
+    
+    inds = cell( 1, size(raster_data, 1) );
+    ts = cell( 1, size(raster_data, 1) );
+    cstp = 1;
+    for j = 1:size(raster_data, 1)
+      inds{j} = find( raster_data(j, :) );
+      ts{j} = repmat( cstp, 1, numel(inds{j}) );
+      if ( ~isempty(inds{j}) )
+        cstp = cstp + 1;
+      end
+    end
+    empties = cellfun( @isempty, inds );
+    inds(empties) = [];
+    ts(empties) = [];
+    
+    inds = [inds{:}];
+    ts = [ts{:}];
+    subplot( 1, 2, 2 ); hold on;
+    
+    current_n = sum( ~empties );
+    scatter( c_raster_t(inds), current_max + ts - 1, 0.2, colors(color_str) );
+    current_max = current_max + current_n;
+
+    current_max = current_max + 20;
+
+    ylim( [0, 1350] );
+    xlim( [-0.3, 0.5] );
+    
+    hold on;
+    plot( [0, 0], [0, 1350], 'k--' );
+    xlabel( 'time (s) from event onset' );
+    
+  end
+  toc(t1);
+
+  legend( h, color_strs );
+  
+  if ( should_save )
+    fname = strjoin( flat_uniques(plt, union(figs_are, 'channel')), '_' );
+    full_fname = fullfile( save_plot_p, fname );
+    t2 = tic();
+    shared_utils.plot.save_fig( fig, full_fname, {'epsc', 'fig', 'png'}, true );      
+    toc( t2 );
+  end
+end
+

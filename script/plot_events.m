@@ -138,7 +138,9 @@ panels_are = { 'looks_to', 'looks_by' };
 
 figure(1); clf();
 
-pl.hist( all_event_distances, 500, [], panels_are );
+plt = all_event_distances;
+plt = plt.rm( {'m1_leads_m2', 'm2_leads_m1'} );
+pl.hist( plt, 500, [], panels_are );
 
 % filename = sprintf( 'event_length_histogram_', filename );
 filename = 'event_distance_histogram';
@@ -156,6 +158,7 @@ plt = all_event_distances;
 
 plt('unified_filename') = 'a';
 plt('session_name') = 'b';
+plt = plt.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
 panels_are = { 'unified_filename', 'session_name', 'meas_type' };
 groups_are = { 'looks_to' };
@@ -188,6 +191,7 @@ plt = evt_info;
 
 % plt = plt({'perc_below_threshold_distance'});
 plt = plt({'median_length'});
+plt = plt.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
 plt('unified_filename') = 'a';
 
@@ -223,6 +227,7 @@ pl.error_function = @ContainerPlotter.nansem;
 figure(1); clf(); colormap( 'default' );
 
 plt = evt_info;
+plt = plt.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
 plt = plt({'n_events'});
 
@@ -249,6 +254,8 @@ end
 
 %%  n events per day
 
+plot_each_day = true;
+
 for i = 1:2
 
 pl = ContainerPlotter();
@@ -258,6 +265,7 @@ pl.error_function = @ContainerPlotter.nansem;
 figure(1); clf(); colormap( 'default' );
 
 plt = evt_info;
+plt = plt.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
 plt = plt({'n_events'});
 
@@ -267,6 +275,7 @@ plt('unified_filename') = 'a';
 
 if ( i == 1 )
   plt('session_name') = 'b';
+  plot_each_day = false;
 end
 
 panels_are = { 'session_name', 'meas_type' };
@@ -275,12 +284,19 @@ x_is = 'looks_by';
 
 pl.bar( plt, x_is, groups_are, panels_are );
 
-filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
+if ( plot_each_day )
+  filename = strjoin( plt.flat_uniques({'meas_type', 'looks_to', 'looks_by'}) );
+  filename = sprintf( 'each_day_%s', filename );
+else
+  filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
+end
 
 filename = sprintf( 'n_events_per_day_%s', filename );
+
+shared_utils.plot.save_fig( gcf, fullfile(look_save_p, filename), {'eps', 'png', 'fig'}, true );
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
 end
 
