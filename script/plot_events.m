@@ -145,8 +145,8 @@ pl.hist( plt, 500, [], panels_are );
 % filename = sprintf( 'event_length_histogram_', filename );
 filename = 'event_distance_histogram';
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
 
 %%  plot bar of event distances
 

@@ -16,6 +16,7 @@ params = bfw.parsestruct( defaults, varargin );
 
 event_p = bfw.get_intermediate_directory( 'events_per_day' );
 spike_p = bfw.get_intermediate_directory( 'spikes' );
+start_p = bfw.get_intermediate_directory( 'start_stop' );
 output_p = bfw.get_intermediate_directory( 'modulation_type' );
 
 params.output_p = output_p;
@@ -47,6 +48,30 @@ for i = 1:numel(event_mats)
     continue;
   end
   
+  %   get start_stop times for each run
+  un_filenames = events.event_info('unified_filename');
+  can_proceed = true;
+  evt_labs = one( events.event_info.labels );
+  
+  start_stop_cont = Container();
+  
+  for j = 1:numel(un_filenames)
+    if ( ~can_proceed ), continue; end
+    start_stop_file = fullfile( start_p, un_filenames{j} );
+    if ( ~shared_utils.io.fexists(start_stop_file) )
+      fprintf( '\n Warning: missing start_stop file for "%s".', un_filenames{j} );
+      can_proceed = false;
+      continue;
+    end
+    start_stop_file = shared_utils.io.fload( start_stop_file );
+    start_stop_times = [start_stop_file.fv_plex_start, start_stop_file.fv_plex_stop];
+    start_stop = Container( start_stop_times, evt_labs );
+    start_stop('unified_filename') = un_filenames{j};
+    start_stop_cont = append( start_stop_cont, start_stop );
+  end
+  
+  if ( ~can_proceed ), continue; end
+  
   spikes = shared_utils.io.fload( spike_file );
   
   if ( spikes.is_link )
@@ -56,7 +81,7 @@ for i = 1:numel(event_mats)
   units = spikes.data;
   
   if ( ~processed_already.isKey(events.unified_filename) )
-    handle_units( units, events, params );
+    handle_units( units, events, start_stop_cont, params );
     processed_already(events.unified_filename) = true;
   else
     spike_struct = struct();
@@ -68,21 +93,15 @@ end
 
 end
 
-function handle_units( units, events, params )
+function handle_units( units, events, start_stops, params )
 
 event_info = events.event_info;
 info_key = events.event_info_key;
 
 event_times_cont = set_data( event_info, event_info.data(:, info_key('times')) );
-
-% event_times_cont = event_times_cont({'mutual', 'm1', 'm2'});
 event_times_cont = event_times_cont.rm( {'m1_leads_m2', 'm2_leads_m1'} );
 
-[I, C] = event_times_cont.get_indices( {'looks_to', 'looks_by'} );
-
-% roi_indices = event_times_cont.get_indices( {'looks_to'} );
-% mut_indices = event_times_cont.get_indices( {'looks_by'} );
-% I = [ roi_indices; mut_indices ];
+[I, C] = event_times_cont.get_indices( {'looks_to', 'looks_by', 'unified_filename'} );
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;
@@ -113,9 +132,11 @@ to_remove = false( size(psth) );
 final_raster_t = cell( size(psth) );
 final_psth_t = cell( size(psth) );
 
-parfor i = 1:size(all_indices, 1)
+for i = 1:size(all_indices, 1)
   unit_index = all_indices{i, 1};
   event_index = all_indices{i, 2};
+  
+  un_filename = C{event_index, 3};
   
   unit = units(unit_index);
 
@@ -124,6 +145,16 @@ parfor i = 1:size(all_indices, 1)
   evts = event_times_cont(I{event_index});
   
   event_times = evts.data;
+  
+  matching_start_stop = start_stops({un_filename});
+  
+  assert( shape(matching_start_stop, 1) == 1, 'Expected 1 element; got %d.' ...
+    , shape(matching_start_stop, 1) );
+  
+  start_t = matching_start_stop.data(1);
+  stop_t = matching_start_stop.data(2);
+  
+  spike_times = spike_times( spike_times >= start_t & spike_times <= stop_t );
   
   min_spk = min( spike_times );
   max_spk = max( spike_times );
@@ -161,6 +192,7 @@ parfor i = 1:size(all_indices, 1)
   elseif ( strcmp(sig_method, 'z') )
     [z_pre, p_pre] = test_z( real_pre, fake_pre );
     [z_post, p_post] = test_z( real_post, fake_post );
+    z_psth = test_z( real_psth, fake_psth );
     %   end test-z
   else
     assert( false );
@@ -233,7 +265,8 @@ parfor i = 1:size(all_indices, 1)
   psth{i} = Container( real_psth, psth_labels.labels );
   null_psth{i} = Container( nanmean(fake_psth, 1), psth_labels.labels );
   rasters{i} = Container( raster, raster_labels.labels );
-  zpsths{i} = Container( [z_pre, z_post], psth_labels.labels );
+%   zpsths{i} = Container( [z_pre, z_post], psth_labels.labels );
+  zpsths{i} = Container( z_psth, psth_labels.labels );
 end
 
 psth( to_remove ) = [];
@@ -281,7 +314,7 @@ end
 function [z, p] = test_z( real, fake )
 
 means = nanmean( fake, 1 );
-devs = std( fake, [], 1 );
+devs = nanstd( fake, [], 1 );
 z = (real - means) ./ devs;
 p = 1 - normcdf( abs(z) );
 
@@ -294,19 +327,3 @@ n_greater = sum( real > fake );
 p = 1 - ( n_greater / n_iters );
 
 end
-
-%   n_greater_pre = 0;
-%   n_greater_post = 0;
-%   
-%   for j = 1:n_iterations
-%     if ( real_pre > fake_pre(j) )
-%       n_greater_pre = n_greater_pre + 1;
-%     end
-%     if ( real_post > fake_post(j) )
-%       n_greater_post = n_greater_post + 1;
-%     end
-%   end
-%   
-%   p_pre = 1 - (n_greater_pre / n_iterations);
-%   p_post = 1 - (n_greater_post / n_iterations);
-  % end test one direction: >

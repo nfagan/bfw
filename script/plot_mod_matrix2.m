@@ -66,15 +66,33 @@ end
 
 window_pre = spk_params.window_pre;
 window_post = spk_params.window_post;
+window_not_minus_null = [-0.1, 0.2];
 
-new_labs = bfw.reclassify_cells( c_at_psth, c_null_psth, c_z_psth, psth_t, window_pre, window_post, 0.025/2 );
+% new_labs = bfw.reclassify_cells( c_at_psth, c_null_psth, c_z_psth, psth_t, window_pre, window_post, 0.025/2 );
+new_labs = c_at_psth.labels;
 
 N = 1000;
 
-[modulation, sig] = ...
-  bfw.analysis.permute_population_modulation( c_psth, c_null_psth, psth_t, N, window_pre, window_post );
+% [modulation, sig] = ...
+%   bfw.analysis.permute_population_modulation( c_psth, c_null_psth, psth_t, N, window_pre, window_post );
 
-save_p = fullfile( conf.PATHS.data_root, 'analyses', 'population_modulation_index', datestr(now, 'mmddyy') );
+% summary_func = @nanmedian;
+summary_func = @nanmean;
+
+is_median = strcmp( func2str(summary_func), 'nanmedian' );
+is_minus_null = true;
+
+[modulation, sig] = ...
+  bfw.analysis.permute_population_modulation_not_minus_null( c_psth, psth_t, N, window_not_minus_null, summary_func );
+
+data_t = 'population_modulation_index';
+
+if ( is_median )
+  data_t = sprintf( '%s_median', base_t );
+end
+
+% save_p = fullfile( conf.PATHS.data_root, 'analyses', data_t, datestr(now, 'mmddyy') );
+save_p = fullfile( conf.PATHS.data_root, 'analyses', 'population_modulation_index', '021318' );
 
 to_save = struct();
 to_save.modulation = modulation;
@@ -415,6 +433,8 @@ for j = 1:size(all_c, 1)
   
   sig_data = zeros( numel(I), 2 );
   c_is_sig = true( numel(I), 1 );
+  store_is_sig = false( numel(I), 1 );
+  store_coords = Container();
 
   for i = 1:numel(I)
     subset = plt_psth(I{i});
@@ -438,11 +458,21 @@ for j = 1:size(all_c, 1)
     
     current_is_sig = ef_is_sig || me_is_sig;
     
+    store_is_sig(i) = current_is_sig;
+    
+    uid = C{i, 1};
+    uid = uid(numel('unit_uuid__')+1:end);      
+    
     if ( current_is_sig )
       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
     else
       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
     end
+    
+    if ( current_is_sig )
+      text( x_coord + 0.05, y_coord, uid );
+    end
+    store_coords = append( store_coords, set_data(one(subset), [x_coord, y_coord]) );
     
 %     if ( ~(ef_is_sig || me_is_sig) )
 %       h = plot( x_coord, y_coord, sprintf('%so', current_color), 'markersize', 6 ); hold on;
@@ -523,7 +553,7 @@ for j = 1:size(all_c, 1)
   
 %   n_bins = 20; 
   n_bins = -1:0.1:1;
-  ylims = [0, 35];
+  ylims = [0, 70];
   
   for i = 1:size(reg_combs, 1)
     ind = plt_psth.where( reg_combs(i, :) );
@@ -582,7 +612,16 @@ for j = 1:size(all_c, 1)
   end
 
   %   save
+  
   kind = 'population_matrix_from_null';
+  
+  if ( is_median )
+    kind = sprintf( '%s_median', kind );
+  end
+  
+  if ( is_minus_null )
+    kind = sprintf( '%s_minus_null', kind );
+  end
 
   fname = strjoin( plt_psth.flat_uniques({'region'}), '_' );
   fname = sprintf( 'population_matrix_%s_%s', require_significant, fname );
@@ -601,4 +640,3 @@ for j = 1:size(all_c, 1)
   shared_utils.plot.save_fig( f3, fullfile(save_plot_p, fname_hist2), formats, true );
   
 end
-

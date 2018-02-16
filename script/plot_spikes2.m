@@ -753,7 +753,8 @@ end
 
 %%  plot two panels
 
-kind = 'side_by_side_psth_raster';
+kind = 'side_by_side_psth_raster_minus_null';
+date_dir = datestr( now, 'mmddyy' );
 save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'psth', date_dir, kind, psth_info_str );
 shared_utils.io.require_dir( save_plot_p );
 
@@ -762,11 +763,17 @@ pl = ContainerPlotter();
 sub_psth = psth({'m1', 'mutual', 'eyes', 'face'});
 sub_psth = sub_psth.rm( 'unit_uuid__NaN' );
 
+sub_psth = sub_psth({'unit_uuid__1507'});
+
 [all_i, all_c] = sub_psth.get_indices( {'unit_uuid', 'channel'} );
 
 n_event_thresh = 10;
 
 fig = figure(1);
+
+summary_func = @nanmedian;
+
+subtract_null = true;
 
 for idx = 1:numel(all_i)
   fprintf( '\n %d of %d', idx, numel(all_i) );
@@ -813,15 +820,21 @@ for idx = 1:numel(all_i)
     subset_null = subset_null.only( all_c{idx, 2} );
 
     assert( shape(subset_null, 1) == 1 );
+    
+    if ( subtract_null )
+      for j = 1:size(subset.data, 1)
+        subset.data(j, :) = subset.data(j, :) - subset_null.data;
+      end
+    end
 
     smooth_amt = 7;
-    meaned_data = smooth( nanmean(subset.data, 1), smooth_amt );
+    meaned_data = smooth( summary_func(subset.data, 1), smooth_amt );
     meaned_data = meaned_data(:)';
 
     smoothed_err = smooth( rowops.sem(subset.data), smooth_amt );
     smoothed_err = smoothed_err(:)';
 
-    meaned_null = smooth( nanmean(subset_null.data, 1), smooth_amt );
+    meaned_null = smooth( summary_func(subset_null.data, 1), smooth_amt );
     meaned_null = meaned_null(:)';
 
     ind = bint >= -0.3;
@@ -831,7 +844,10 @@ for idx = 1:numel(all_i)
     set( h(i), 'color', colors(color_str) );
 
     xlim( [-0.3, 0.5] );
-    ylim( [0, 50] );
+%     ylim( [0, 50] );
+%     ylim( [-100, 100] );
+
+    ylim( [-5, 5] );
     
     hold on;
     plot( [0, 0], [0, 50], 'k--' );

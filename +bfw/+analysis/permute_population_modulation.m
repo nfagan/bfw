@@ -17,6 +17,7 @@ modulation_amount = zeros( size(psth.data, 1), 1 );
 mod_amount = Container();
 
 take_mean = true;
+use_minus_null = false;
 
 for i = 1:numel(I)
   fprintf( '\n %d of %d', i, numel(I) );
