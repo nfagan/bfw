@@ -119,6 +119,8 @@ parfor i = 1:numel(mats)
     aligned.(fields{j}).aligned_directory = save_p;
   end
   
+  aligned.params = params;
+  
   do_save( aligned, full_filename );
 end
 

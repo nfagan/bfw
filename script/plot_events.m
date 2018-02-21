@@ -16,7 +16,8 @@ save_plot_p = fullfile( conf.PATHS.data_root, 'plots' );
 
 look_save_p = fullfile( save_plot_p, 'looking_behavior', datestr(now, 'mmddyy') );
 
-event_param_str = sprintf( 'event_%s_%d', first_event_params.mutual_method, first_event_params.duration );
+event_param_str = sprintf( 'event_%s_%d_%d' ...
+  , first_event_params.mutual_method, first_event_params.duration, first_event_params.fill_gaps_duration );
 window_param_str = sprintf( 'window_%d_step_%d', first_bounds_file.window_size, first_bounds_file.step_size );
 event_subdir = sprintf( '%s_%s', event_param_str, window_param_str );
 

@@ -156,6 +156,11 @@ for i = 1:size(all_indices, 1)
   
   spike_times = spike_times( spike_times >= start_t & spike_times <= stop_t );
   
+  if ( isempty(spike_times) )
+    to_remove(i) = true;
+    continue;
+  end
+  
   min_spk = min( spike_times );
   max_spk = max( spike_times );
   

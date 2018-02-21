@@ -7,6 +7,8 @@ defaults = bfw.get_common_make_defaults();
 defaults.duration = NaN;
 defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
+defaults.fill_gaps = false;
+defaults.fill_gaps_duration = 50;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -55,6 +57,7 @@ for i = 1:numel(bound_mats)
   
   adjusted_duration = duration / bounds.step_size;
   adjusted_mutual_duration = params.plus_minus_duration / bounds.step_size;
+  adjusted_fill_gaps_duration = params.fill_gaps_duration / bounds.step_size;
   
   for j = 1:numel(roi_names)
     
@@ -62,10 +65,16 @@ for i = 1:numel(bound_mats)
     
     m1_bounds = m1(roi_name);
     m2_bounds = m2(roi_name);
-    mutual_bounds = m1_bounds & m2_bounds;
 
     m1_evts = find_starts( m1_bounds, adjusted_duration );
     m2_evts = find_starts( m2_bounds, adjusted_duration );
+    
+    if ( params.fill_gaps )
+      [m1_bounds, m1_evts] = fill_gaps( m1_bounds, m1_evts, adjusted_fill_gaps_duration );
+      [m2_bounds, m2_evts] = fill_gaps( m2_bounds, m2_evts, adjusted_fill_gaps_duration );
+    end
+    
+    mutual_bounds = m1_bounds & m2_bounds;
     
     mut_method = params.mutual_method;
     
@@ -117,7 +126,11 @@ for i = 1:numel(bound_mats)
   
   events.adjustments = containers.Map();
   
-  save( full_filename, 'events' );
+  if ( params.save )
+    save( full_filename, 'events' );
+  else
+    fprintf( '\n Not saving "%s"', unified_filename );
+  end
 end
 
 end
@@ -147,6 +160,29 @@ for i = 1:numel(out)
     distance(i) = mutual_evts(i) - b;
   end
 end
+
+end
+
+function [bounds, events] = fill_gaps( bounds, events, threshold )
+
+ind = [ diff(events) <= threshold, false ];
+
+if ( ~any(ind) ), return; end;
+
+num_inds = find( ind );
+
+to_keep_evts = true( size(events) );
+
+for i = 1:numel(num_inds)
+  start_ind = events(num_inds(i));
+  stop_ind = events(num_inds(i)+1);
+  to_keep_evts(num_inds(i)+1) = false;
+  bounds(start_ind:stop_ind) = true;
+end
+
+events = events( to_keep_evts );
+
+[bounds, events] = fill_gaps( bounds, events, threshold );
 
 end
 

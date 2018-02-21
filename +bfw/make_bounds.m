@@ -29,12 +29,12 @@ copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 window_size = params.window_size;
 step_size = params.step_size;
 
-for i = 1:numel(aligned_mats)
+parfor i = 1:numel(aligned_mats)
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
   
-  fields = fieldnames( aligned );
+  fields = { 'm1', 'm2' };
   
   un_f = aligned.(fields{1}).unified_filename;
   

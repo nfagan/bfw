@@ -44,6 +44,8 @@ for i = 1:numel(spike_mats)
   zpsth = zpsth.append( spikes.zpsth );
 end
 
+xls_unit_map = bfw.get_unit_xls_map();
+
 psth_info_str = sprintf( 'step_%d_ms', spk_params.psth_bin_size * 1e3 );
 
 %%  remove non-existent units
@@ -60,6 +62,19 @@ if ( ~isempty(missing_unit_ids) )
     , numel(missing_unit_ids) );
   c_psth = c_psth.rm( missing_unit_ids );
 end
+
+%%  optionally remove exclued units from xls
+
+channel_strs = xls_unit_map( 'channel_str' );
+unit_uuids = xls_unit_map( 'unit_uuid' );
+is_excluded = xls_unit_map( 'exclude_unit' );
+to_exclude = unit_uuids( is_excluded );
+
+to_exclude = cellfun( @(x) ['unit_uuid__', num2str(x)], to_exclude, 'un', false );
+
+c_at_psth = c_at_psth.rm( to_exclude );
+c_null_psth = c_null_psth.rm( to_exclude );
+c_z_psth = c_z_psth.rm( to_exclude );
 
 %%  calculate modulation index
 
@@ -209,6 +224,7 @@ for idx = 1:size(all_c, 1)
     ylim( lims );
 
     xlims = get( gca, 'xlim' );
+    ylims = get( gca, 'ylim' );
     leg_items{i} = char( flat_uniques(sub_to_scatter, leg_items_are) );
 
     if ( strcmp(kind, 'eyes_vs_face') )

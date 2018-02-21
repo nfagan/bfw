@@ -4,5 +4,6 @@ defaults = struct();
 defaults.files = [];
 defaults.files_containing = [];
 defaults.overwrite = false;
+defaults.save = true;
 
 end
