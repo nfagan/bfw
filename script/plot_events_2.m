@@ -61,9 +61,11 @@ end
 
 %%
 
-event_counts = subset_event_info.each1d( {'unified_filename', 'looks_to', 'looks_by'}, @(x) size(x, 1) );
+event_counts = subset_event_info.each1d( {'session_name', 'looks_to', 'looks_by'}, @(x) size(x, 1) );
 
-summarized_dists = event_distances.each1d( {'looks_to', 'looks_by'}, @rowops.nanmedian );
+% event_counts = subset_event_info.each1d( {'looks_to', 'looks_by'}, @(x) size(x, 1) );
+
+summarized_dists = event_distances.each1d( {'looks_to', 'looks_by'}, @rowops.min );
 
 summarized_counts = event_counts.each1d( {'looks_to', 'looks_by'}, @rowops.nanmedian );
 

@@ -86,6 +86,10 @@ for i = 1:numel(bound_mats)
     
     mutual = find_starts( mutual_bounds, adjusted_duration );
     
+     if ( params.fill_gaps )
+        [mutual_bounds, mutual] = fill_gaps( mutual_bounds, mutual, adjusted_fill_gaps_duration );
+     end 
+    
     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
     
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
