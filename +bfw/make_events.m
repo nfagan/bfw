@@ -23,7 +23,7 @@ duration = params.duration;
 
 assert( ~isnan(duration), 'Specify a valid "duration".' );
 
-for i = 1:numel(bound_mats)
+parfor i = 1:numel(bound_mats)
   fprintf( '\n %d of %d', i, numel(bound_mats) );
   
   bounds = shared_utils.io.fload( bound_mats{i} );
@@ -131,11 +131,17 @@ for i = 1:numel(bound_mats)
   events.adjustments = containers.Map();
   
   if ( params.save )
-    save( full_filename, 'events' );
+    do_save( full_filename, events );
   else
     fprintf( '\n Not saving "%s"', unified_filename );
   end
 end
+
+end
+
+function do_save( filename, events )
+
+save( filename, 'events' );
 
 end
 

@@ -5,9 +5,8 @@ defaults = bfw.get_common_make_defaults();
 params = bfw.parsestruct( defaults, varargin );
 
 edf_p = bfw.get_intermediate_directory( 'edf' );
-output_p = bfw.get_intermediate_directory( 'fixations' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
-aligned_p = bfw.get_intermediate_directory( 'aligned' );
+output_p = bfw.get_intermediate_directory( 'fixations' );
 
 edfs = bfw.require_intermediate_mats( params.files, edf_p, params.files_containing );
 
@@ -19,15 +18,6 @@ parfor i = 1:numel(edfs)
   un_filename = edf_file.m1.unified_filename;
   
   unified_file = shared_utils.io.fload( fullfile(unified_p, un_filename) );
-  
-  aligned_filename = fullfile( aligned_p, un_filename );
-  
-  if ( ~shared_utils.io.fexists(aligned_filename) )
-    fprintf( '\n Skipping "%s" because it is missing an aligned file.', un_filename );
-    continue;
-  end
-  
-  aligned_file = shared_utils.io.fload( aligned_filename );
   
   output_filename = fullfile( output_p, un_filename );
   
@@ -50,7 +40,7 @@ parfor i = 1:numel(edfs)
   
   if ( isempty(m1.edf) ), continue; end
   
-  mat_id_times = aligned_file.m1.time;
+  mat_id_times = 0:(1/1e3):unified_file.m1.session_duration;
   
   m1_edf = m1.edf;
   m2_edf = m2.edf;

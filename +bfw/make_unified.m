@@ -22,6 +22,8 @@ else
   dir_sep = '/';
 end
 
+default_session_duration = 400; % s;
+
 for idx = 1:numel(outerdirs)
   fprintf( '\n %d of %d', idx, numel(outerdirs) );
   
@@ -195,6 +197,16 @@ for idx = 1:numel(outerdirs)
         assert__n_files( ms_firings_channel_map_files, 1 ...
           , 'mountain sort channel map file', mountain_sort_directory_path );
         ms_firings_channel_map_file = ms_firings_channel_map_files{1};
+      end
+    end
+    
+    %
+    %   add session duration, if it does not exist
+    %
+    
+    if ( ~isfield(m_data, 'session_duration') )
+      for j = 1:numel(m_data)
+        m_data(j).session_duration = default_session_duration;
       end
     end
     

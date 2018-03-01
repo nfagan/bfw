@@ -27,8 +27,10 @@ bfw.make_edf_aligned( shared_inputs{:} );
 
 bfw.make_edf_fixations( shared_inputs{:} );
 
+%%  restrict fixations to at least N ms
+
 bfw.adjust.set_fixation_criterion( shared_inputs{:} ...
-  , 'duration', 50 ... % remove fixations less than n ms.
+  , 'duration', 10 ... % remove fixations less than n ms.
 );
 
 %%  rois
@@ -55,10 +57,10 @@ bfw.make_events( shared_inputs{:} ...
   , 'fill_gaps_duration', 150 ...
 );
 
-%   classify events as m1 leading m2, vs. m2 leading m1
-bfw.adjust.add_m_ordering( shared_inputs{:} ...
-  , 'max_lag', 2 ...
-);
+% %   classify events as m1 leading m2, vs. m2 leading m1
+% bfw.adjust.add_m_ordering( shared_inputs{:} ...
+%   , 'max_lag', 2 ...
+% );
 
 %   convert to plexon time
 bfw.adjust.events_to_plex_time( shared_inputs{:} );

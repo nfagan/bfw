@@ -61,7 +61,7 @@ end
 
 %%
 
-event_counts = subset_event_info.each1d( {'session_name', 'looks_to', 'looks_by'}, @(x) size(x, 1) );
+event_counts = subset_event_info.each1d( {'session_name', 'unified_filename', 'looks_to', 'looks_by'}, @(x) size(x, 1) );
 
 % event_counts = subset_event_info.each1d( {'looks_to', 'looks_by'}, @(x) size(x, 1) );
 
@@ -72,7 +72,7 @@ summarized_counts = event_counts.each1d( {'looks_to', 'looks_by'}, @rowops.nanme
 %%  N events
 
 f = figure(1); 
-
+  
 for i = 1:2
 
 pl = ContainerPlotter();
