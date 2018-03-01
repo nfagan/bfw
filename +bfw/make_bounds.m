@@ -8,11 +8,13 @@ defaults.window_size = 500;
 defaults.step_size = 1;
 defaults.update_time = true;
 defaults.remove_blink_nans = true;
+defaults.require_fixation = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
 data_p = bfw.get_intermediate_directory( 'aligned' );
 blink_p = bfw.get_intermediate_directory( 'blinks' );
+fix_p = bfw.get_intermediate_directory( 'fixations' );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
@@ -50,6 +52,10 @@ parfor i = 1:numel(aligned_mats)
   bounds = struct();
   
   meta = shared_utils.io.fload( fullfile(unified_p, un_f) );
+  
+  if ( params.require_fixation )
+    fix_file = shared_utils.io.fload( fullfile(fix_p, un_f) );
+  end
   
   if ( params.remove_blink_nans )
     blinks = shared_utils.io.fload( fullfile(blink_p, un_f) );
@@ -94,6 +100,11 @@ parfor i = 1:numel(aligned_mats)
         n_included_blink_x = NaN;
         n_included_blink_y = NaN;
         n_included_samples = NaN;
+      end
+      
+      %   & operation to include fixations, only
+      if ( params.require_fixation )
+        m_ib = m_ib & fix_file.(fields{k}).is_fixation;
       end
       
       %   add sliding window

@@ -22,12 +22,12 @@ copy_fields = { 'unified_filename' };
 
 allow_overwrite = params.overwrite;
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
-  current = shared_utils.io.fload( mats{i} );
+  current_edf_file = shared_utils.io.fload( mats{i} );
   
-  current_meta = shared_utils.io.fload( fullfile(unified_p, current.m1.unified_filename) );
+  current_meta = shared_utils.io.fload( fullfile(unified_p, current_edf_file.m1.unified_filename) );
   
   mat_dir = current_meta.m1.mat_directory_name;
   m_filename = current_meta.m1.mat_filename;
@@ -37,8 +37,8 @@ parfor i = 1:numel(mats)
   
   if ( bfw.conditional_skip_file(full_filename, allow_overwrite) ), continue; end
   
-  m1 = current.m1;
-  m2 = current.m2;
+  m1 = current_edf_file.m1;
+  m2 = current_edf_file.m2;
   
   if ( isempty(m1.edf) ), continue; end
   
@@ -53,7 +53,7 @@ parfor i = 1:numel(mats)
   sync_m2 = current_meta.m2.sync_times(:, 1);
   
   %   remove the first sync time, because the first sync time is the start
-  %   pulse to plexon, rather than the RESYNCH commands to eyelink
+  %   pulse to plexon, rather than a RESYNCH command to eyelink
   edf_sync_m1 = current_meta.m1.plex_sync_times(2:end);
   edf_sync_m2 = current_meta.m2.plex_sync_times(2:end);
   
@@ -61,7 +61,6 @@ parfor i = 1:numel(mats)
     assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
     assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
   catch err
-%     fprintf( '\n WARNING: %s; skipping "%s".', err.message, current_meta.m1.unified_filename );
     fprintf( '\n WARNING: %s; truncating "%s".', err.message, current_meta.m1.unified_filename );
     n = min( numel(m1t), numel(m2t) );
     m1t = m1t(1:n);
@@ -71,7 +70,6 @@ parfor i = 1:numel(mats)
     sync_m1 = sync_m1(1:n);
     sync_m1_m2 = sync_m1_m2(1:n);
     sync_m2 = sync_m2(1:n);
-%     continue;
   end
   
   t_m1 = m1_edf.Samples.time;
@@ -113,7 +111,7 @@ parfor i = 1:numel(mats)
   
   for j = 1:numel(fields)
     for k = 1:numel(copy_fields)
-      aligned.(fields{j}).(copy_fields{k}) = current.(fields{j}).(copy_fields{k});
+      aligned.(fields{j}).(copy_fields{k}) = current_edf_file.(fields{j}).(copy_fields{k});
     end
     aligned.(fields{j}).aligned_filename = a_filename;
     aligned.(fields{j}).aligned_directory = save_p;
