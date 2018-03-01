@@ -22,7 +22,7 @@ copy_fields = { 'unified_filename' };
 
 allow_overwrite = params.overwrite;
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   current_edf_file = shared_utils.io.fload( mats{i} );

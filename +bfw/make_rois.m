@@ -15,6 +15,7 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 event_funcs = containers.Map();
 event_funcs('face') = @bfw.calibration.rect_face;
 event_funcs('eyes') = @bfw.calibration.rect_eyes;
+event_funcs('mouth') = @bfw.calibration.rect_mouth;
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 

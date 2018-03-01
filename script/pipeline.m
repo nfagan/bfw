@@ -1,7 +1,7 @@
 folders = { '02082018', '02092018' };
 file_spec = folders;
 
-shared_inputs = { 'files_containing', file_spec, 'overwrite', false };
+shared_inputs = { 'files_containing', file_spec, 'overwrite', true };
 
 %%  unified
 
@@ -23,6 +23,14 @@ bfw.make_edf_blink_info( shared_inputs{:} );
 
 bfw.make_edf_aligned( shared_inputs{:} );
 
+%%  fixations
+
+bfw.make_edf_fixations( shared_inputs{:} );
+
+bfw.adjust.set_fixation_criterion( shared_inputs{:} ...
+  , 'duration', 50 ... % remove fixations less than n ms.
+);
+
 %%  rois
 
 bfw.make_rois( shared_inputs{:} );
@@ -33,6 +41,7 @@ bfw.make_bounds( shared_inputs{:} ...
   , 'window_size', 10 ...
   , 'step_size', 10 ...
   , 'remove_blink_nans', true ...
+  , 'require_fixation', true ...
 );
 
 %   separate eyes from face
