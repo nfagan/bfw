@@ -43,7 +43,7 @@ parfor i = 1:numel(fix_mats)
     fix_file.(fields{j}) = c_fix_file;
   end
   
-  fix_file.params = params;
+  fix_file.adjust_params = params;
   
   do_save( fix_mats{i}, fix_file );
 end

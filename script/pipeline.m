@@ -23,6 +23,10 @@ bfw.make_edf_blink_info( shared_inputs{:} );
 
 bfw.make_edf_aligned( shared_inputs{:} );
 
+%%  add plex time
+
+bfw.adjust.add_plex_time_to_aligned( shared_inputs{:} );
+
 %%  fixations
 
 bfw.make_edf_fixations( shared_inputs{:} );
