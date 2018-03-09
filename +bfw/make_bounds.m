@@ -9,6 +9,7 @@ defaults.step_size = 1;
 defaults.update_time = true;
 defaults.remove_blink_nans = true;
 defaults.require_fixation = true;
+defaults.single_roi_fixations = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -31,7 +32,7 @@ copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 window_size = params.window_size;
 step_size = params.step_size;
 
-parfor i = 1:numel(aligned_mats)
+for i = 1:numel(aligned_mats)
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
@@ -133,44 +134,57 @@ parfor i = 1:numel(aligned_mats)
     
     t = bounds.(fields{k}).time;
     
-    fix_id = cell( 1, numel(c_fix.start_indices) );
-            
-    for j = 1:numel(c_fix.start_indices)
-      start_index = c_fix.start_indices(j);
-      stop_index = c_fix.stop_indices(j);
-      
-      ns = zeros( size(rect_keys) );
-      
-      for h = 1:numel(rect_keys)
-        roi = rect_keys{h};
-        c_bounds_vec = c_bounds(roi);        
-        ns(h) = sum( c_bounds_vec(start_index:stop_index) );
+    %   if true, for each fixation:
+    %     count the number of samples that are in bounds for each roi.
+    %     assign the fixation to the roi with the maximum number of
+    %     samples.
+    %   otherwise, use the same is_fixation vector for each roi.
+    if ( params.single_roi_fixations )
+      fix_id = cell( 1, numel(c_fix.start_indices) );
+
+      for j = 1:numel(c_fix.start_indices)
+        start_index = c_fix.start_indices(j);
+        stop_index = c_fix.stop_indices(j);
+
+        ns = zeros( size(rect_keys) );
+
+        for h = 1:numel(rect_keys)
+          roi = rect_keys{h};
+          c_bounds_vec = c_bounds(roi);        
+          ns(h) = sum( c_bounds_vec(start_index:stop_index) );
+        end
+
+        %   right now, we assign a fixation to an roi based on the maximum
+        %   number of samples that fall into that roi.
+        [~, max_index] = max( ns );
+
+        fix_id{j} = rect_keys{max_index};
       end
-      
-      %   right now, we assign a fixation to an roi based on the maximum
-      %   number of samples that fall into that roi.
-      [~, max_index] = max( ns );
-      
-      fix_id{j} = rect_keys{max_index};
-    end
-    
-    per_roi_fix = containers.Map();
-    
-    for j = 1:numel(rect_keys)
-      roi = rect_keys{j};
-      
-      adjusted_fix_vec = false( size(c_fix.is_fixation) );
-      
-      matching_fix = find( strcmp(fix_id, roi) );
-      
-      for h = 1:numel(matching_fix)
-        fix_index = matching_fix(h);
-        start_index = c_fix.start_indices(fix_index);
-        stop_index = c_fix.stop_indices(fix_index);
-        adjusted_fix_vec(start_index:stop_index) = true;
+
+      per_roi_fix = containers.Map();
+
+      for j = 1:numel(rect_keys)
+        roi = rect_keys{j};
+
+        adjusted_fix_vec = false( size(c_fix.is_fixation) );
+
+        matching_fix = find( strcmp(fix_id, roi) );
+
+        for h = 1:numel(matching_fix)
+          fix_index = matching_fix(h);
+          start_index = c_fix.start_indices(fix_index);
+          stop_index = c_fix.stop_indices(fix_index);
+          adjusted_fix_vec(start_index:stop_index) = true;
+        end
+
+        per_roi_fix(roi) = adjusted_fix_vec;  
       end
-      
-      per_roi_fix(roi) = adjusted_fix_vec;  
+    else
+      per_roi_fix = containers.Map();
+      for j = 1:numel(rect_keys)
+        roi = rect_keys{j};
+        per_roi_fix(roi) = c_fix.is_fixation;
+      end
     end
     
     for j = 1:numel(rect_keys)
