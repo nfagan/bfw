@@ -116,6 +116,16 @@ parfor i = 1:numel(aligned_mats)
     bounds.(fields{k}).bounds_directory = save_p;
   end
   
+  %   separate eyes from face
+  for k = 1:numel(fields)
+    c_bounds = bounds.(fields{k}).bounds;
+    
+    c_bounds('face') = c_bounds('face') & ~c_bounds('eyes');
+    c_bounds('face') = c_bounds('face') & ~c_bounds('mouth');
+    
+    bounds.(fields{k}).bounds = c_bounds;
+  end  
+  
   %   then apply fixations
   for k = 1:numel(fields)
     c_fix = fix_file.(fields{k});
@@ -160,7 +170,7 @@ parfor i = 1:numel(aligned_mats)
         adjusted_fix_vec(start_index:stop_index) = true;
       end
       
-      per_roi_fix(roi) = adjusted_fix_vec;      
+      per_roi_fix(roi) = adjusted_fix_vec;  
     end
     
     for j = 1:numel(rect_keys)
@@ -196,9 +206,9 @@ end
 
 end
 
-function do_save( pathstr, variable )
+function do_save( pathstr, bound )
 
-save( pathstr, 'variable' );
+save( pathstr, 'bound' );
 
 end
 
