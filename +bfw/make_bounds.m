@@ -31,7 +31,7 @@ copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 window_size = params.window_size;
 step_size = params.step_size;
 
-for i = 1:numel(aligned_mats)
+parfor i = 1:numel(aligned_mats)
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
@@ -173,18 +173,13 @@ for i = 1:numel(aligned_mats)
         m_ib = m_ib & per_roi_fix(roi);
       end
       
-      %   add sliding window
-      if ( params.update_time )
-        [m_ib, t] = slide_window( m_ib, t, window_size, step_size );
-      else
-        m_ib = slide_window( m_ib, t, window_size, step_size );
-      end
+      [m_ib, adjusted_t] = slide_window( m_ib, t, window_size, step_size );
       %   end sliding window
       
-      bounds.(fields{k}).bounds(key) = m_ib;
-      bounds.(fields{k}).time = t;
+      bounds.(fields{k}).bounds(roi) = m_ib;
+      bounds.(fields{k}).time = adjusted_t;
     end
-  end  
+  end
   
   bounds.window_size = window_size;
   bounds.step_size = step_size;
@@ -196,9 +191,9 @@ end
 
 end
 
-function do_save( pathstr, variable )
+function do_save( pathstr, bound )
 
-save( pathstr, 'variable' );
+save( pathstr, 'bound' );
 
 end
 
