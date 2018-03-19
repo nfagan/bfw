@@ -17,7 +17,7 @@ end
 f1 = f1 / (fs/2);
 f2 = f2 / (fs/2);
 
-[b, a] = butter( n, [f1 f2] );
+[b, a] = butter( n, [f1, f2] );
 
 filtered = filtfilt( b, a, signals' )';
 

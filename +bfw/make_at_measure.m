@@ -8,6 +8,7 @@ defaults.summary_function = @rowops.nanmean;
 defaults.input_dir = '';
 defaults.output_dir = '';
 defaults.meas_type = '';
+defaults.z_score = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -56,8 +57,24 @@ for i = 1:numel(meas_mats)
   output_measure = meas.(meas_type);
   
   for j = 1:numel(output_measure)
-    c_coh = output_measure{j};
-    output_measure{j} = c_coh.each1d( params.within, params.summary_function );
+    c_meas = output_measure{j};
+    c_meas = c_meas.each1d( params.within, params.summary_function );
+    
+    if ( params.z_score )
+      dat = c_meas.data;
+      dat_b = output_measure{j}.data;
+      
+      mean_1d = rowops.nanmean( dat_b );
+      std_1d = rowops.nanstd( dat_b );
+      
+      for k = 1:size(dat, 1)
+        dat(k, :, :) = (dat(k, :, :) - mean_1d) ./ std_1d;
+      end
+      
+      c_meas.data = dat;
+    end
+    
+    output_measure{j} = c_meas;
   end
   
   meas_struct = struct();

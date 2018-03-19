@@ -102,9 +102,16 @@ end
 f = figure(1); 
 clf( f );
 
+[I, C] = meaned_meas.get_indices( {'region'} );
+
+for idx = 1:numel(I)
+  
+to_plt = meaned_meas(I{idx});
+
 for i = 1
   
-plt = meaned_meas;
+plt = to_plt.collapse( {'look_order', 'unified_filename', 'session_name'} );
+plt = plt.rm( {'mouth', 'm2'} );
 
 if ( i == 1 )
   plt = plt({'mutual'}) - plt({'m1'});
@@ -119,12 +126,12 @@ set( f, 'units', 'normalized' );
 set( f, 'position', [0, 0, 1, 1] );
 
 plt.spectrogram( specificity ...
-  , 'shape', [2, 3] ...
+  , 'shape', [1, 2] ...
   , 'frequencies', [0, 100] ...
-  , 'time', [-200, 500] ...
+  , 'time', [-500, 500] ...
   );
 
-kind = 'subtracted_coherence';
+kind = sprintf( 'subtracted_%s', meas_type );
 
 if ( ~did_ref_sub )
   kind = sprintf( 'non_ref_subtracted_%s', kind );
@@ -138,7 +145,9 @@ full_plotp = fullfile( plot_p, kind );
 full_fname = fullfile( full_plotp, fname );
 
 shared_utils.io.require_dir( full_plotp );
-shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'} );
+shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'}, true );
+
+end
 
 end
 
