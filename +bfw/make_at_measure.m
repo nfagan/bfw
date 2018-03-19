@@ -19,7 +19,7 @@ if ( isempty(params.meas_type) )
   error( '`meas_type` must be specified.' );
 end
 
-input_dir = params.intput_dir;
+input_dir = params.input_dir;
 output_dir = params.output_dir;
 
 meas_type = params.meas_type;
