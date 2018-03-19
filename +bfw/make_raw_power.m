@@ -4,7 +4,6 @@ import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
 defaults.step_size = 50;
-defaults.sample_rate = 1e3;
 defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
@@ -46,7 +45,7 @@ for i = 1:numel(lfp_mats)
     f1 = params.f1;
     f2 = params.f2;
     filt_order = params.filter_order;
-    fs = lfp.sample_rate;
+    fs = params.sample_rate;
     lfp_cont.data = bfw.zpfilter( lfp_cont.data, f1, f2, fs, filt_order );
   end
   

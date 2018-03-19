@@ -11,5 +11,6 @@ out.reference_subtract = true;
 out.f1 = 2.5;
 out.f2 = 250;
 out.filter_order = 2;
+out.sample_rate = 1e3;
 
 end
