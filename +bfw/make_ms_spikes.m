@@ -62,10 +62,10 @@ for i = 1:numel(un_mats)
   header = ms_channel_map(1, :);
   
   channel_ind = cellfun( @(x) containsi(x, 'channel'), header );
-  unit_n_ind = cellfun( @(x) containsi(x, 'unit'), header );
+  unit_n_ind = cellfun( @(x) strcmpi(x, 'unit'), header );
   rating_ind = cellfun( @(x) containsi(x, 'rating'), header );
   day_ind = cellfun( @(x) containsi(x, 'day'), header );
-  unit_id_ind = cellfun( @(x) containsi(x, 'id'), header );
+  unit_id_ind = cellfun( @(x) strcmpi(x, 'id'), header );
   
   assert__any_header_indices( channel_ind, unit_n_ind, unit_id_ind, rating_ind, day_ind );
   
@@ -88,7 +88,8 @@ for i = 1:numel(un_mats)
   end
   
   ms_unit_numbers = cellfun( @(x) x, ms_channel_map(2:end, unit_n_ind) );
-  ms_unit_ids = cellfun( @(x) x, ms_channel_map(2:end, unit_id_ind) );
+%   ms_unit_ids = cellfun( @(x) num2str(x), ms_channel_map(2:end, unit_id_ind) );
+  ms_unit_ids = cellfun( @(x) num2str(x), ms_channel_map(2:end, unit_id_ind), 'un', false );
   ms_unit_ratings = cellfun( @(x) x, ms_channel_map(2:end, rating_ind) );
   
   c_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );

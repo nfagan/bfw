@@ -44,8 +44,8 @@ for i = 1:numel(coh_mats)
     got_freqs = true;
   end
   
-%   meas = meas.append( c_meas.measure );
-  meas = meas.append( c_meas.coherence );
+  meas = meas.append( c_meas.measure );
+%   meas = meas.append( c_meas.coherence );
 end
 
 meas = SignalContainer( meas );
@@ -112,12 +112,15 @@ for i = 1
   
 plt = to_plt.collapse( {'look_order', 'unified_filename', 'session_name'} );
 plt = plt.rm( {'mouth', 'm2'} );
+plt = plt.rm( 'face' );
 
 if ( i == 1 )
   plt = plt({'mutual'}) - plt({'m1'});
   plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
 else
   plt = plt({'mutual', 'm1'});
+  plt = plt.collapse( 'looks_by' );
+  plt = plt.each1d( specificity, @rowops.nanmean );  
   plt = plt({'eyes'}) - plt({'face'});
   plt = plt.replace( 'eyes_minus_face', 'eyes-face' );
 end
@@ -126,9 +129,9 @@ set( f, 'units', 'normalized' );
 set( f, 'position', [0, 0, 1, 1] );
 
 plt.spectrogram( specificity ...
-  , 'shape', [1, 2] ...
+  , 'shape', [1, 1] ...
   , 'frequencies', [0, 100] ...
-  , 'time', [-500, 500] ...
+  , 'time', [-300, 500] ...
   );
 
 kind = sprintf( 'subtracted_%s', meas_type );
@@ -151,3 +154,75 @@ end
 
 end
 
+%%  lines
+
+specificity = { 'looks_to', 'looks_by', 'region', 'session_name', 'channel' };
+
+meaned_meas = meas.each1d( specificity, @rowops.nanmean );
+
+meaned_meas = meaned_meas.collapse( 'channel' );
+meaned_meas = meaned_meas.each1d( specificity, @rowops.nanmean );
+
+
+%%  plot lines, mut v exclusive
+
+pl = ContainerPlotter();
+
+for idx = 1:2
+
+to_plt = meaned_meas;
+to_plt = to_plt.rm( {'mouth', 'm2'} );
+to_plt = to_plt.replace( 'm1', 'exclusive' );
+
+if ( idx == 1 )
+  to_plt = to_plt.collapse( 'looks_by' );
+  to_plt = to_plt.each1d( specificity, @rowops.nanmean );
+  lines_are = { 'looks_to' };
+  panels_are = { 'region', 'looks_by' };
+else
+  to_plt = to_plt.rm( 'face' );
+  lines_are = { 'looks_by' };
+  panels_are = { 'looks_to', 'region' };
+end
+
+[I, C] = to_plt.get_indices( {'region'} );
+
+to_plt = to_plt.time_mean( [0, 300] );
+to_plt = to_plt.keep_within_freqs( [0, 100] );
+
+for i = 1:numel(I)
+  
+plt = to_plt(I{i});
+
+figure(1); clf();
+
+pl.default();
+pl.y_lim = [-0.35, 0.35];
+pl.main_line_width = 1.5;
+pl.x = to_plt.frequencies;
+pl.add_ribbon = true;
+pl.summary_function = @nanmean;
+pl.compare_series = true;
+% pl.error_function = @(x, y) nanstd(x, [], 1);
+% pl.add_smoothing = true;
+% pl.smooth_function = @(x) smooth(x, 4);
+
+pl.plot( plt, lines_are, panels_are );
+
+kind = sprintf( 'lines_%s', meas_type );
+
+if ( ~did_ref_sub )
+  kind = sprintf( 'non_ref_subtracted_%s', kind );
+end
+
+fnames_are = { 'region', 'looks_to', 'looks_by' };
+fname = strjoin( flat_uniques(plt, fnames_are), '_' );
+full_plotp = fullfile( plot_p, kind );
+full_fname = fullfile( full_plotp, fname );
+
+shared_utils.io.require_dir( full_plotp );
+shared_utils.plot.save_fig( gcf(), full_fname, {'epsc', 'png', 'fig'}, true );
+
+end
+
+end

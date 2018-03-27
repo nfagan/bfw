@@ -92,6 +92,11 @@ parfor i = 1:numel(bound_mats)
     
     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
     
+    %   NEW -- ensure exclusive events are truly exclusive of mutual
+    m1_evts = setdiff( m1_evts, mutual );
+    m2_evts = setdiff( m2_evts, mutual );
+    %
+    
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
     mutual_evt_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual );
