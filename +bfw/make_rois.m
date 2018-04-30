@@ -27,7 +27,7 @@ for i = 1:numel(mats)
   fields = fieldnames( meta );
   
 %   roi_map = bfw.calibration.get_calibration_key_roi_map();
-  roi_map = meta.(fields{1}).far_plane_key_map;
+%   roi_map = meta.(fields{1}).far_plane_key_map;
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
   
@@ -45,6 +45,7 @@ for i = 1:numel(mats)
   
   for j = 1:numel(fields)
     rect_map = containers.Map();
+    roi_map = meta.(fields{j}).far_plane_key_map;
     calibration = meta.(fields{j}).far_plane_calibration;
     for k = 1:numel(event_func_keys)
       key = event_func_keys{k};

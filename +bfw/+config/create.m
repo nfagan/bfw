@@ -28,6 +28,7 @@ DEPENDS = struct();
 DEPENDS.repositories = { 'shared_utils', 'spike_helpers', 'plexon' ...
   , 'jsonlab-1.5', 'chronux_2_11' };
 DEPENDS.classes = { 'Edf2Mat' };
+DEPENDS.others = { '' };
 
 %   CLUSTER
 

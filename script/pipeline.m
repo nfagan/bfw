@@ -1,5 +1,6 @@
-folders = { '02082018', '02092018' };
+folders = { '04242018', '04252018' };
 file_spec = folders;
+% file_spec = [ file_spec, '04242018_position_2' ];
 
 shared_inputs = { 'files_containing', file_spec, 'overwrite', true };
 
@@ -10,6 +11,10 @@ bfw.make_unified( folders );
 %%  sync times
 
 bfw.make_sync_times( shared_inputs{:} );
+
+%%
+
+bfw.make_stimulation_times( shared_inputs{:} );
 
 %%  edfs
 
@@ -29,7 +34,13 @@ bfw.adjust.add_plex_time_to_aligned( shared_inputs{:} );
 
 %%  fixations
 
-bfw.make_edf_fixations( shared_inputs{:} );
+% bfw.make_edf_fixations( shared_inputs{:} );
+
+bfw.make_eye_mmv_fixations( shared_inputs{:} ...
+  , 't1', 20 ...
+  , 't2', 15 ...
+  , 'min_duration', 0.05 ...
+  );
 
 %%  restrict fixations to at least N ms
 
@@ -39,6 +50,10 @@ bfw.adjust.set_fixation_criterion( shared_inputs{:} ...
 
 %%  rois
 
+%
+% reminder: +/- 15 px added!
+%
+
 bfw.make_rois( shared_inputs{:} );
 
 %%  bounds
@@ -46,7 +61,7 @@ bfw.make_rois( shared_inputs{:} );
 bfw.make_bounds( shared_inputs{:} ...
   , 'window_size', 10 ...
   , 'step_size', 10 ...
-  , 'remove_blink_nans', true ...
+  , 'remove_blink_nans', false ...
   , 'require_fixation', true ...
   , 'single_roi_fixations', true ...
 );

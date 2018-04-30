@@ -22,8 +22,10 @@ for i = 1:numel(mats)
   
   unified = shared_utils.io.fload( mats{i} );
   
+  sync_id = unified.m1.plex_sync_id;
+  
   fields = fieldnames( unified );
-  first = fields{1};
+  first = sync_id;
   
   unified_filename = unified.(first).unified_filename;
   output_filename = fullfile( save_p, unified_filename );
@@ -58,8 +60,9 @@ for i = 1:numel(mats)
   sync_index = unified.(first).plex_sync_index;
   
   if ( sync_index < 1 || sync_index > numel(binned_sync) )
-    error( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...
+    warning( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...
       , mats{i}, numel(binned_sync), sync_index ); 
+    continue;
   end
   
   id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
@@ -73,8 +76,8 @@ for i = 1:numel(mats)
       , mats{i}, sync_index );
   end
   
-  mat_sync = unified.m2.plex_sync_times;
-  mat_reward_sync = unified.m2.reward_sync_times;
+  mat_sync = unified.(sync_id).plex_sync_times;
+  mat_reward_sync = unified.(sync_id).reward_sync_times;
   
   assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
     , ' number of plex reward sync and mat reward sync pulses.'] );

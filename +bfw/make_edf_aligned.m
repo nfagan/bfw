@@ -48,9 +48,13 @@ parfor i = 1:numel(mats)
   m1t = get_sync_times( m1_edf );
   m2t = get_sync_times( m2_edf );
   
-  sync_m1 = current_meta.m1.sync_times(:, 1);
-  sync_m1_m2 = current_meta.m2.sync_times(:, 2);
-  sync_m2 = current_meta.m2.sync_times(:, 1);
+  if ( strcmp(current_meta.m1.plex_sync_id, 'm2') )
+    sync_m1_m2 = current_meta.m2.sync_times(:, 2);
+    sync_m2 = current_meta.m2.sync_times(:, 1);
+  else
+    sync_m1_m2 = current_meta.m1.sync_times(:, 1);
+    sync_m2 = current_meta.m1.sync_times(:, 2);
+  end
   
   %   remove the first sync time, because the first sync time is the start
   %   pulse to plexon, rather than a RESYNCH command to eyelink
@@ -67,7 +71,6 @@ parfor i = 1:numel(mats)
     m2t = m2t(1:n);
     edf_sync_m1 = edf_sync_m1(1:n);
     edf_sync_m2 = edf_sync_m2(1:n);
-    sync_m1 = sync_m1(1:n);
     sync_m1_m2 = sync_m1_m2(1:n);
     sync_m2 = sync_m2(1:n);
   end

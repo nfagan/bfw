@@ -64,7 +64,7 @@ for idx = 1:numel(outerdirs)
 
   m_plex_sync_map_file = shared_utils.io.find( pl2_dir, 'plex_sync_map.json' );
   
-  assert__n_files( m_plex_sync_map_file, 2, 'plex_sync_map.json', pl2_dir );
+  assert__n_files( m_plex_sync_map_file, 1, 'plex_sync_map.json', pl2_dir );
   
   m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
   
@@ -102,6 +102,19 @@ for idx = 1:numel(outerdirs)
     if ( i > 1 )
       assert( numel(m_mats) == n_last_mats, ['Number of .mat files' ...
         , ' must match between m1 and m2.'] );
+    end
+  
+    %
+    %   add plex sync id
+    %
+    
+    plex_sync_id_file = shared_utils.io.find( pl2_dir, 'plex_sync_id.json' );
+    
+    plex_sync_id = 'm2';
+    
+    if ( numel(plex_sync_id_file) ~= 0 )
+      plex_sync_id_struct = bfw.jsondecode( plex_sync_id_file{1} );
+      plex_sync_id = plex_sync_id_struct.plex_sync_id;
     end
     
     %
@@ -213,6 +226,7 @@ for idx = 1:numel(outerdirs)
     for j = 1:numel(m_data)
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
+      m_data(j).plex_sync_id = plex_sync_id;
       m_data(j).plex_directory = plex_dir_components;
       m_data(j).plex_filename = pl2_file;
       m_data(j).plex_region_map_filename = 'regions.json';
@@ -253,7 +267,7 @@ end
 end
 
 function assert__n_files( files, N, kind, directory )
-assert( numel(files) == 1, ['Expected to find %d "%s"' ...
+assert( numel(files) == N, ['Expected to find %d "%s"' ...
     , ' file in "%s", but there were %d.'], N, kind, directory, numel(files) );
 end
 

@@ -23,7 +23,7 @@ duration = params.duration;
 
 assert( ~isnan(duration), 'Specify a valid "duration".' );
 
-parfor i = 1:numel(bound_mats)
+for i = 1:numel(bound_mats)
   fprintf( '\n %d of %d', i, numel(bound_mats) );
   
   bounds = shared_utils.io.fload( bound_mats{i} );
