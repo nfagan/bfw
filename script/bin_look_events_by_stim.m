@@ -5,6 +5,7 @@ unified_p = bfw.get_intermediate_directory( 'unified' );
 aligned_p = bfw.get_intermediate_directory( 'aligned' );
 events_p = bfw.get_intermediate_directory( 'events_per_day' );
 bounds_p = bfw.get_intermediate_directory( 'bounds' );
+fix_p = bfw.get_intermediate_directory( 'fixations' );
 
 mats = bfw.require_intermediate_mats( [], stim_p, [] );
 
@@ -15,6 +16,7 @@ outs.total_dur = Container();
 outs.p_look_back = Container();
 outs.p_in_bounds = Container();
 outs.vel = Container();
+outs.amp_vel = Container();
 
 for i = 1:numel(mats)
 
@@ -26,12 +28,14 @@ un_file = shared_utils.io.fload( fullfile(unified_p, un_filename) );
 events_file = shared_utils.io.fload( fullfile(events_p, un_filename) );
 bounds_file = shared_utils.io.fload( fullfile(bounds_p, un_filename) );
 aligned_file = shared_utils.io.fload( fullfile(aligned_p, un_filename) );
+fix_file = shared_utils.io.fload( fullfile(fix_p, un_filename) );
 
 session_alias = sprintf( 'session__%d', un_file.m1.mat_index );
 
 if ( events_file.is_link )
   events_file = shared_utils.io.fload( fullfile(events_p, events_file.data_file) );
 end
+
 
 %
 % bounds psth
@@ -48,6 +52,10 @@ bounds = bounds_file.m1.bounds('eyes');
   , plex_time, mat_time, stim_file.stimulation_times, lb, la );
 sham_bounds_psth = bounds_psth( bounds, bounds_file.m1.time ...
   , plex_time, mat_time, stim_file.sham_times, lb, la );
+
+%
+% labs
+%
 
 base_labs = SparseLabels.create( ...
     'date', un_file.m1.date ...
@@ -68,6 +76,30 @@ sham_bounds_psth = Container( sham_bounds_psth, set_field(ib_labs, 'stim_type', 
 
 outs.p_in_bounds = extend( outs.p_in_bounds, stim_bounds_psth, sham_bounds_psth );
 outs.p_in_bounds_t = stim_bounds_t * bounds_file.step_size;
+
+%
+% fix amps vs. vels
+%
+
+fix_la = look_ahead;
+fix_starts = fix_file.m1.time( fix_file.m1.start_indices );
+fix_stops = fix_file.m1.time( fix_file.m1.stop_indices );
+
+[stim_fix, stim_end_fix] = bin_fixations( fix_starts, fix_stops ...
+  , stim_file.stimulation_times, fix_la, mat_time, plex_time );
+[sham_fix, sham_end_fix] = bin_fixations( fix_starts, fix_stops ...
+  , stim_file.sham_times, fix_la, mat_time, plex_time );
+
+[stim_amps, stim_vels] = fix_amplitude( stim_fix, stim_end_fix, aligned_file.m1.position, mat_time );
+[sham_amps, sham_vels] = fix_amplitude( sham_fix, sham_end_fix, aligned_file.m1.position, mat_time );
+
+va_labs = set_field( ib_labs, 'meas_type', 'amp_vel' );
+
+va_stim_means = Container( [stim_amps(:), stim_vels(:)], va_labs );
+va_sham_means = Container( [sham_amps(:), sham_vels(:)] ...
+  , set_field(va_labs, 'stim_type', 'sham') );
+
+outs.amp_vel = extend( outs.amp_vel, va_stim_means, va_sham_means );
 
 %
 % velocities
@@ -191,6 +223,139 @@ for j = 1:numel(I)
   
 end
 end
+
+end
+
+function [amps, vels] = fix_amplitude(fix_starts, fix_stops, pos, mat_t)
+
+filt_order = 4;
+frame_len = 21;
+
+x = pos(1, :);
+y = pos(2, :);
+
+x = sgolayfilt( x, filt_order, frame_len );
+y = sgolayfilt( y, filt_order, frame_len );
+
+amps = nan( 1, numel(fix_starts) );
+vels = nan( size(amps) );
+
+for i = 1:numel(fix_starts)
+  starts = fix_starts{i};
+  stops = fix_stops{i};
+  
+  tmp_amps = nan( 1, numel(starts)-1 );
+  tmp_vels = nan( size(tmp_amps)-1 );
+  
+  if ( numel(starts) < 2 )
+    continue;
+  end
+  
+  for j = 1:numel(starts)-1
+    start0 = starts(j);
+    stop0 = stops(j);
+    start1 = starts(j+1);
+    stop1 = stops(j+1);
+
+    [~, start0_i] = min( abs(mat_t - start0) );
+    [~, stop0_i] = min( abs(mat_t - stop0) );
+    [~, start1_i] = min( abs(mat_t - start1) );
+    [~, stop1_i] = min( abs(mat_t - stop1) );
+    
+    x_avg0 = nanmean( x(start0_i:stop0_i) );
+    y_avg0 = nanmean( y(start0_i:stop0_i) );
+    x_avg1 = nanmean( x(start1_i:stop1_i) );
+    y_avg1 = nanmean( y(start1_i:stop1_i) );
+    
+%     xamp = abs( x(start1_i) - x(stop0_i) );
+%     yamp = abs( y(start1_i) - y(stop0_i) );
+
+    xamp = abs( x_avg1 - x_avg0 );
+    yamp = abs( y_avg1 - y_avg0 );
+    
+    subset_x = x(stop0_i+1:start1_i);
+    subset_y = y(stop0_i+1:start1_i);
+    
+    x_peakvel = max( abs(diff(subset_x)) ) * 1e3;
+    y_peakvel = max( abs(diff(subset_y)) ) * 1e3;
+    
+    tmp_amps(j) = (xamp + yamp) / 2;
+    tmp_vels(j) = (x_peakvel + y_peakvel) / 2;
+  end
+  
+  %   first valid saccade
+  use_ind = find( ~isnan(tmp_amps) & ~isnan(tmp_vels), 1, 'first' );
+  
+  if ( isempty(use_ind) )
+    use_ind = 1;
+  end
+  
+  amps(i) = tmp_amps(use_ind);
+  vels(i) = tmp_vels(use_ind);
+  
+  continue;
+  
+  %
+  % old
+  %
+  
+  for j = 1:numel(starts)-1
+%   for j = 1
+  
+    start0 = starts(j);
+    stop0 = stops(j);
+    start1 = starts(j+1);
+    stop1 = stops(j+1);
+
+    [~, start0_i] = min( abs(mat_t - start0) );
+    [~, stop0_i] = min( abs(mat_t - stop0) );
+    [~, start1_i] = min( abs(mat_t - start1) );
+    [~, stop1_i] = min( abs(mat_t - stop1) );
+
+    x_avg0 = nanmean( x(start0_i:stop0_i) );
+    y_avg0 = nanmean( y(start0_i:stop0_i) );
+    x_avg1 = nanmean( x(start1_i:stop1_i) );
+    y_avg1 = nanmean( y(start1_i:stop1_i) );
+    
+    diff_t = stop1 - stop0;
+    
+    xamp = abs( x_avg1 - x_avg0 );
+    yamp = abs( y_avg1 - y_avg0 );
+    
+    xvel = xamp / diff_t;
+    yvel = yamp / diff_t;
+    
+    tmp_amps(j) = (xamp + yamp) / 2;
+    tmp_vels(j) = (xvel + yvel) / 2;
+  end
+  
+  amps(i) = nanmean( tmp_amps );
+  vels(i) = nanmean( tmp_vels );
+
+%   amps(i) = max( tmp_amps );
+%   vels(i) = max( tmp_vels );
+end
+
+end
+
+function [fix, end_fix] = bin_fixations(fix_starts, fix_stops, event_times, la, mat_time, plex_time)
+
+first_t = find( plex_time > 0, 1, 'first' );
+plex_t = plex_time(first_t:end);
+mat_t = mat_time(first_t:end);
+
+fix = cell( 1, numel(event_times) );
+end_fix = cell( size(fix) );
+
+for i = 1:numel(event_times)
+  et = event_times(i);
+  [~, I] = min( abs(plex_t - et) );
+  mat_et = mat_t(I);
+  ind = fix_starts >= mat_et & fix_starts < mat_et + la;
+  fix{i} = fix_starts(ind);
+  end_fix{i} = fix_stops(ind);
+end
+
 
 end
 

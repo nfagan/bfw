@@ -16,13 +16,15 @@ total_dur = labeled.from( event_info.total_dur );
 p_lookback = labeled.from( event_info.p_look_back );
 p_inbounds = labeled.from( event_info.p_in_bounds );
 vel = labeled.from( event_info.vel );
+amp_vel = labeled.from( event_info.amp_vel );
 
 p_inbounds_t = event_info.p_in_bounds_t / 1e3;
 
 %%  stats
 
-to_stats = fix_dur';
-prune( only(to_stats, {'04242018', '04252018'}) );
+to_stats = vel';
+% prune( only(to_stats, {'04242018', '04252018'}) );
+prune( only(to_stats, {'042418', '042518'}) );
 to_rm = bfw.num2cat( 2:6, 'session__' );
 to_keep = setdiff( 1:size(to_stats, 1), find(to_stats, ['042418', to_rm]) );
 prune( keep(to_stats, to_keep) );
@@ -108,7 +110,7 @@ groups_are = { 'meas_type', 'look_ahead' };
 panels_are = { 'session', 'day', 'looks_to' };
 
 plt = vel';
-setdata( plt, plt.data * 1000 );
+setdata( plt, plt.data );
 
 prune( only(plt, {'042418', '042518'}) );
 
@@ -336,3 +338,67 @@ for i = 1:numel(I)
   shared_utils.io.require_dir( full_save_p );  
   shared_utils.plot.save_fig( gcf, fullfile(full_save_p, fname), {'epsc', 'png', 'fig'}, true );
 end
+
+%%  amp vs. velocity
+
+plt = amp_vel';
+
+ok = find( ~any(isnan(plt.data), 2) );
+
+plt = plt(ok);
+
+to_rm = bfw.num2cat( 2:6, 'session__' );
+to_keep = setdiff( 1:size(plt, 1), find(plt, ['042418', to_rm]) );
+prune( keep(plt, to_keep) );
+
+only( plt, {'042418', '042518'} );
+
+% each( plt, {'day', 'stim_type', 'unified_filename'}, @(x) mean(x, 1) );
+
+av_l = getlabels( plt );
+av_d = getdata( plt );
+
+[y, I] = keepeach( av_l', {'day'} );
+
+figure(1); clf();
+
+n = shared_utils.plot.get_subplot_shape( numel(I) );
+axs = gobjects( 1, numel(I) );
+
+for i = 1:numel(I)
+  ax = subplot( n(1), n(2), i );
+  
+  grp_labs = partcat( av_l, 'stim_type', I{i} );
+  
+  A = av_d(I{i}, 1);
+  V = av_d(I{i}, 2);
+  
+  gscatter( A, V, grp_labs );
+  
+  title( joincat(prune(y(i)), 'day') );
+  
+  axis( ax, 'square' );
+  
+  axs(i) = ax;
+end
+
+set( axs, 'xscale', 'log' );
+set( axs, 'yscale', 'log' );
+
+xlims = shared_utils.plot.match_xlims( axs );
+ylims = shared_utils.plot.match_ylims( axs );
+
+arrayfun( @(x) xlabel(x, 'Amplitude (px)'), axs );
+arrayfun( @(x) ylabel(x, 'Peak velocity (px/s)'), axs );
+
+ylim( axs, [1e2, 1e5] );
+xlim( axs, [1e0, 1e3] );
+
+
+
+
+
+
+
+
+
