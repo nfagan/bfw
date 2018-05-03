@@ -1,6 +1,6 @@
 conf = bfw.config.load();
 
-meas_type = 'coherence';
+meas_type = 'sfcoherence';
 input_dir = sprintf( 'at_%s', meas_type );
 
 input_p = bfw.get_intermediate_directory( input_dir );
@@ -63,10 +63,18 @@ specificity = { 'looks_to', 'looks_by', 'region' };
 
 meaned_meas = meas.each1d( specificity, @rowops.nanmean );
 
+%%
+
+to_plt = meaned_meas({'eyes', 'm1'});
+
+figure(1); clf();
+
+spectrogram( to_plt, 'region' );
+
 %%  plot regular
 
 to_plt = meaned_meas;
-to_plt = to_plt.rm( {'mouth', 'm2'} );
+to_plt = to_plt.rm( {'mouth', 'm2', 'outside1'} );
 
 [I, C] = to_plt.get_indices( {'region'} );
 
@@ -108,28 +116,53 @@ for idx = 1:numel(I)
   
 to_plt = meaned_meas(I{idx});
 
-for i = 1
+for i = 2:4
   
 plt = to_plt.collapse( {'look_order', 'unified_filename', 'session_name'} );
 plt = plt.rm( {'mouth', 'm2'} );
-plt = plt.rm( 'face' );
 
+%   mutual minus exclusive, across all
 if ( i == 1 )
+  plt = plt.rm( 'face' );
   plt = plt({'mutual'}) - plt({'m1'});
   plt = plt.replace( 'mutual_minus_m1', 'mut-excl' );
-else
+  sp_shape = [ 1, 1 ];
+  
+  %   eyes minus face
+elseif ( i == 2 )
   plt = plt({'mutual', 'm1'});
   plt = plt.collapse( 'looks_by' );
   plt = plt.each1d( specificity, @rowops.nanmean );  
   plt = plt({'eyes'}) - plt({'face'});
   plt = plt.replace( 'eyes_minus_face', 'eyes-face' );
+  sp_shape = [ 1, 1 ];
+  
+  %   face minus outside
+elseif ( i == 3 )
+  plt = collapse( plt({'mutual', 'm1'}), 'looks_by' );
+  plt = each1d( plt, specificity, @rowops.nanmean );
+  plt = plt({'face', 'outside1'});
+  plt = plt({'face'}) - plt({'outside1'});
+  sp_shape = [ 1, 1 ];
+  
+  %   mutual minus exclusive, eyes and face
+elseif ( i == 4 )
+  plt = plt( {'mutual', 'm1'} );
+  eyes = each1d( plt({'eyes'}), specificity, @rowops.nanmean );
+  %   face in this case is face OR eyes
+  face = set_field( plt({'eyes', 'face'}), 'looks_to', 'face' );
+  face = each1d( face, specificity, @rowops.nanmean );
+  face = face({'mutual'}) - face({'m1'});
+  eyes = eyes({'mutual'}) - eyes({'m1'});
+  plt = extend( face, eyes );
+  sp_shape = [ 1, 2 ];
 end
 
 set( f, 'units', 'normalized' );
 set( f, 'position', [0, 0, 1, 1] );
 
 plt.spectrogram( specificity ...
-  , 'shape', [1, 1] ...
+  , 'shape', sp_shape ...
   , 'frequencies', [0, 100] ...
   , 'time', [-300, 500] ...
   );

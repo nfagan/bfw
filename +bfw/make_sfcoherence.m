@@ -1,4 +1,4 @@
-function make_coherence(varargin)
+function make_sfcoherence(varargin)
 
 import shared_utils.io.fload;
 
@@ -10,7 +10,8 @@ params = bfw.parsestruct( defaults, varargin );
 
 aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
 rng_p = bfw.get_intermediate_directory( 'rng' );
-output_p = bfw.get_intermediate_directory( 'coherence' );
+spike_p = bfw.get_intermediate_directory( 'per_trial_mua' );
+output_p = bfw.get_intermediate_directory( 'sfcoherence' );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
@@ -42,6 +43,15 @@ for i = 1:numel(lfp_mats)
     continue;
   end
   
+  spike_filename = fullfile( spike_p, un_filename );
+  
+  if ( ~shared_utils.io.fexists(spike_filename) )
+    warning( 'Missing spike file for "%s".', un_filename );
+    continue;
+  end
+  
+  spike_file = shared_utils.io.fload( spike_filename );
+  
   lfp_cont = lfp.lfp;
   
   if ( params.filter )
@@ -66,9 +76,16 @@ for i = 1:numel(lfp_mats)
     continue;
   end
   
+  spike_cont = spike_file.data;
+  
   window_size = lfp.params.window_size;
   
-  windowed_data = shared_utils.array.bin3d( lfp_cont.data, window_size, step_size );
+  windowed_lfp = shared_utils.array.bin3d( lfp_cont.data, window_size, step_size );  
+  windowed_spikes = spike_cont.data;
+  
+  if ( numel(spike_file.time) ~= size(windowed_lfp, 3) )
+    error( 'Mismatch in time dimension for lfp and spikes.' );
+  end
   
   chronux_params = struct();
   chronux_params.Fs = params.sample_rate;
@@ -88,12 +105,12 @@ for i = 1:numel(lfp_mats)
   res = cell( 1, size(pairs, 1) );
   freqs = cell( size(res) );
   
-  parfor j = 1:size(pairs, 1)    
+  for j = 1:size(pairs, 1)    
     channel_a = num2str_zeropad( 'FP', pairs(j, 1) );
-    channel_b = num2str_zeropad( 'FP', pairs(j, 2) );
+    channel_b = num2str_zeropad( 'WB', pairs(j, 2) );
     
     index_a = lfp_cont.where( {regions{1}, channel_a} );
-    index_b = lfp_cont.where( {regions{2}, channel_b} );
+    index_b = spike_cont.where( {regions{2}, channel_b} );
     
     if ( sum(index_a) ~= sum(index_b) )
       fprintf( ['\n Skipping "%s" because distributions across channels had' ...
@@ -102,14 +119,15 @@ for i = 1:numel(lfp_mats)
       continue;
     end
     
-    subset_a = windowed_data(index_a, :, :);
-    subset_b = windowed_data(index_b, :, :);
+    subset_a = windowed_lfp(index_a, :, :);
+    subset_b = windowed_spikes(index_b, :);
     
     for h = 1:size(subset_a, 3)      
       one_t_a = subset_a(:, :, h)';
-      one_t_b = subset_b(:, :, h)';
+      one_t_b = subset_b(:, h);
+      one_t_b = cellfun( @(x) struct('times', x), one_t_b );
       
-      [C,~,~,~,~,f] = coherencyc( one_t_a, one_t_b, chronux_params );
+      [C,~,~,~,~,f] = coherencycpt( one_t_a, one_t_b, chronux_params );
       
       C = C';
       
@@ -135,7 +153,7 @@ for i = 1:numel(lfp_mats)
   
   coh_struct = struct();
   coh_struct.is_link = false;
-  coh_struct.coherence = res;
+  coh_struct.sfcoherence = res;
   coh_struct.frequencies = freqs{1};
   coh_struct.unified_filename = un_filename;
   coh_struct.params = params;
@@ -144,6 +162,37 @@ for i = 1:numel(lfp_mats)
 %   do_save( output_filename, coh_struct, '-v7.3' );
   do_save( output_filename, coh_struct );
 end
+
+end
+
+function B = select_gt( A, thresh )
+
+if ( numel(A) < 2 )
+  B = A;
+  return;
+end
+
+first_ind = 1;
+sec_ind = first_ind + 1;
+
+B = A(1);
+
+while ( first_ind <= numel(A) && sec_ind <= numel(A) )
+  
+  first = A(first_ind);
+  sec = A(sec_ind);
+  
+  difference = abs( sec - first );
+  
+  if ( difference >= thresh )
+    B(end+1) = sec;
+    first_ind = sec_ind;
+  end
+  
+  sec_ind = sec_ind + 1;
+end
+
+B = B(:);
 
 end
 
@@ -160,3 +209,33 @@ end
 function do_save(filename, variable, varargin)
 save( filename, 'variable', varargin{:} );
 end
+
+%       dt = 1/chronux_params.Fs;
+%       N = size(one_t_a, 1);
+%       
+%       start_ts = [ 0, -0.5, -1 ];
+%       
+%       cs = cell( 1, numel(start_ts) );
+%       ts = cell( 1, numel(start_ts) );
+%       
+%       for hdx = 1:numel(start_ts)
+%       
+%         start_t = start_ts(hdx);
+%         t = (0:dt:(N-1)*dt) + start_t;
+% 
+%         one_t_b_prime = arrayfun( @(x) setfield(x, 'times', x.times + start_t), one_t_b );
+% 
+%   %       [C,~,~,~,~,f] = coherencycpt( one_t_a, one_t_b, chronux_params, [], t );
+%         [C,~,~,~,~,f] = coherencycpt( one_t_a, one_t_b_prime, chronux_params, [], t );
+% 
+%         C = C';
+%         
+%         cs{hdx} = C;
+%         ts{hdx} = t;
+%       end
+%       
+%       figure(1); clf();
+%       plot( cs{1}(1, :), 'r' ); hold on;
+%       plot( cs{2}(1, :), 'b' ); hold on;
+%       
+%       legend( arrayfun(@num2str, start_ts, 'un', false) );
