@@ -119,6 +119,12 @@ bfw.make_modulation_type( shared_inputs{:} ...
   , 'window_post', [0, 0.3] ...
 );
 
+%%
+
+bfw.make_rng( shared_inputs{:} );
+bfw.make_mua_spikes( shared_inputs{:} );
+bfw.make_per_trial_mua( shared_inputs{:} );
+
 %%  lfp
 
 bfw.make_coherence( shared_inputs{:} );
