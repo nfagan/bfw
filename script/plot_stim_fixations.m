@@ -1,6 +1,11 @@
 
+conf = bfw.config.load();
+base_save_p = fullfile( conf.PATHS.data_root, 'plots', 'stim' ...
+  , 'behavior', datestr(now, 'mmddyy') );
+
+%%
 look_ahead = 2;
-event_info = bin_look_events_by_stim( look_ahead );
+event_info = bin_look_events_by_stim( look_ahead, {'05032018'} );
 
 %%
 event_info2 = debug__check_m1_sync();
@@ -17,8 +22,58 @@ p_lookback = labeled.from( event_info.p_look_back );
 p_inbounds = labeled.from( event_info.p_in_bounds );
 vel = labeled.from( event_info.vel );
 amp_vel = labeled.from( event_info.amp_vel );
+is_fix = labeled.from( event_info.fix );
+
+p_lookback_t = event_info.p_look_back_t;
 
 p_inbounds_t = event_info.p_in_bounds_t / 1e3;
+
+is_fix_t = event_info.fix_t / 1e3;
+
+%%  check with human
+
+% plt = p_inbounds';
+% t = p_inbounds_t;
+
+% plt = p_lookback';
+% t = p_lookback_t;
+
+plt = is_fix';
+t = is_fix_t;
+
+prune( only(plt, 'eyes') );
+
+ind = find( plt, '04242018' );
+
+if ( ~isempty(ind) )
+  plt(ind, 'session') = 'session__1';
+end
+
+pl = plotlabeled();
+pl.x = t;
+pl.one_legend = true;
+pl.error_func = @plotlabeled.nansem;
+pl.add_smoothing = false;
+pl.smooth_func = @(x) smooth(x, 100);
+
+lines_are = 'stim_type';
+panels_are = { 'day', 'session' };
+
+axs = lines( pl, plt, lines_are, panels_are );
+
+xlim( axs, [-1, 1] );
+
+arrayfun( @(x) set(x, 'nextplot', 'add'), axs );
+
+arrayfun( @(x) plot(x, [0; 0], get(x, 'ylim'), 'k--'), axs );
+arrayfun( @(x) plot(x, [-0.15; -0.15], get(x, 'ylim'), 'k--'), axs );
+
+fname = joincat( plt, {'meas_type', 'day', 'session'} );
+full_save_p = fullfile( base_save_p, 'check_probabilities' );
+
+shared_utils.io.require_dir( full_save_p )
+shared_utils.plot.save_fig( gcf, fullfile(full_save_p, fname), {'epsc', 'png', 'fig'}, true );
+
 
 %%  stats
 

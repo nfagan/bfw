@@ -1,4 +1,8 @@
-function outs = bin_look_events_by_stim(look_ahead)
+function outs = bin_look_events_by_stim(look_ahead, files_containing)
+
+if ( nargin < 2 )
+  files_containing = [];
+end
 
 stim_p = bfw.get_intermediate_directory( 'stim' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
@@ -7,7 +11,7 @@ events_p = bfw.get_intermediate_directory( 'events_per_day' );
 bounds_p = bfw.get_intermediate_directory( 'bounds' );
 fix_p = bfw.get_intermediate_directory( 'fixations' );
 
-mats = bfw.require_intermediate_mats( [], stim_p, [] );
+mats = bfw.require_intermediate_mats( [], stim_p, files_containing );
 
 outs = struct();
 outs.n_fix = Container();
@@ -17,6 +21,7 @@ outs.p_look_back = Container();
 outs.p_in_bounds = Container();
 outs.vel = Container();
 outs.amp_vel = Container();
+outs.fix = Container();
 
 for i = 1:numel(mats)
 
@@ -120,6 +125,24 @@ vpsth_sham = Container( vpsth_sham, set_field(vel_labs, 'stim_type', 'sham') );
 
 outs.vel = extend( outs.vel, vpsth_stim, vpsth_sham );
 
+%
+% fix psth
+%
+f_lb = -1e3;
+f_la = 2e3;
+
+[fpsth_stim, fix_t] = fix_psth( fix_file.m1.is_fixation, stim_file.stimulation_times, mat_time, plex_time, f_lb, f_la );
+fpsth_sham = fix_psth( fix_file.m1.is_fixation, stim_file.sham_times, mat_time, plex_time, f_lb, f_la );
+
+fix_labs = set_field( ib_labs, 'meas_type', 'is_fixation' );
+fix_labs = set_field( fix_labs, 'look_ahead', sprintf('look_ahead__%0.3f', f_la/1e3) );
+
+fpsth_stim = Container( fpsth_stim, fix_labs );
+fpsth_sham = Container( fpsth_sham, set_field(fix_labs, 'stim_type', 'sham') );
+
+outs.fix = extend( outs.fix, fpsth_stim, fpsth_sham );
+outs.fix_t = fix_t;
+
 
 %
 % duration
@@ -189,11 +212,16 @@ for j = 1:numel(I)
   %
   % p look back
   %
-
-  lb = -0.5;
+  
+  lb = -1;
   la = 5;
-  bw = 0.5;
+  bw = 0.1;
   ss = 0.1;
+
+%   lb = -0.5;
+%   la = 5;
+%   bw = 0.5;
+%   ss = 0.1;
 
   [stim_counts, t] = p_look_back( stim_file.stimulation_times, event_times, lb, la, bw, ss );
   sham_counts = p_look_back( stim_file.sham_times, event_times, lb, la, bw, ss );
@@ -223,6 +251,32 @@ for j = 1:numel(I)
   
 end
 end
+
+end
+
+function [psth, t] = fix_psth(is_fix, events, mat_time, plex_time, f_lb, f_la)
+
+first_t = find( plex_time > 0, 1, 'first' );
+plex_time = plex_time(first_t:end);
+mat_time = mat_time(first_t:end);
+is_fix = is_fix(first_t:end);
+
+t = f_lb:f_la;
+
+psth = false( numel(events), numel(t) );
+
+for i = 1:numel(events)
+  [~, plex_i] = min( abs(plex_time - events(i)) );
+  mat_t = mat_time(plex_i);
+  [~, mat_i] = min( abs(mat_time - mat_t) );
+  
+  start = mat_i + f_lb;
+  stop = mat_i + f_la;
+  
+  psth(i, :) = is_fix(start:stop);
+end
+
+psth = sum(psth, 1) / size(psth, 1);
 
 end
 
