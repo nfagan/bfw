@@ -2,8 +2,6 @@ function p = get_intermediate_directory(kind, conf)
 
 import shared_utils.assertions.*;
 
-assert__isa( kind, 'char' );
-
 if ( nargin < 2 || isempty(conf) )
   conf = bfw.config.load();
 else
@@ -12,6 +10,6 @@ end
 
 data_p = conf.PATHS.data_root;
 
-p = fullfile( data_p, 'intermediates', kind );
+p = shared_utils.io.fullfiles( data_p, 'intermediates', kind );
 
 end
