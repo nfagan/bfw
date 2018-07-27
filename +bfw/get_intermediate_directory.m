@@ -12,4 +12,6 @@ data_p = conf.PATHS.data_root;
 
 p = shared_utils.io.fullfiles( data_p, 'intermediates', kind );
 
+if ( isa(kind, 'char') ), p = char( p ); end
+
 end
