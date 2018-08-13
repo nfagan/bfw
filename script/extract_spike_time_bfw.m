@@ -2,6 +2,9 @@ import shared_utils.io.fload;
 
 conf = bfw.config.load();
 
+% extract information from "intermediate" folders, these data have already
+% been extracted by bfw function. (e.g bfw.make_spikes, bfw.make_events), they generated intermediate files.
+% stored in .../data/brains/free_viewing/intermediates/...
 event_p = bfw.get_intermediate_directory( 'events' );
 unified_p = bfw.get_intermediate_directory( 'unified' );
 bounds_p = bfw.get_intermediate_directory( 'bounds' );
@@ -22,13 +25,34 @@ look_back = -0.5;
 look_ahead = 0.5;
 spike_bin_size = 0.1; % 100 ms
 
-fs = 1e3; % 
+fs = 1e3; % not sure what this is
 
-for i = 1:numel(event_files)
+% I should probably do some visualization here.
+% for i = 1:numel(event_files)
+for i = 1:2
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );
+  % documents for "event" variable
+  % times: event start time 
+  % durations: length of event in ms scale, not sure what is lengths(seem redundant)
+  % params : duration = 30, we have 10ms bin, we define 3 consecutive bins
+  %          as start of an event
+  %          mutual_method = 'plus-minus' or 'duration', the method used to
+  %          smooth the event, it looked for the window defined by plus_minus_duration. 
+  % make an event graph
+  % relevant function: plot_psth make_spikes
+  
   unified = fload( fullfile(unified_p, events.unified_filename) );
+  % documents for "unified" variable (seemed to be a file, every time info
+  % stored here.
+  % plex_sync_times: clock in plexon?
+  % sync_times: clocks for two monkeys, they are matlab clocks?
+  % reward_sync_times: 
+  % position: eye tracker position?
+  % time: eye tracker time
+  % mat_index: ?
+  % plex_sync_index: ?
   plex_file = unified.m1.plex_filename;
   
   sync_file = fullfile( sync_p, events.unified_filename );
@@ -40,7 +64,10 @@ for i = 1:numel(event_files)
   end
   
   sync = fload( sync_file );
-  spikes = fload( spike_file );
+  % what is this? different from "unified"
+  spikes = fload( spike_file ); 
+  % seemed like a table of selected units for analysis  
+  % should plot spike trains 
   
   if ( ~spikes.is_link )
     spike_map( plex_file ) = spikes;
@@ -48,7 +75,7 @@ for i = 1:numel(event_files)
     spikes = fload( fullfile(spike_p, spikes.data_file) );
     spike_map( plex_file ) = spikes;
   else
-    spikes = spike_map( plex_file );
+    spikes = spike_map( plex_file );  % why? should assign spikes variable to spike_map
   end
   
   %   convert spike times in plexon time (a) to matlab time (b)
@@ -64,7 +91,7 @@ for i = 1:numel(event_files)
   
   %   first get event info
   
-  for j = 1:size(C1, 1)
+  for j = 1:size(C1,1)
     roi = C1{j, 1};
     monk = C1{j, 2};
     row = events.roi_key( roi );
@@ -84,6 +111,7 @@ for i = 1:numel(event_files)
     
     all_event_lengths = all_event_lengths.append( evt_lengths );
     all_event_times = all_event_times.append( set_data(evt_lengths, evts(:)) );
+    
   end
   
   %   then get spike info
@@ -101,7 +129,7 @@ for i = 1:numel(event_files)
     
     unit = spikes.data(unit_index);
     
-    unit_start = unit.start;
+    unit_start = unit.start; % is this determined by spike sorting?
     unit_stop = unit.stop;
     spike_times = unit.times;
     channel_str = unit.channel_str;
@@ -126,8 +154,8 @@ for i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
-    % [raw_psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
-    raw_psth = zeros( 1, 2 );
+    [raw_psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
+%     raw_psth = zeros( 1, 2 );
     raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, fs );
     
     n_events = numel( event_times );
@@ -151,6 +179,7 @@ for i = 1:numel(event_files)
     
     rasters = rasters.append( Container(raster, unqs{:}) );
   end
+  
 end
 
 %   make units unique

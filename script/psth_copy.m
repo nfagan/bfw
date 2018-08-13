@@ -28,7 +28,6 @@ shared_utils.io.require_dir( look_save_p );
 cont = Container();
 evt_info = Container();
 all_event_lengths = Container();
-all_event_distances = Container();
 rasters = Container();
 
 spike_map = containers.Map();
@@ -37,7 +36,6 @@ update_spikes = true;
 
 look_back = -0.5;
 look_ahead = 0.5;
-psth_bin_size = 0.05;
 
 fs = 1e3;
 
@@ -45,7 +43,6 @@ upper_distance_threshold = 1; % longest time allowed between events
 lower_distance_threshold = 100 / 1e3;  % shortest time between events, ms
 
 for i = 1:numel(event_files)
-
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );
@@ -82,7 +79,7 @@ for i = 1:numel(event_files)
   
   C = bfw.allcomb( {rois, monks, unit_indices} );
   C1 = bfw.allcomb( {rois, monks} );
-  hell0 = 1
+  
   %   first get event info
   
   for j = 1:size(C1, 1)
@@ -108,12 +105,10 @@ for i = 1:numel(event_files)
     
     median_evt_length = median( evt_lengths );
     max_evt_length = max( evt_lengths );
-    min_evt_length = min( evt_lengths );
     dev_evt_length = std( evt_lengths );
     
     if ( isempty(min_evt_distance) ), min_evt_distance = NaN; end
     if ( isempty(max_evt_distance) ), max_evt_distance = NaN; end
-    if ( isempty(min_evt_length) ), min_evt_length = NaN; end
     if ( isempty(max_evt_length) ), max_evt_length = NaN; end
     
     labs = SparseLabels.create( ...
@@ -139,17 +134,15 @@ for i = 1:numel(event_files)
     
     cont1 = Container( median_evt_length, labs );
     cont2 = Container( max_evt_length, labs );
-    cont3 = Container( min_evt_length, labs );
     
-    conts2 = extend( cont1, cont2, cont3 );
-    conts2('meas_type') = { 'median_length', 'max_length', 'min_length' };
+    conts2 = extend( cont1, cont2 );
+    conts2('meas_type') = { 'median_length', 'max_length' };
     
     evt_info = evt_info.extend( conts, conts2 );
     
     pairs = cont1.field_label_pairs();
     
     all_event_lengths = all_event_lengths.append( Container(evt_lengths(:), pairs{:}) );
-    all_event_distances = all_event_distances.append( Container(evt_distances(:), pairs{:}) );
   end
   
   if ( ~update_spikes ), continue; end
@@ -193,13 +186,7 @@ for i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
-    %   discard events that occur before the first spike, or after the
-    %   last spike
-    event_times = event_times( event_times >= mat_spikes(1) & event_times <= mat_spikes(end) );
-    
-    if ( isempty(event_times) ), continue; end
-    
-    [psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, psth_bin_size );
+    [psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
     raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, fs );
     
     n_events = numel( event_times );
@@ -235,7 +222,7 @@ if ( update_spikes )
     rasters('unit_id', ind) = sprintf( 'unit__%d', i );
   end
 end
-hello = 1
+
 %%  plot population response matrix
 
 psth = cont;
@@ -274,8 +261,6 @@ colors( 'accg' ) = 'b';
 
 res = Container();
 
-legend_components = containers.Map();
-
 for i = 1:numel(I)
   subset_ = psth_modulation(I{i});
   
@@ -285,8 +270,7 @@ for i = 1:numel(I)
   
   current_color = colors( reg );
   
-%   if ( i == 1 ), legend( gca, '-dynamiclegend' ); end
-  legend( '-dynamiclegend' );
+  if ( i == 1 ), legend( gca, '-dynamiclegend' ); end
   
   for j = 1:numel(regs)
     subset = subset_(regs(j));
@@ -316,10 +300,10 @@ for i = 1:numel(I)
     
     res = res.append( Container([eyes_over_face, mut_over_excl], pairs{:}) );
 
-    h = plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
+    plot( x_coord, y_coord, sprintf('%so', current_color), 'MarkerFaceColor', current_color, 'markersize', 6 ); hold on;
     
-    if ( ~legend_components.isKey(regs{j}) )
-      legend_components(regs{j}) = h;
+    if ( i == 1 )
+      legend( regs{j} );
     end
   end
 end
@@ -349,26 +333,6 @@ xlim( [-1, 1] );
 
 axis( 'square' );
 
-leg_keys = legend_components.keys();
-leg_elements = gobjects( 1, numel(leg_keys) );
-
-for i = 1:numel(leg_keys)
-  leg_elements(i) = legend_components(leg_keys{i}); 
-end
-
-legend( leg_elements, leg_keys );
-
-%   save
-kind = 'population_matrix';
-fname = strjoin( res.flat_uniques({'session_name'}), '_' );
-fname = sprintf( 'population_matrix_%s', fname );
-date_dir = datestr( now, 'mmddyy' );
-save_plot_p = fullfile( conf.PATHS.data_root, 'plots', 'population_response' );
-save_plot_p = fullfile( save_plot_p, date_dir, kind, event_subdir );
-shared_utils.io.require_dir( save_plot_p );
-
-shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, fname), {'epsc', 'png', 'fig'} );
-
 %%  plot histogram of event lengths
 
 pl = ContainerPlotter();
@@ -378,57 +342,6 @@ panels_are = { 'looks_to', 'looks_by' };
 figure(1); clf();
 
 pl.hist( all_event_lengths, 500, [], panels_are );
-
-% filename = sprintf( 'event_length_histogram_', filename );
-filename = 'event_length_histogram';
-  
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
-
-%%  plot histogram of event distances
-
-pl = ContainerPlotter();
-
-panels_are = { 'looks_to', 'looks_by' };
-
-figure(1); clf();
-
-pl.hist( all_event_distances, 500, [], panels_are );
-
-% filename = sprintf( 'event_length_histogram_', filename );
-filename = 'event_distance_histogram';
-  
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
-
-%%  plot bar of event distances
-
-pl = ContainerPlotter();
-
-figure(1); clf(); colormap( 'default' );
-
-plt = all_event_distances;
-
-% pl.summary_function = @min;
-
-plt('unified_filename') = 'a';
-plt('session_name') = 'b';
-
-panels_are = { 'unified_filename', 'session_name', 'meas_type' };
-groups_are = { 'looks_to' };
-x_is = 'looks_by';
-
-pl.bar( plt, x_is, groups_are, panels_are );
-
-filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
-
-meas_types = strjoin( plt('meas_type'), '_' );
-
-filename = sprintf( 'event_distances_%s_%s', filename, meas_types );
-  
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
-
 
 %%  event info
 
@@ -455,12 +368,11 @@ pl.bar( plt, x_is, groups_are, panels_are );
 
 filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
 
-meas_types = strjoin( plt('meas_type'), '_' );
-
-filename = sprintf( 'event_length_%s_%s', filename, meas_types );
+filename = sprintf( 'event_length_%s', filename );
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+print(fullfile(look_save_p, filename), '-dpng')
 
 %%  n events per session
 
@@ -486,38 +398,9 @@ filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
 
 filename = sprintf( 'n_events_per_session_%s', filename );
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
-
-%%  n events per day
-
-pl = ContainerPlotter();
-pl.summary_function = @nanmean;
-pl.error_function = @ContainerPlotter.nansem;
-
-figure(1); clf(); colormap( 'default' );
-
-plt = evt_info;
-
-plt = plt({'n_events'});
-
-plt = plt.each1d( {'session_name', 'meas_type', 'looks_to', 'looks_by'}, @rowops.sum );
-
-plt('unified_filename') = 'a';
-plt('session_name') = 'b';
-
-panels_are = { 'session_name', 'meas_type' };
-groups_are = { 'looks_to' };
-x_is = 'looks_by';
-
-pl.bar( plt, x_is, groups_are, panels_are );
-
-filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
-
-filename = sprintf( 'n_events_per_day_%s', filename );
-  
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+print(fullfile(look_save_p, filename), '-dpng')
 %%
 
 pl = ContainerPlotter();
@@ -574,21 +457,17 @@ for i = 1:numel(I)
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
-  saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
-  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
-  
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  print(fullfile(look_save_p, filename), '-dpng')
 end
 
 %%  per unit, overlay rasters
 
-pl = ContainerPlotter();
-
 date_dir = datestr( now, 'mmddyy' );
 
 % plt = cont({'01162018', '01172018'});
-% plt = cont;
-plt = cont({'01162018', '01172018'});
-plt = plt({'m1_leads_m2','m2_leads_m1'});
+plt = cont;
 
 % plt = plt.replace( 'm1', 'zm1' );
 % plt = plt.replace( 'm2', 'zm2' );
@@ -604,9 +483,7 @@ shared_utils.io.require_dir( save_plot_p );
 
 fig = figure(1);
 
-for i = 185:numel(I)
-  fprintf( '\n %d of %d', i, numel(I) );
-  
+for i = 41:numel(I)
   subset = plt(I{i});
   
   pl.default();
@@ -614,17 +491,11 @@ for i = 185:numel(I)
   pl.vertical_lines_at = 0;
 %   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
-  pl.add_legend = false;
   
   clf(fig);
   
-%   h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
-  
-  title_str = strjoin( flat_uniques(subset, {'looks_by', 'looks_to', 'region', 'unit_id'}), ' | ' );
-  
-  meaned_data = nanmean( subset.data, 1 );
-  sem_data = ContainerPlotter.nansem( subset.data );
-  
+%   subset.plot( pl, 'looks_to', {'looks_by', 'region', 'unit_id'} );
+  h = subset.plot( pl, 'looks_to', {'looks_by', 'looks_to', 'region', 'unit_id'} );
   matching_raster = rasters(C(i, :));
   
   y_lims = get( gca, 'ylim' );
@@ -649,13 +520,15 @@ for i = 185:numel(I)
         hold on;
         plot( x_coord, y_coord, 'k*', 'markersize', 1 );
       end
+%       else
+%         plot( x_coord, y_coord, 'k-', 'markersize', 0.2 );
+%       end
     end
   end
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
-  shared_utils.plot.save_fig( gcf, fullfile(save_plot_p, filename), {'png', 'epsc', 'fig'}, true );
-  
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  print(fullfile(look_save_p, filename), '-dpng')
 end
-
-
