@@ -3,8 +3,9 @@ function separate_eyes_from_face(varargin)
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-bound_p = bfw.get_intermediate_directory( 'bounds' );
+bound_p = bfw.get_intermediate_directory( 'bounds', conf );
 
 bounds = bfw.require_intermediate_mats( params.files, bound_p, params.files_containing );
 

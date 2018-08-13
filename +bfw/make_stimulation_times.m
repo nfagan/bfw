@@ -4,12 +4,12 @@ defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
 
 data_root = conf.PATHS.data_root;
 
-data_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'stim' );
+data_p = bfw.get_intermediate_directory( 'unified', conf );
+save_p = bfw.get_intermediate_directory( 'stim', conf );
 
 mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 

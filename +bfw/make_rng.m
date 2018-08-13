@@ -2,10 +2,12 @@ function make_rng(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-input_p = bfw.get_intermediate_directory( 'unified' );
-output_p = bfw.get_intermediate_directory( 'rng' );
-
 params = bfw.parsestruct( defaults, varargin );
+
+conf = params.config;
+
+input_p = bfw.get_intermediate_directory( 'unified', conf );
+output_p = bfw.get_intermediate_directory( 'rng', conf );
 
 mats = bfw.require_intermediate_mats( params.files, input_p, params.files_containing );
 

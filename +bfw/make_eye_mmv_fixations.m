@@ -7,9 +7,11 @@ defaults.t2 = 15;
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'aligned' );
-unified_p = bfw.get_intermediate_directory( 'unified' );
-output_p = bfw.get_intermediate_directory( 'fixations' );
+conf = params.config;
+
+aligned_p = bfw.get_intermediate_directory( 'aligned', conf );
+unified_p = bfw.get_intermediate_directory( 'unified', conf );
+output_p = bfw.get_intermediate_directory( 'fixations', conf );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 

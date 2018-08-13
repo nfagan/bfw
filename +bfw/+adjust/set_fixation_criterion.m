@@ -4,8 +4,9 @@ defaults = bfw.get_common_make_defaults();
 defaults.duration = 100;  % ms;
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-fix_p = bfw.get_intermediate_directory( 'fixations' );
+fix_p = bfw.get_intermediate_directory( 'fixations', conf );
 
 fix_mats = bfw.require_intermediate_mats( params.files, fix_p, params.files_containing );
 

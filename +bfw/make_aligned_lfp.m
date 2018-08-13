@@ -10,9 +10,11 @@ defaults.sample_rate = 1e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-lfp_p = bfw.get_intermediate_directory( 'lfp' );
-event_p = bfw.get_intermediate_directory( 'events_per_day' );
-output_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
+conf = params.config;
+
+lfp_p = bfw.get_intermediate_directory( 'lfp', conf );
+event_p = bfw.get_intermediate_directory( 'events_per_day', conf );
+output_p = bfw.get_intermediate_directory( 'event_aligned_lfp', conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 

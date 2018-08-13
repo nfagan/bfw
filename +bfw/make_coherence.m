@@ -8,9 +8,11 @@ defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
-rng_p = bfw.get_intermediate_directory( 'rng' );
-output_p = bfw.get_intermediate_directory( 'coherence' );
+conf = params.config;
+
+aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp', conf );
+rng_p = bfw.get_intermediate_directory( 'rng', conf );
+output_p = bfw.get_intermediate_directory( 'coherence', conf );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 

@@ -1,4 +1,4 @@
-function make_sync_times(varargin)
+function make_cs_sync_times(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
@@ -8,10 +8,14 @@ conf = params.config;
 
 data_root = conf.PATHS.data_root;
 
-data_p = bfw.get_intermediate_directory( 'unified', conf );
-save_p = bfw.get_intermediate_directory( 'sync', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
+cs_unified_p = bfw.get_intermediate_directory( fullfile('cs_unified/m1', isd), conf );
+unified_p = bfw.get_intermediate_directory( fullfile('unified', isd), conf );
+save_p = bfw.get_intermediate_directory( fullfile('cs_sync', osd), conf );
+
+mats = bfw.require_intermediate_mats( params.files, cs_unified_p, params.files_containing );
 
 pl2_map = bfw.get_plex_channel_map();
 
@@ -20,12 +24,14 @@ copy_fields = { 'unified_filename', 'plex_filename', 'plex_directory' };
 for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
-  unified = shared_utils.io.fload( mats{i} );
+  cs_unified = shared_utils.io.fload( mats{i} );
+  unified = shared_utils.io.fload( fullfile(unified_p, cs_unified.unified_filename) );
   
-  sync_id = bfw.field_or( unified.m1, 'plex_sync_id', 'm2' );
-  first = 'm1';
+  sync_id = unified.m1.plex_sync_id;
   
-  unified_filename = unified.(first).unified_filename;
+  first = sync_id;
+  
+  unified_filename = cs_unified.unified_filename;
   output_filename = fullfile( save_p, unified_filename );
   
   if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
@@ -55,7 +61,7 @@ for i = 1:numel(mats)
   binned_sync = bfw.bin_pulses( sync_pulses, start_pulses );
   binned_reward = bfw.bin_pulses( reward_pulses, start_pulses );
   
-  sync_index = unified.(first).plex_sync_index;
+  sync_index = cs_unified.plex_sync_index;
   
   if ( sync_index < 1 || sync_index > numel(binned_sync) )
     warning( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...

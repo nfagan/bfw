@@ -1,8 +1,5 @@
 function make_mua_spikes(varargin)
 
-conf = bfw.config.load();
-data_p = conf.PATHS.data_root;
-
 defaults = bfw.get_common_make_defaults();
 defaults = bfw.get_common_lfp_defaults( defaults );
 defaults.std_threshold = 3;
@@ -11,6 +8,9 @@ defaults.f2 = 1800;
 defaults.sample_rate = 40e3;
 
 params = bfw.parsestruct( defaults, varargin );
+
+conf = params.config;
+data_p = conf.PATHS.data_root;
 
 input_p = bfw.get_intermediate_directory( 'lfp' );
 un_p = bfw.get_intermediate_directory( 'unified' );

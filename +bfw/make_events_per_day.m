@@ -5,9 +5,10 @@ import shared_utils.io.fload;
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-event_p = bfw.get_intermediate_directory( 'events' );
-unified_p = bfw.get_intermediate_directory( 'unified' );
+event_p = bfw.get_intermediate_directory( 'events', conf );
+unified_p = bfw.get_intermediate_directory( 'unified', conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 

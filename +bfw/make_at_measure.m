@@ -12,6 +12,8 @@ defaults.z_score = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
+conf = params.config;
+
 if ( isempty(params.input_dir) || isempty(params.output_dir) )
   error( '`input_dir` and `output_dir` must be specified.' );
 end
@@ -25,8 +27,8 @@ output_dir = params.output_dir;
 
 meas_type = params.meas_type;
 
-meas_p = bfw.get_intermediate_directory( input_dir );
-output_p = bfw.get_intermediate_directory( output_dir );
+meas_p = bfw.get_intermediate_directory( input_dir, conf );
+output_p = bfw.get_intermediate_directory( output_dir, conf );
 
 meas_mats = bfw.require_intermediate_mats( params.files, meas_p, params.files_containing );
 

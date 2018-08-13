@@ -7,12 +7,12 @@ defaults.sample_rate = 40e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
 
 data_root = conf.PATHS.data_root;
 
-unified_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'spikes' );
+unified_p = bfw.get_intermediate_directory( 'unified', conf );
+save_p = bfw.get_intermediate_directory( 'spikes', conf );
 
 shared_utils.io.require_dir( save_p );
 

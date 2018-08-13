@@ -3,9 +3,10 @@ function add_plex_time_to_aligned(varargin)
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-aligned_p = bfw.get_intermediate_directory( 'aligned' );
-sync_p = bfw.get_intermediate_directory( 'sync' );
+aligned_p = bfw.get_intermediate_directory( 'aligned', conf );
+sync_p = bfw.get_intermediate_directory( 'sync', conf );
 
 mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
@@ -64,14 +65,8 @@ parfor i = 1:numel(mats)
     last_bin = plex_sync(j+1);
   end
 
-  adjusted_time_m1 = aligned.m1.time + start_time_plex;
-  adjusted_time_m2 = aligned.m2.time + start_time_plex;
-  
-% %   %%
-%   figure(1); clf();
-%   plot( (adjusted_time_m1(1e4:end-2e5) - adjusted_t(1e4:end-2e5)) * 1e3, 'r' ); hold on;
-  
-%   %%
+%   adjusted_time_m1 = aligned.m1.time + start_time_plex;
+%   adjusted_time_m2 = aligned.m2.time + start_time_plex;
   
   if ( ~isfield(aligned, 'adjustments') )
     aligned.adjustments = containers.Map();
@@ -79,10 +74,11 @@ parfor i = 1:numel(mats)
   
   aligned.adjustments('to_plex_time') = params;
   
-%   aligned.m1.plex_time = adjusted_time_m1;
-%   aligned.m2.plex_time = adjusted_time_m2;
-  aligned.m1.plex_time = adjusted_t;
-  aligned.m2.plex_time = adjusted_t;
+  fields = fieldnames( aligned );
+  
+  for j = 1:numel(fields)
+    aligned.(fields{j}).plex_time = adjusted_t;
+  end
   
   do_save( mats{i}, aligned );
 end

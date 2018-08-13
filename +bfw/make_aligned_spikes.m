@@ -11,16 +11,18 @@ defaults.per_event_psth = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
+conf = params.config;
+
 look_back = params.look_back;
 look_ahead = params.look_ahead;
 psth_bin_size = params.psth_bin_size;
 
 raster_fs = params.raster_fs;
 
-spike_p = bfw.get_intermediate_directory( 'spikes' );
-event_p = bfw.get_intermediate_directory( 'events_per_day' );
-unified_p = bfw.get_intermediate_directory( 'unified' );
-output_p = bfw.get_intermediate_directory( 'event_aligned_spikes' );
+spike_p = bfw.get_intermediate_directory( 'spikes', conf );
+event_p = bfw.get_intermediate_directory( 'events_per_day', conf );
+unified_p = bfw.get_intermediate_directory( 'unified', conf );
+output_p = bfw.get_intermediate_directory( 'event_aligned_spikes', conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 

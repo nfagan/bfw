@@ -8,10 +8,12 @@ defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
-rng_p = bfw.get_intermediate_directory( 'rng' );
-spike_p = bfw.get_intermediate_directory( 'per_trial_mua' );
-output_p = bfw.get_intermediate_directory( 'sfcoherence' );
+conf = params.config;
+
+aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp', conf );
+rng_p = bfw.get_intermediate_directory( 'rng', conf );
+spike_p = bfw.get_intermediate_directory( 'per_trial_mua', conf );
+output_p = bfw.get_intermediate_directory( 'sfcoherence', conf );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 

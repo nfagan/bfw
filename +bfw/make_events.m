@@ -12,8 +12,10 @@ defaults.fill_gaps_duration = 50;
 
 params = bfw.parsestruct( defaults, varargin );
 
-bounds_p = bfw.get_intermediate_directory( 'bounds' );
-save_p = bfw.get_intermediate_directory( 'events' );
+conf = params.config;
+
+bounds_p = bfw.get_intermediate_directory( 'bounds', conf );
+save_p = bfw.get_intermediate_directory( 'events', conf );
 
 shared_utils.io.require_dir( save_p );
 

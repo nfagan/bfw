@@ -4,7 +4,8 @@ conf = bfw.config.load();
 
 sub_dirs = shared_utils.cell.ensure_cell( sub_dirs );
 
-save_dir = bfw.get_intermediate_directory( 'unified' );
+unified_output_dir = bfw.get_intermediate_directory( 'unified' );
+cs_unified_output_dir = bfw.get_intermediate_directory( 'cs_unified' );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
@@ -61,16 +62,24 @@ for idx = 1:numel(outerdirs)
   %
   %   get plex sync map
   %
-
-  m_plex_sync_map_file = shared_utils.io.find( pl2_dir, 'plex_sync_map.json' );
   
-  assert__n_files( m_plex_sync_map_file, 1, 'plex_sync_map.json', pl2_dir );
+  sync_file = 'plex_sync_map.json';
+
+  m_plex_sync_map_file = shared_utils.io.find( pl2_dir, sync_file );
+  
+  assert__n_files( m_plex_sync_map_file, 1, sync_file, pl2_dir );
   
   m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
   
   for i = 1:numel(m_dirs)
     m_str = m_dirs{i};
     m_dir = fullfile( outerdir, m_str );
+    
+    if ( ~shared_utils.io.dexists(m_dir) )
+      warning( 'Directory "%s" does not exist.', m_dir );
+      continue;
+    end
+    
     m_cal_dir = fullfile( m_dir, 'calibration' );
     m_mats = shared_utils.io.find( m_dir, '.mat' );
     m_edfs = shared_utils.io.find( m_dir, '.edf' );
@@ -238,6 +247,7 @@ for idx = 1:numel(outerdirs)
       m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
+      m_data(j).unified_filename = bfw.make_intermediate_filename( last_dir, m_filenames{j} );
       m_data(j).edf_filename = edf_filename;
       m_data(j).mat_index = mat_index;
       m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
@@ -246,6 +256,13 @@ for idx = 1:numel(outerdirs)
     data_.(m_str) = m_data;
     
     n_last_mats = numel( m_mats );
+
+    
+    cs_plus_dir = fullfile( m_dir, 'cs_plus' );
+    
+    if ( shared_utils.io.dexists(cs_plus_dir) )
+      csplus_unified( cs_unified_output_dir, m_plex_sync_map, m_data, last_dir, m_str, cs_plus_dir )
+    end
   end
   
   
@@ -254,15 +271,65 @@ for idx = 1:numel(outerdirs)
     m_filename = data_.(m_dirs{1})(i).mat_filename;
     u_filename = bfw.make_intermediate_filename( last_dir, m_filename );
     for j = 1:numel(m_dirs)
+      
+      if ( ~isfield(data_, m_dirs{j}) )
+        continue;
+      end
+      
       data.(m_dirs{j}) = data_.(m_dirs{j})(i);
       data.(m_dirs{j}).unified_filename = u_filename;
-      data.(m_dirs{j}).unified_directory = save_dir;
+      data.(m_dirs{j}).unified_directory = unified_output_dir;
     end
-    shared_utils.io.require_dir( save_dir );
-    file = fullfile( save_dir, u_filename );
+    shared_utils.io.require_dir( unified_output_dir );
+    file = fullfile( unified_output_dir, u_filename );
     save( file, 'data' );
   end
 end
+
+end
+
+function csplus_unified(cs_unified_p, plex_sync_map, m_data, session_dir, m_dir, filep)
+
+mats = shared_utils.io.dirnames( filep, '.mat', false );
+edfs = shared_utils.io.dirnames( filep, '.edf', false );
+
+assert( numel(mats) == numel(edfs), 'Number of .mat files must match number of .edf files.' );
+
+un_dat = m_data(1);
+
+mat_filenumbers = get_filenumbers( mats, 'mat' );
+edf_filenumbers = get_filenumbers( edfs, 'edf' );
+
+for i = 1:numel(mats)
+  data = shared_utils.io.fload( fullfile(filep, mats{i}) );
+  
+  [~, fname] = fileparts( mats{i} );
+  
+  unified_filename = bfw.make_intermediate_filename( session_dir, fname );
+  
+  mat_filenumber = mat_filenumbers(i);
+  matching_edf = edf_filenumbers == mat_filenumber;
+  
+  assert( sum(matching_edf) == 1, 'Expected 1 matching edf file; got %d', sum(matching_edf) );
+  
+  unified_file = struct();
+  
+  unified_file.data = data;
+  unified_file.cs_unified_filename = unified_filename;
+  unified_file.unified_filename = un_dat.unified_filename;
+  unified_file.edf_filename = edfs{matching_edf};
+  unified_file.mat_filename = fname;
+  unified_file.m_id = m_dir;
+  
+  unified_file.mat_index = mat_filenumbers(i);
+  unified_file.plex_sync_index = plex_sync_map(fname);
+  
+  save_p = fullfile( cs_unified_p, m_dir );
+  
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, unified_filename), 'unified_file' );    
+end
+
 
 end
 
@@ -281,6 +348,8 @@ nums = zeros( size(num_ind) );
 for j = 1:numel(num_ind)
   nums(j) = str2double( m_edfs{j}(num_ind{j}) );
 end
+
+validateattributes( nums, {'double'}, {'real', 'integer'} );
 
 end
 

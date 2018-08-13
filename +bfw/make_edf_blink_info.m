@@ -1,12 +1,12 @@
 function make_edf_blink_info(varargin)
 
 defaults = bfw.get_common_make_defaults();
-
 params = bfw.parsestruct( defaults, varargin );
 
-edf_p = bfw.get_intermediate_directory( 'edf' );
+conf = params.config;
 
-save_p = bfw.get_intermediate_directory( 'blinks' );
+edf_p = bfw.get_intermediate_directory( 'edf', conf );
+save_p = bfw.get_intermediate_directory( 'blinks', conf );
 
 shared_utils.io.require_dir( save_p );
 

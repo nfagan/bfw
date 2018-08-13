@@ -12,10 +12,11 @@ defaults.require_fixation = true;
 defaults.single_roi_fixations = false;
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-data_p = bfw.get_intermediate_directory( 'aligned' );
-blink_p = bfw.get_intermediate_directory( 'blinks' );
-fix_p = bfw.get_intermediate_directory( 'fixations' );
+data_p = bfw.get_intermediate_directory( 'aligned', conf );
+blink_p = bfw.get_intermediate_directory( 'blinks', conf );
+fix_p = bfw.get_intermediate_directory( 'fixations', conf );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 

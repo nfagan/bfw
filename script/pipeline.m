@@ -1,4 +1,4 @@
-folders = { '05032018' };
+folders = { '08102018' };
 file_spec = folders;
 % file_spec = [ file_spec, '04242018_position_2' ];
 
@@ -11,6 +11,7 @@ bfw.make_unified( folders );
 %%  sync times
 
 bfw.make_sync_times( shared_inputs{:} );
+bfw.make_cs_sync_times( shared_inputs{:} );
 
 %%
 

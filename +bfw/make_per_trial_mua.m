@@ -8,9 +8,11 @@ defaults.window_size = 0.15;
 
 params = bfw.parsestruct( defaults, varargin );
 
-mua_p = bfw.get_intermediate_directory( 'mua_spikes' );
-events_p = bfw.get_intermediate_directory( 'events_per_day' );
-output_p = bfw.get_intermediate_directory( 'per_trial_mua' );
+conf = params.config;
+
+mua_p = bfw.get_intermediate_directory( 'mua_spikes', conf );
+events_p = bfw.get_intermediate_directory( 'events_per_day', conf );
+output_p = bfw.get_intermediate_directory( 'per_trial_mua', conf );
 
 lb = params.look_back;
 la = params.look_ahead;

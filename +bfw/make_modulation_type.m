@@ -14,10 +14,12 @@ defaults.sig_test_type = 'z';
 
 params = bfw.parsestruct( defaults, varargin );
 
-event_p = bfw.get_intermediate_directory( 'events_per_day' );
-spike_p = bfw.get_intermediate_directory( 'spikes' );
-start_p = bfw.get_intermediate_directory( 'start_stop' );
-output_p = bfw.get_intermediate_directory( 'modulation_type' );
+conf = params.config;
+
+event_p = bfw.get_intermediate_directory( 'events_per_day', conf );
+spike_p = bfw.get_intermediate_directory( 'spikes', conf );
+start_p = bfw.get_intermediate_directory( 'start_stop', conf );
+output_p = bfw.get_intermediate_directory( 'modulation_type', conf );
 
 params.output_p = output_p;
 

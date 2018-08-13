@@ -4,7 +4,7 @@ defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
 
 data_p = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
 
