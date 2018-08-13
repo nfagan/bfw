@@ -59,12 +59,8 @@ for i = 1:numel(un_mats)
   
   pl2_visited_files(pl2_fullfile) = un_filename;
   
-  unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
-  
-  all_maps = bfw.get_plex_region_and_unit_maps( region_map_file, unit_map_file );
-  
-  region_map = all_maps.regions;
+  region_map = bfw.unify_plex_region_map( bfw.jsondecode(region_map_file) );
   
   stp = 1;
   
