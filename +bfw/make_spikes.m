@@ -1,4 +1,8 @@
-function make_spikes(un_mats)
+function make_spikes(varargin)
+
+defaults = bfw.get_common_make_defaults();
+
+params = bfw.parsestruct( defaults, varargin );
 
 conf = bfw.config.load();
 
@@ -9,9 +13,7 @@ save_p = bfw.get_intermediate_directory( 'spikes' );
 
 shared_utils.io.require_dir( save_p );
 
-if ( nargin < 1 )
-  un_mats = shared_utils.io.find( unified_p, '.mat' );
-end
+un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 pl2_visited_files = containers.Map();
 
@@ -26,6 +28,10 @@ for i = 1:numel(un_mats)
   un_filename = unified.(firstf).unified_filename;
   
   un0 = unified.(firstf);
+  
+  full_filename = fullfile( save_p, un0.unified_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   pl2_file = un0.plex_filename;
   pl2_dir_components = un0.plex_directory(1:end-1);
@@ -45,13 +51,13 @@ for i = 1:numel(un_mats)
     spikes = struct();
     
     spikes.is_link = true;
-    spikes.data_file = un_filename;
+    spikes.data_file = pl2_visited_files( pl2_fullfile );
     
     do_save( spikes, fullfile(save_p, un_filename) );
     continue;
   end
   
-  pl2_visited_files(pl2_fullfile) = true;
+  pl2_visited_files(pl2_fullfile) = un_filename;
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
@@ -108,7 +114,7 @@ for i = 1:numel(un_mats)
   spikes.data = all_units;
   spikes.unified_filename = un0.unified_filename;
   
-  do_save( spikes, fullfile(save_p, un0.unified_filename) );
+  do_save( spikes, full_filename );
 end
 
 end

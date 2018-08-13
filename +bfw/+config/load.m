@@ -1,6 +1,33 @@
-function conf = load()
+
+function out = load(cmd)
 
 %   LOAD -- Load the config file.
+%
+%     out = bfw.config.load() loads the current config file.
+%     out = bfw.config.load( '-clear' ) clears the cache of the config
+%     file before loading. This isn't ever necessary unless manually
+%     updating the `config.mat` file via the filesystem.
+%
+%     OUT:
+%       - `out` (struct)
+
+% cache `conf`, unless it is updated via a call to `jjtom.config.save`
+persistent conf;
+
+if ( nargin > 0 )
+  assert( strcmp(cmd, '-clear'), 'Invalid command. Valid options are: -clear.' );  
+  conf = [];
+end
+
+if ( isempty(conf) )
+  conf = do_load();
+end
+
+out = conf;
+
+end
+
+function conf = do_load()
 
 const = bfw.config.constants();
 

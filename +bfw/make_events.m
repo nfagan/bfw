@@ -1,20 +1,28 @@
 function make_events(varargin)
 
 import shared_utils.logical.find_starts;
+ff = @fullfile;
 
-defaults = struct();
+defaults = bfw.get_common_make_defaults();
+
 defaults.duration = NaN;
 defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
+defaults.fill_gaps = false;
+defaults.fill_gaps_duration = 50;
 
 params = bfw.parsestruct( defaults, varargin );
 
-bounds_p = bfw.get_intermediate_directory( 'bounds' );
-save_p = bfw.get_intermediate_directory( 'events' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+bounds_p = bfw.gid( ff('bounds', isd), conf );
+save_p = bfw.gid( ff('events', osd), conf );
 
 shared_utils.io.require_dir( save_p );
 
-bound_mats = shared_utils.io.find( bounds_p, '.mat' );
+bound_mats = bfw.require_intermediate_mats( params.files, bounds_p, params.files_containing );
 
 duration = params.duration;
 
@@ -25,10 +33,24 @@ for i = 1:numel(bound_mats)
   
   bounds = shared_utils.io.fload( bound_mats{i} );
   
+  m_fields = intersect( {'m1', 'm2'}, fieldnames(bounds) );
+  
+  unified_filename = bounds.(m_fields{1}).unified_filename;
+  full_filename = fullfile( save_p, unified_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
+  
+  check_mutual = true;
+  
+  if ( numel(m_fields) == 1 )
+    missing = char( setdiff({'m1', 'm2'}, m_fields{1}) );
+    bounds.(missing) = bounds.(m_fields{1});
+    bounds.(missing).bounds = missing_mutual_fill0( bounds.(missing).bounds );
+    check_mutual = false;
+  end
+  
   m1 = bounds.m1.bounds;
   m2 = bounds.m2.bounds;
-  
-  unified_filename = bounds.m1.unified_filename;
   
   m1t = bounds.m1.time;
   m2t = bounds.m2.time;
@@ -38,6 +60,8 @@ for i = 1:numel(bound_mats)
   all_events = cell( numel(roi_names), 3 );
   all_event_lengths = cell( size(all_events) );
   all_event_durations = cell( size(all_events) );
+  all_looked_first_indices = cell( numel(roi_names), 1 );
+  all_looked_first_distances = cell( size(all_looked_first_indices) );
   
   event_roi_key = containers.Map();
   monk_key = containers.Map();
@@ -48,6 +72,7 @@ for i = 1:numel(bound_mats)
   
   adjusted_duration = duration / bounds.step_size;
   adjusted_mutual_duration = params.plus_minus_duration / bounds.step_size;
+  adjusted_fill_gaps_duration = params.fill_gaps_duration / bounds.step_size;
   
   for j = 1:numel(roi_names)
     
@@ -55,10 +80,20 @@ for i = 1:numel(bound_mats)
     
     m1_bounds = m1(roi_name);
     m2_bounds = m2(roi_name);
-    mutual_bounds = m1_bounds & m2_bounds;
 
     m1_evts = find_starts( m1_bounds, adjusted_duration );
     m2_evts = find_starts( m2_bounds, adjusted_duration );
+    
+    if ( params.fill_gaps )
+      [m1_bounds, m1_evts] = fill_gaps( m1_bounds, m1_evts, adjusted_fill_gaps_duration );
+      [m2_bounds, m2_evts] = fill_gaps( m2_bounds, m2_evts, adjusted_fill_gaps_duration );
+    end
+    
+    if ( check_mutual )
+      mutual_bounds = m1_bounds & m2_bounds;
+    else
+      mutual_bounds = false( size(m1_bounds) );
+    end
     
     mut_method = params.mutual_method;
     
@@ -68,17 +103,18 @@ for i = 1:numel(bound_mats)
       assert( strcmp(mut_method, 'duration'), 'Unrecognized mutual method "%s".', mut_method );
     end
     
-    mutual = find_starts( mutual_bounds, duration );
+    mutual = find_starts( mutual_bounds, adjusted_duration );
     
-%     switch ( params.mutual_method )
-%       case 'duration'
-%         mutual = find_starts( mutual_bounds, duration );
-%       case 'plus-minus'
-%         m2_bounds2 = b_plus_minus( m1_bounds, m2_bounds, adjusted_mutual_duration );
-%         mutual = mutual_plus_minus( m1_evts, m2_evts, adjusted_mutual_duration );
-%       otherwise
-%         error( 'Unrecognized mutual method "%s".', params.mutual_method );
-%     end
+    if ( params.fill_gaps )
+      [mutual_bounds, mutual] = fill_gaps( mutual_bounds, mutual, adjusted_fill_gaps_duration );
+    end 
+    
+    [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
+    
+    %   NEW -- ensure exclusive events are truly exclusive of mutual
+    m1_evts = setdiff( m1_evts, mutual );
+    m2_evts = setdiff( m2_evts, mutual );
+    %
     
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
@@ -92,6 +128,9 @@ for i = 1:numel(bound_mats)
     all_event_lengths(j, :) = { m1_evt_length, m2_evt_length, mutual_evt_length };
     all_event_durations(j, :) = all_event_lengths(j, :);
     
+    all_looked_first_indices{j, 1} = looked_first_index;
+    all_looked_first_distances{j, 1} = looked_first_distance;
+    
     event_roi_key(roi_name) = j;
   end
   
@@ -100,13 +139,110 @@ for i = 1:numel(bound_mats)
   events.times = all_events;
   events.lengths = all_event_lengths;
   events.durations = cellfun( @(x) x .* bounds.step_size, all_event_durations, 'un', false );
+  events.looked_first_indices = all_looked_first_indices;
+  events.looked_first_distances = all_looked_first_distances;
+  events.looked_first_durations = cellfun( @(x) x .* bounds.step_size, all_looked_first_distances, 'un', false );
+  
+  events.identifiers = bfw.get_event_identifiers( events.times, unified_filename );
+  
   events.roi_key = event_roi_key;
   events.monk_key = monk_key;
   events.unified_filename = unified_filename;
   events.params = params;
+  events.window_size = bounds.window_size;
+  events.step_size = bounds.step_size;
   
-  save( fullfile(save_p, unified_filename), 'events' );
+  events.adjustments = containers.Map();
+  
+  if ( params.save )
+    do_save( full_filename, events );
+  else
+    fprintf( '\n Not saving "%s"', unified_filename );
+  end
 end
+
+end
+
+function do_save( filename, events )
+
+save( filename, 'events' );
+
+end
+
+function [out, distance] = who_looked_first( mutual_evts, bounds_a, bounds_b )
+
+starts_a = arrayfun( @(x) find_start_looking_back_from(x, bounds_a), mutual_evts );
+starts_b = arrayfun( @(x) find_start_looking_back_from(x, bounds_b), mutual_evts );
+
+out = zeros( size(mutual_evts) );
+distance = zeros( size(mutual_evts) );
+
+for i = 1:numel(out)
+  a = starts_a(i);
+  b = starts_b(i);
+  
+  if ( a == b )
+    %   both initiate simultaneously
+    continue;
+  elseif ( a < b )
+    %   m1 initiates
+    out(i) = 1;
+    distance(i) = mutual_evts(i) - a;
+  else
+    %   m2 initiates
+    out(i) = 2;
+    distance(i) = mutual_evts(i) - b;
+  end
+end
+
+end
+
+function bounds_copy = missing_mutual_fill0(bounds)
+
+bounds_copy = containers.Map();
+
+K = keys( bounds );
+
+for i = 1:numel(K)
+  fake = bounds(K{i});
+  fake(:) = false;
+  bounds_copy(K{i}) = fake;
+end
+
+end
+
+function [bounds, events] = fill_gaps( bounds, events, threshold )
+
+ind = [ diff(events) <= threshold, false ];
+
+if ( ~any(ind) ), return; end;
+
+num_inds = find( ind );
+
+to_keep_evts = true( size(events) );
+
+for i = 1:numel(num_inds)
+  start_ind = events(num_inds(i));
+  stop_ind = events(num_inds(i)+1);
+  to_keep_evts(num_inds(i)+1) = false;
+  bounds(start_ind:stop_ind) = true;
+end
+
+events = events( to_keep_evts );
+
+[bounds, events] = fill_gaps( bounds, events, threshold );
+
+end
+
+function evt = find_start_looking_back_from( evt, bounds )
+
+while ( evt > 0 && bounds(evt) )
+  evt = evt - 1;
+end
+
+if ( evt == 0 ), return; end
+
+evt = evt + 1;
 
 end
 
@@ -124,21 +260,6 @@ for i = duration+1:N-duration
     end
   end
 end
-
-end
-
-function mut = mutual_plus_minus( a, b, duration )
-
-mut = [];
-
-for i = 1:numel(a)
-  evt = a(i);
-  less = b < evt & abs(b-evt) <= duration;
-  more = b >= evt & abs(b-evt) <= duration;
-  mut(end+1:end+sum(less | more)) = b(less | more);
-end
-
-mut = unique( mut );
 
 end
 

@@ -23,4 +23,6 @@ eyet_px = eye_y + (padding_info.eyes.y * ratio);
 
 bounds = [ eyel_px, eyeb_px, eyer_px, eyet_px ];
 
+% bounds = bounds + [-15, -15, 15, 15];
+
 end

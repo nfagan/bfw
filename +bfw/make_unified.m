@@ -1,16 +1,24 @@
-function make_unified(sub_dirs)
+function make_unified(sub_dirs, varargin)
 
-conf = bfw.config.load();
+ff = @fullfile;
 
-save_dir = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
-save_filename = '';
+defaults = bfw.get_common_make_defaults();
+params = bfw.parsestruct( defaults, varargin );
 
-do_save = true;
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+sub_dirs = shared_utils.cell.ensure_cell( sub_dirs );
+
+unified_output_dir = bfw.gid( ff('unified', osd), conf );
+cs_unified_output_dir = bfw.gid( ff('cs_unified', osd), conf );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
+data_root = conf.PATHS.data_root;
+
 base_dir = fullfile( conf.PATHS.data_root, 'raw' );
-% sub_dirs = { '011118', '011618' };
 
 outerdirs = cellfun( @(x) fullfile(base_dir, x), sub_dirs, 'un', false );
 
@@ -22,7 +30,10 @@ else
   dir_sep = '/';
 end
 
+default_session_duration = 400; % s;
+
 for idx = 1:numel(outerdirs)
+  fprintf( '\n %d of %d', idx, numel(outerdirs) );
   
   outerdir = outerdirs{idx};
   
@@ -58,16 +69,24 @@ for idx = 1:numel(outerdirs)
   %
   %   get plex sync map
   %
-
-  m_plex_sync_map_file = shared_utils.io.find( pl2_dir, 'plex_sync_map.json' );
   
-  assert__n_files( m_plex_sync_map_file, 2, 'plex_sync_map.json', pl2_dir );
+  sync_file = 'plex_sync_map.json';
+
+  m_plex_sync_map_file = shared_utils.io.find( pl2_dir, sync_file );
+  
+  assert__n_files( m_plex_sync_map_file, 1, sync_file, pl2_dir );
   
   m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
   
   for i = 1:numel(m_dirs)
     m_str = m_dirs{i};
     m_dir = fullfile( outerdir, m_str );
+    
+    if ( ~shared_utils.io.dexists(m_dir) )
+      warning( 'Directory "%s" does not exist.', m_dir );
+      continue;
+    end
+    
     m_cal_dir = fullfile( m_dir, 'calibration' );
     m_mats = shared_utils.io.find( m_dir, '.mat' );
     m_edfs = shared_utils.io.find( m_dir, '.edf' );
@@ -100,6 +119,19 @@ for idx = 1:numel(outerdirs)
       assert( numel(m_mats) == n_last_mats, ['Number of .mat files' ...
         , ' must match between m1 and m2.'] );
     end
+  
+    %
+    %   add plex sync id
+    %
+    
+    plex_sync_id_file = shared_utils.io.find( pl2_dir, 'plex_sync_id.json' );
+    
+    plex_sync_id = 'm2';
+    
+    if ( numel(plex_sync_id_file) ~= 0 )
+      plex_sync_id_struct = bfw.jsondecode( plex_sync_id_file{1} );
+      plex_sync_id = plex_sync_id_struct.plex_sync_id;
+    end
     
     %
     %   attach edf files to data, if they're not already attached
@@ -114,7 +146,6 @@ for idx = 1:numel(outerdirs)
       nums = get_filenumbers( m_edfs );
       [~, I] = sort( nums );
       m_edfs = m_edfs(I);
-%       edf_map_ = jsondecode( fileread(m_edf_map{1}) );
       edf_map_ = bfw.jsondecode( m_edf_map{1} );
       pos_fs = fieldnames( edf_map_ );
       for j = 1:numel(pos_fs)
@@ -152,16 +183,78 @@ for idx = 1:numel(outerdirs)
       end
     end
     
+    %
+    %   attach key map file to data, if it's not already attached
+    %
+    
+    if ( ~isfield(m_data, 'far_plane_key_map') )
+      m_map_mats = shared_utils.io.find( outerdir, 'calibration_key_map.mat' );
+      assert__n_files( m_map_mats, 1, 'calibration key map', outerdir );
+      m_key_map = shared_utils.io.fload( m_map_mats{1} );
+      for j = 1:numel(m_data)
+        m_data(j).far_plane_key_map = m_key_map;
+      end
+    end
+    
+    %
+    %   attach mountain sort filename to data, if it exists
+    %
+    
+    ms_firings_filemap_file = '';
+    ms_firings_channel_map_file = '';
+    
+    ms_firings_filemap_directory_path = fullfile( outerdir, 'mountain_sort' );
+
+    if ( shared_utils.io.dexists(ms_firings_filemap_directory_path) )
+      file_map_full_file = fullfile( ms_firings_filemap_directory_path, 'file_map.json' );
+      if ( shared_utils.io.fexists(file_map_full_file) )
+        ms_firings_filemap_file = 'file_map.json';
+      else 
+        fprintf( ['\n Warning: "moutain_sort" directory exists in "%s", but no' ...
+          , ' file_map.json file was found within.'], outerdir );
+      end
+    end
+    
+    mountain_sort_directory_path = fullfile( data_root, 'mountain_sort' );
+    
+    if ( shared_utils.io.dexists(mountain_sort_directory_path) )
+      ms_firings_channel_map_files = shared_utils.io.dirnames( mountain_sort_directory_path, '.xlsx', false );
+      if ( numel(ms_firings_channel_map_files) == 0 )
+        fprintf( ['\n Warning: moutain sort directory "%s" exists, but' ...
+          , ' no channel map excel file exists.'] );
+      else
+        assert__n_files( ms_firings_channel_map_files, 1 ...
+          , 'mountain sort channel map file', mountain_sort_directory_path );
+        ms_firings_channel_map_file = ms_firings_channel_map_files{1};
+      end
+    end
+    
+    %
+    %   add session duration, if it does not exist
+    %
+    
+    if ( ~isfield(m_data, 'session_duration') )
+      for j = 1:numel(m_data)
+        m_data(j).session_duration = default_session_duration;
+      end
+    end
+    
     for j = 1:numel(m_data)
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
+      m_data(j).plex_sync_id = plex_sync_id;
       m_data(j).plex_directory = plex_dir_components;
       m_data(j).plex_filename = pl2_file;
       m_data(j).plex_region_map_filename = 'regions.json';
       m_data(j).plex_unit_map_filename = 'units.json';
+      m_data(j).ms_firings_file_map_filename = ms_firings_filemap_file;
+      m_data(j).ms_firings_file_map_directory = [ all_dir_components, 'mountain_sort' ];
+      m_data(j).ms_firings_channel_map_filename = ms_firings_channel_map_file;
+      m_data(j).ms_firings_directory = { 'mountain_sort' };
       m_data(j).mat_directory = m_dir_components;
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
+      m_data(j).unified_filename = bfw.make_intermediate_filename( last_dir, m_filenames{j} );
       m_data(j).edf_filename = edf_filename;
       m_data(j).mat_index = mat_index;
       m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
@@ -170,29 +263,87 @@ for idx = 1:numel(outerdirs)
     data_.(m_str) = m_data;
     
     n_last_mats = numel( m_mats );
+
+    
+    cs_plus_dir = fullfile( m_dir, 'cs_plus' );
+    
+    if ( shared_utils.io.dexists(cs_plus_dir) )
+      csplus_unified( cs_unified_output_dir, m_plex_sync_map, m_data, last_dir, m_str, cs_plus_dir )
+    end
   end
+  
   
   for i = 1:numel(data_.(m_dirs{1}))
     data = struct();
     m_filename = data_.(m_dirs{1})(i).mat_filename;
     u_filename = bfw.make_intermediate_filename( last_dir, m_filename );
     for j = 1:numel(m_dirs)
+      
+      if ( ~isfield(data_, m_dirs{j}) )
+        continue;
+      end
+      
       data.(m_dirs{j}) = data_.(m_dirs{j})(i);
       data.(m_dirs{j}).unified_filename = u_filename;
-      data.(m_dirs{j}).unified_directory = save_dir;
+      data.(m_dirs{j}).unified_directory = unified_output_dir;
     end
-    if ( do_save )
-      shared_utils.io.require_dir( save_dir );
-      file = fullfile( save_dir, u_filename );
-      save( file, 'data' );
-    end
+    shared_utils.io.require_dir( unified_output_dir );
+    file = fullfile( unified_output_dir, u_filename );
+    save( file, 'data' );
   end
 end
 
 end
 
+function csplus_unified(cs_unified_p, plex_sync_map, m_data, session_dir, m_dir, filep)
+
+mats = shared_utils.io.dirnames( filep, '.mat', false );
+edfs = shared_utils.io.dirnames( filep, '.edf', false );
+
+assert( numel(mats) == numel(edfs), 'Number of .mat files must match number of .edf files.' );
+
+un_dat = m_data(1);
+
+mat_filenumbers = get_filenumbers( mats, 'mat' );
+edf_filenumbers = get_filenumbers( edfs, 'edf' );
+
+for i = 1:numel(mats)
+  data = shared_utils.io.fload( fullfile(filep, mats{i}) );
+  
+  [~, fname] = fileparts( mats{i} );
+  
+  unified_filename = bfw.make_intermediate_filename( session_dir, fname );
+  
+  mat_filenumber = mat_filenumbers(i);
+  matching_edf = edf_filenumbers == mat_filenumber;
+  
+  assert( sum(matching_edf) == 1, 'Expected 1 matching edf file; got %d', sum(matching_edf) );
+  
+  unified_file = struct();
+  
+  unified_file.data = data;
+  unified_file.cs_unified_filename = unified_filename;
+  unified_file.unified_filename = un_dat.unified_filename;
+  unified_file.edf_filename = edfs{matching_edf};
+  unified_file.mat_filename = fname;
+  unified_file.m_id = m_dir;
+  unified_file.mat_directory = { 'raw', session_dir, m_dir, 'cs_plus' };
+  unified_file.mat_directory_name = session_dir;
+  
+  unified_file.mat_index = mat_filenumbers(i);
+  unified_file.plex_sync_index = plex_sync_map(fname);
+  
+  save_p = fullfile( cs_unified_p, m_dir );
+  
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, unified_filename), 'unified_file' );    
+end
+
+
+end
+
 function assert__n_files( files, N, kind, directory )
-assert( numel(files) == 1, ['Expected to find %d "%s"' ...
+assert( numel(files) == N, ['Expected to find %d "%s"' ...
     , ' file in "%s", but there were %d.'], N, kind, directory, numel(files) );
 end
 
@@ -206,6 +357,8 @@ nums = zeros( size(num_ind) );
 for j = 1:numel(num_ind)
   nums(j) = str2double( m_edfs{j}(num_ind{j}) );
 end
+
+validateattributes( nums, {'double'}, {'real', 'integer'} );
 
 end
 

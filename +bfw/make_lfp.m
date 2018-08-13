@@ -1,15 +1,22 @@
-function make_lfp()
+function make_lfp(varargin)
 
-conf = bfw.config.load();
+ff = @fullfile;
 
+defaults = bfw.get_common_make_defaults();
+
+params = bfw.parsestruct( defaults, varargin );
+
+conf = params.config;
 data_root = conf.PATHS.data_root;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-unified_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'lfp' );
+unified_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('lfp', osd), conf );
 
 shared_utils.io.require_dir( save_p );
 
-un_mats = shared_utils.io.find( unified_p, '.mat' );
+un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 pl2_visited_files = containers.Map();
 
@@ -22,6 +29,10 @@ for i = 1:numel(un_mats)
   firstf = fields{1};
   
   un_filename = unified.(firstf).unified_filename;
+  
+  full_filename = fullfile( save_p, un_filename );
+  
+  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   un0 = unified.(firstf);
   
@@ -41,13 +52,12 @@ for i = 1:numel(un_mats)
     fprintf( '\n Using cached data for "%s".', pl2_fullfile );
     lfp = struct();
     lfp.is_link = true;
-    lfp.data_file = un_filename;
-    
+    lfp.data_file = pl2_visited_files( pl2_fullfile );
     do_save( lfp, fullfile(save_p, un_filename) );
     continue;
   end
   
-  pl2_visited_files(pl2_fullfile) = true;
+  pl2_visited_files(pl2_fullfile) = un_filename;
   
   unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
@@ -63,6 +73,10 @@ for i = 1:numel(un_mats)
   total_number_of_channels = sum( arrayfun(@(x) numel(x.channels), region_map) );
   identifiers = cell( total_number_of_channels, 2 );
   rejects = false( total_number_of_channels, 1 );
+  
+  key_cols = containers.Map();
+  key_cols('channel') = 1;
+  key_cols('region') = 2;
     
   for j = 1:numel(region_map)
     
@@ -107,10 +121,11 @@ for i = 1:numel(un_mats)
   lfp.data = lfp_mat;
   lfp.unified_filename = un_filename;
   lfp.key = identifiers;
+  lfp.key_column_map = key_cols;
   lfp.sample_rate = sample_rate;
   lfp.id_times = (0:size(lfp_mat, 2)-1) * (1/sample_rate);
   
-  do_save( lfp, fullfile(save_p, un_filename) );
+  do_save( lfp, full_filename );
 end
 
 end
