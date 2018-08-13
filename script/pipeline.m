@@ -11,7 +11,6 @@ bfw.make_unified( folders );
 %%  sync times
 
 bfw.make_sync_times( shared_inputs{:} );
-bfw.make_cs_sync_times( shared_inputs{:} );
 
 %%
 

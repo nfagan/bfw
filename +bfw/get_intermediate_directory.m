@@ -1,5 +1,19 @@
 function p = get_intermediate_directory(kind, conf)
 
+%   GET_INTERMEDIATE_DIRECTORY -- Get full path to intermediate folder.
+%
+%     p = get_intermediate_directory( 'rois' ) returns the full path to the
+%     intermediate directory 'rois'.
+%
+%     p = get_intermediate_directory( .., conf ) uses the config file
+%     `conf` to create the full path, instead of the saved config file.
+%
+%     IN:
+%       - `kind` (char)
+%       - `conf` (struct)
+%     OUT:
+%       - `p` (cell array of strings, char)
+
 import shared_utils.assertions.*;
 
 if ( nargin < 2 || isempty(conf) )

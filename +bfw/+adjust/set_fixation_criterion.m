@@ -1,12 +1,16 @@
 function set_fixation_criterion(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 defaults.duration = 100;  % ms;
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 
-fix_p = bfw.get_intermediate_directory( 'fixations', conf );
+isd = params.input_subdir;
+
+fix_p = bfw.gid( ff('fixations', isd), conf );
 
 fix_mats = bfw.require_intermediate_mats( params.files, fix_p, params.files_containing );
 
@@ -18,6 +22,9 @@ parfor i = 1:numel(fix_mats)
   fields = { 'm1', 'm2' };
   
   for j = 1:numel(fields)
+    
+    if ( ~isfield(fix_file, fields{j}) ), continue; end
+    
     c_fix_file = fix_file.(fields{j});
     
     if ( ~isfield(c_fix_file, 'original') )

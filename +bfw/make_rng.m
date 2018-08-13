@@ -1,13 +1,17 @@
 function make_rng(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-input_p = bfw.get_intermediate_directory( 'unified', conf );
-output_p = bfw.get_intermediate_directory( 'rng', conf );
+input_p = bfw.gid( ff('unified', isd), conf );
+output_p = bfw.gid( ff('rng', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, input_p, params.files_containing );
 

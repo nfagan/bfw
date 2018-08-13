@@ -1,14 +1,18 @@
 function make_lfp(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
 data_root = conf.PATHS.data_root;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-unified_p = bfw.get_intermediate_directory( 'unified', conf );
-save_p = bfw.get_intermediate_directory( 'lfp', conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('lfp', osd), conf );
 
 shared_utils.io.require_dir( save_p );
 

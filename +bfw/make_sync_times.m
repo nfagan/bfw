@@ -1,5 +1,7 @@
 function make_sync_times(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
@@ -8,8 +10,11 @@ conf = params.config;
 
 data_root = conf.PATHS.data_root;
 
-data_p = bfw.get_intermediate_directory( 'unified', conf );
-save_p = bfw.get_intermediate_directory( 'sync', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+data_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('sync', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 

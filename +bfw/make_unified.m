@@ -1,11 +1,18 @@
-function make_unified(sub_dirs)
+function make_unified(sub_dirs, varargin)
 
-conf = bfw.config.load();
+ff = @fullfile;
+
+defaults = bfw.get_common_make_defaults();
+params = bfw.parsestruct( defaults, varargin );
+
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
 sub_dirs = shared_utils.cell.ensure_cell( sub_dirs );
 
-unified_output_dir = bfw.get_intermediate_directory( 'unified' );
-cs_unified_output_dir = bfw.get_intermediate_directory( 'cs_unified' );
+unified_output_dir = bfw.gid( ff('unified', osd), conf );
+cs_unified_output_dir = bfw.gid( ff('cs_unified', osd), conf );
 
 load_func = @(x) bfw.unify_raw_data( shared_utils.io.fload(x) );
 
@@ -320,6 +327,8 @@ for i = 1:numel(mats)
   unified_file.edf_filename = edfs{matching_edf};
   unified_file.mat_filename = fname;
   unified_file.m_id = m_dir;
+  unified_file.mat_directory = { 'raw', session_dir, m_dir, 'cs_plus' };
+  unified_file.mat_directory_name = session_dir;
   
   unified_file.mat_index = mat_filenumbers(i);
   unified_file.plex_sync_index = plex_sync_map(fname);

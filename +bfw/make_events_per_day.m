@@ -1,14 +1,18 @@
 function make_events_per_day(varargin)
 
 import shared_utils.io.fload;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 
-event_p = bfw.get_intermediate_directory( 'events', conf );
-unified_p = bfw.get_intermediate_directory( 'unified', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+event_p = bfw.gid( ff('events', isd), conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 
@@ -48,11 +52,15 @@ end
 function one_session( events, params )
 
 import shared_utils.io.fload;
+ff = @fullfile;
+
+isd = params.input_subdir;
+osd = params.output_subdir;
 
 if ( numel(events) == 0 ), return; end
 
-unified_p = bfw.get_intermediate_directory( 'unified' );
-evt_save_p = bfw.get_intermediate_directory( 'events_per_day' );
+unified_p = bfw.gid( ff('unified', isd), params.config );
+evt_save_p = bfw.gid( ff('events_per_day', osd), params.config );
 
 allow_overwrite = params.overwrite;
 

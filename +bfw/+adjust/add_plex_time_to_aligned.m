@@ -1,16 +1,21 @@
 function add_plex_time_to_aligned(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 
-aligned_p = bfw.get_intermediate_directory( 'aligned', conf );
-sync_p = bfw.get_intermediate_directory( 'sync', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+aligned_p = bfw.gid( ff('aligned', isd), conf );
+sync_p = bfw.gid( ff('sync', isd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   aligned = shared_utils.io.fload( mats{i} );
@@ -38,13 +43,10 @@ parfor i = 1:numel(mats)
   mat_sync = sync.plex_sync(:, strcmp(sync.sync_key, 'mat'));
   plex_sync = sync.plex_sync(:, strcmp(sync.sync_key, 'plex'));
   
-  start_offset_mat = mat_sync(1);
-  start_time_plex = plex_sync(1) - start_offset_mat;
-  
   if ( aligned.m1.time(1) ~= 0 || aligned.m2.time(1) ~= 0 )
     fprintf( ['\n Warning: Expected first element of `aligned.(x).time` to' ...
       , ' be 0, but was %0.2f'], aligned.m1.time(1) );
-    continue;
+%     continue;
   end
   
   m1_t = aligned.m1.time;
@@ -64,9 +66,6 @@ parfor i = 1:numel(mats)
 %     last_bin = last_bin + sum_ind_t * plex_sync_interval;
     last_bin = plex_sync(j+1);
   end
-
-%   adjusted_time_m1 = aligned.m1.time + start_time_plex;
-%   adjusted_time_m2 = aligned.m2.time + start_time_plex;
   
   if ( ~isfield(aligned, 'adjustments') )
     aligned.adjustments = containers.Map();
@@ -74,9 +73,11 @@ parfor i = 1:numel(mats)
   
   aligned.adjustments('to_plex_time') = params;
   
-  fields = fieldnames( aligned );
+  fields = { 'm1', 'm2' };
   
   for j = 1:numel(fields)
+    if ( ~isfield(aligned, fields{j}) ), continue; end    
+    
     aligned.(fields{j}).plex_time = adjusted_t;
   end
   

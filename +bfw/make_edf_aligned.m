@@ -1,5 +1,7 @@
 function make_edf_aligned(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 defaults.fs = 1e3;
@@ -9,9 +11,12 @@ params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
 
-data_p = bfw.get_intermediate_directory( 'edf', conf );
-unified_p = bfw.get_intermediate_directory( 'unified', conf );
-save_p = bfw.get_intermediate_directory( 'aligned', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+data_p = bfw.gid( ff('edf', isd), conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('aligned', osd), conf );
 
 shared_utils.io.require_dir( save_p );
 
@@ -48,7 +53,7 @@ for i = 1:numel(mats)
     edf_sync = current_meta.(m_id).plex_sync_times(2:end);
     
     aligned = struct();
-    aligned.(m_id) = dummy_align( current_edf_file.(m_id).edf, edf_sync );
+    aligned.(m_id) = dummy_align( current_edf_file.(m_id).edf, edf_sync, fs, N );
   else
     m1 = current_edf_file.m1;
     m2 = current_edf_file.m2;
@@ -158,7 +163,7 @@ t = edf.Events.Messages.time( msg_ind );
 
 end
 
-function aligned = dummy_align(edf, mat_clock)
+function aligned = dummy_align(edf, mat_clock, fs, N)
 
 m1t = get_sync_times( edf );
 
@@ -174,6 +179,19 @@ edf_clock = m1t - m1_edf_start;
 mat_time = bfw.clock_a_to_b( edf_time, edf_clock, mat_clock*1e3 ) / 1e3;
 
 pos = [edf.Samples.posX(:)'; edf.Samples.posY(:)'];
+
+ind = mat_time >= 0;
+pos = pos(:, ind);
+mat_time = mat_time(ind);
+mat_time = mat_time(:)';
+
+% t = 0:fs:N;
+% 
+% loop_for = 100;
+% 
+% for i = 1:loop_for
+%   [~, I] = min( abs(mat_time(i) - t) );
+% end
 
 aligned = struct( ...
     'position', pos ...

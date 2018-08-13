@@ -1,6 +1,7 @@
 function make_aligned_spikes(varargin)
 
 import shared_utils.io.fload;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.look_back = -0.5;
@@ -12,6 +13,8 @@ defaults.per_event_psth = true;
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
 look_back = params.look_back;
 look_ahead = params.look_ahead;
@@ -19,10 +22,10 @@ psth_bin_size = params.psth_bin_size;
 
 raster_fs = params.raster_fs;
 
-spike_p = bfw.get_intermediate_directory( 'spikes', conf );
-event_p = bfw.get_intermediate_directory( 'events_per_day', conf );
-unified_p = bfw.get_intermediate_directory( 'unified', conf );
-output_p = bfw.get_intermediate_directory( 'event_aligned_spikes', conf );
+spike_p = bfw.gid( ff('spikes', isd), conf );
+event_p = bfw.gid( ff('events_per_day', isd), conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
+output_p = bfw.gid( ff('event_aligned_spikes', osd), conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 

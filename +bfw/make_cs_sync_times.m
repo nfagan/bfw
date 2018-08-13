@@ -10,16 +10,17 @@ data_root = conf.PATHS.data_root;
 
 isd = params.input_subdir;
 osd = params.output_subdir;
+mid = params.cs_monk_id;
 
-cs_unified_p = bfw.get_intermediate_directory( fullfile('cs_unified/m1', isd), conf );
+cs_unified_p = bfw.get_intermediate_directory( fullfile('cs_unified', mid, isd), conf );
 unified_p = bfw.get_intermediate_directory( fullfile('unified', isd), conf );
-save_p = bfw.get_intermediate_directory( fullfile('cs_sync', osd), conf );
+save_p = bfw.get_intermediate_directory( fullfile('cs_sync', mid, osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, cs_unified_p, params.files_containing );
 
 pl2_map = bfw.get_plex_channel_map();
 
-copy_fields = { 'unified_filename', 'plex_filename', 'plex_directory' };
+copy_fields = { 'plex_filename', 'plex_directory' };
 
 for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
@@ -31,7 +32,7 @@ for i = 1:numel(mats)
   
   first = sync_id;
   
-  unified_filename = cs_unified.unified_filename;
+  unified_filename = cs_unified.cs_unified_filename;
   output_filename = fullfile( save_p, unified_filename );
   
   if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
@@ -59,7 +60,6 @@ for i = 1:numel(mats)
   start_pulses = bfw.get_pulse_indices( start_pulse_raw.Values );
 
   binned_sync = bfw.bin_pulses( sync_pulses, start_pulses );
-  binned_reward = bfw.bin_pulses( reward_pulses, start_pulses );
   
   sync_index = cs_unified.plex_sync_index;
   
@@ -72,7 +72,6 @@ for i = 1:numel(mats)
   id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
   
   current_plex_sync = binned_sync{sync_index};
-  current_plex_reward = binned_reward{sync_index};
   current_plex_start = start_pulses(sync_index);
   
   if ( numel(current_plex_sync) == 0 )
@@ -80,31 +79,22 @@ for i = 1:numel(mats)
       , mats{i}, sync_index );
   end
   
-  mat_sync = unified.(sync_id).plex_sync_times;
-  mat_reward_sync = unified.(sync_id).reward_sync_times;
-  
-  assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
-    , ' number of plex reward sync and mat reward sync pulses.'] );
-  
-  %   current_sync should have one fewer element than mat_sync. This is
-  %   because the first mat_sync time corresponds to the start_sync pulse
-  assert( numel(mat_sync) == numel(current_plex_sync) + 1, ['Mismatch between' ...
+  mat_sync = cs_unified.data.sync.sync_times(1:cs_unified.data.sync.sync_stp-1);
+  assert( numel(mat_sync) == numel(current_plex_sync), ['Mismatch between' ...
     , ' number of plex sync and mat sync pulses.'] );
   
-  current_plex_sync = [ current_plex_start; current_plex_sync ];
   current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
-  
-  current_plex_reward = arrayfun( @(x) id_times(x), current_plex_reward );
   
   sync = struct();
   
-  sync.reward = [ mat_reward_sync(:), current_plex_reward(:) ];
   sync.plex_sync = [ mat_sync(:), current_plex_sync(:) ];
   sync.sync_key = { 'mat', 'plex' };
   
   for j = 1:numel(copy_fields)
     sync.(copy_fields{j}) = unified.(first).(copy_fields{j});
   end
+  
+  sync.cs_unified_filename = cs_unified.cs_unified_filename;
   
   shared_utils.io.require_dir( save_p );
   save( output_filename, 'sync' );

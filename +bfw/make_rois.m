@@ -1,14 +1,17 @@
 function make_rois(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-data_p = fullfile( conf.PATHS.data_root, 'intermediates', 'unified' );
-
-save_p = fullfile( conf.PATHS.data_root, 'intermediates', 'rois' );
+data_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('rois', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 

@@ -1,6 +1,7 @@
 function make_at_measure(varargin)
 
 import shared_utils.io.fload;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.within = { 'looks_to', 'looks_by' };
@@ -24,11 +25,13 @@ end
 
 input_dir = params.input_dir;
 output_dir = params.output_dir;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
 meas_type = params.meas_type;
 
-meas_p = bfw.get_intermediate_directory( input_dir, conf );
-output_p = bfw.get_intermediate_directory( output_dir, conf );
+meas_p = bfw.gid( ff(input_dir, isd), conf );
+output_p = bfw.gid( ff(output_dir, osd), conf );
 
 meas_mats = bfw.require_intermediate_mats( params.files, meas_p, params.files_containing );
 

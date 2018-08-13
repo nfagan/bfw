@@ -1,5 +1,7 @@
 function make_modulation_type(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 defaults.look_back = -0.5;
 defaults.look_ahead = 0.5;
@@ -15,11 +17,13 @@ defaults.sig_test_type = 'z';
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-event_p = bfw.get_intermediate_directory( 'events_per_day', conf );
-spike_p = bfw.get_intermediate_directory( 'spikes', conf );
-start_p = bfw.get_intermediate_directory( 'start_stop', conf );
-output_p = bfw.get_intermediate_directory( 'modulation_type', conf );
+event_p = bfw.gid( ff('events_per_day', isd), conf );
+spike_p = bfw.gid( ff('spikes', isd), conf );
+start_p = bfw.gid( ff('start_stop', isd), conf );
+output_p = bfw.gid( ff('modulation_type', osd), conf );
 
 params.output_p = output_p;
 

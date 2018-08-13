@@ -1,5 +1,7 @@
 function make_eye_mmv_fixations(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 defaults.min_duration = 0.01;
 defaults.t1 = 30;
@@ -9,9 +11,12 @@ params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
 
-aligned_p = bfw.get_intermediate_directory( 'aligned', conf );
-unified_p = bfw.get_intermediate_directory( 'unified', conf );
-output_p = bfw.get_intermediate_directory( 'fixations', conf );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+aligned_p = bfw.gid( ff('aligned', isd), conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
+output_p = bfw.gid( ff('fixations', osd), conf );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
@@ -43,13 +48,15 @@ parfor i = 1:numel(aligned_mats)
   for j = 1:numel(monks)    
     monk = monks{j};
     
+    if ( ~isfield(aligned_file, monk) ), continue; end
+    
     pos = aligned_file.(monk).position;
     time = aligned_file.(monk).time;
     
     %   repositories/eyelink/eye_mmv
-    is_fix = is_fixation( pos, time, t1, t2, min_duration );
+    is_fix = is_fixation( pos, time(:)', t1, t2, min_duration );
     is_fix = logical( is_fix );
-    is_fix = is_fix(:)';
+    is_fix = is_fix(1:numel(time))';
     
     [starts, lengths] = shared_utils.logical.find_all_starts( is_fix );
     

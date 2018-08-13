@@ -8,6 +8,7 @@ end
 
 defaults.files = [];
 defaults.files_containing = [];
+defaults.cs_monk_id = 'm1';
 defaults.input_subdir = '';
 defaults.output_subdir = '';
 defaults.overwrite = false;
