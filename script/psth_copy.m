@@ -43,7 +43,6 @@ upper_distance_threshold = 1; % longest time allowed between events
 lower_distance_threshold = 100 / 1e3;  % shortest time between events, ms
 
 for i = 1:numel(event_files)
-
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );
@@ -80,7 +79,7 @@ for i = 1:numel(event_files)
   
   C = bfw.allcomb( {rois, monks, unit_indices} );
   C1 = bfw.allcomb( {rois, monks} );
-  hell0 = 1
+  
   %   first get event info
   
   for j = 1:size(C1, 1)
@@ -223,7 +222,7 @@ if ( update_spikes )
     rasters('unit_id', ind) = sprintf( 'unit__%d', i );
   end
 end
-hello = 1
+
 %%  plot population response matrix
 
 psth = cont;
@@ -371,8 +370,9 @@ filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
 
 filename = sprintf( 'event_length_%s', filename );
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+print(fullfile(look_save_p, filename), '-dpng')
 
 %%  n events per session
 
@@ -398,9 +398,9 @@ filename = strjoin( plt.flat_uniques(plt.categories()), '_' );
 
 filename = sprintf( 'n_events_per_session_%s', filename );
   
-saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
-saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
-
+% saveas( gcf, fullfile(look_save_p, [filename, '.eps']) );
+% saveas( gcf, fullfile(look_save_p, [filename, '.png']) );
+print(fullfile(look_save_p, filename), '-dpng')
 %%
 
 pl = ContainerPlotter();
@@ -457,9 +457,9 @@ for i = 1:numel(I)
   
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
-  saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
-  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
-  
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  print(fullfile(look_save_p, filename), '-dpng')
 end
 
 %%  per unit, overlay rasters
@@ -491,7 +491,6 @@ for i = 41:numel(I)
   pl.vertical_lines_at = 0;
 %   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
-  pl.add_legend = false;
   
   clf(fig);
   
@@ -530,8 +529,6 @@ for i = 41:numel(I)
   filename = strjoin( subset.flat_uniques({'region', 'looks_to', 'looks_by', 'unit_id'}), '_' );
   
 %   saveas( gcf, fullfile(save_plot_p, [filename, '.eps']) );
-  saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
-  
+%   saveas( gcf, fullfile(save_plot_p, [filename, '.png']) );
+  print(fullfile(look_save_p, filename), '-dpng')
 end
-
-
