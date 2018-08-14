@@ -30,8 +30,6 @@ for i = 1:numel(mats)
   
   fields = fieldnames( meta );
   
-%   roi_map = bfw.calibration.get_calibration_key_roi_map();
-%   roi_map = meta.(fields{1}).far_plane_key_map;
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
   
@@ -51,15 +49,19 @@ for i = 1:numel(mats)
     rect_map = containers.Map();
     roi_map = meta.(fields{j}).far_plane_key_map;
     calibration = meta.(fields{j}).far_plane_calibration;
+    screen_rect = meta.(fields{j}).screen_rect;
+    
     for k = 1:numel(event_func_keys)
       key = event_func_keys{k};
       func = event_funcs(key);
-      rect = func( calibration, roi_map, roi_pad, roi_const );
+      rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect );
       rect_map(key) = rect;
     end
+    
     for k = 1:numel(copy_fields)
       rois.(fields{j}).(copy_fields{k}) = meta.(fields{j}).(copy_fields{k});
     end
+    
     rois.(fields{j}).roi_filename = r_filename;
     rois.(fields{j}).roi_directory = save_p;
     rois.(fields{j}).rects = rect_map;

@@ -31,7 +31,7 @@ clf( f );
 usedat = events;
 uselabs = eventlabs';
 
-rois = { 'eyes', 'face' };
+rois = { 'eyes', 'face', 'outside1' };
 
 shp = plotlabeled.get_subplot_shape( numel(rois) );
 axs = gobjects( numel(rois), 1 );
@@ -49,11 +49,11 @@ for i = 1:numel(rois)
 
   bfw.plot_fix_psth( ax, time, pos, usedat(mask), lb, la, rect, colorfunc );
   
-  title( rname );
+  title_str = strrep( strjoin({rname, selector}, ' | '), '_', ' ' );
+  
+  title( title_str );
   axs(i) = ax;
 end
-
-d = 10;
 
 end
 

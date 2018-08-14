@@ -1,6 +1,5 @@
 folders = { '08102018' };
 file_spec = folders;
-% file_spec = [ file_spec, '04242018_position_2' ];
 
 shared_inputs = { 'files_containing', file_spec, 'overwrite', false };
 
@@ -125,9 +124,12 @@ bfw.make_modulation_type( shared_inputs{:} ...
   , 'window_post', [0, 0.3] ...
 );
 
-%%
+%%  rng
 
 bfw.make_rng( shared_inputs{:} );
+
+%%  mua
+
 bfw.make_mua_spikes( shared_inputs{:} );
 bfw.make_per_trial_mua( shared_inputs{:} );
 

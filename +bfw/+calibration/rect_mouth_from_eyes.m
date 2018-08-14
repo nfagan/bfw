@@ -1,4 +1,4 @@
-function bounds = rect_mouth_from_eyes(calibration_data, key_map, padding_info, const)
+function bounds = rect_mouth_from_eyes(calibration_data, key_map, padding_info, const, screen_rect)
 
 %
 %   EYES

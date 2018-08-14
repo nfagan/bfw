@@ -183,6 +183,16 @@ for idx = 1:numel(outerdirs)
       end
     end
     
+    m_screen_rect = shared_utils.io.find( m_cal_dir, '.json' );
+    
+    if ( numel(m_screen_rect) > 0 )
+      scr_rect = bfw.jsondecode( m_screen_rect{1} );
+      scr_rect = scr_rect.screen_rect;
+    else
+      warning( 'No screen rect specified; using default' );
+      scr_rect = [0, 0, 1024*3, 768];
+    end
+    
     %
     %   attach key map file to data, if it's not already attached
     %
@@ -258,6 +268,7 @@ for idx = 1:numel(outerdirs)
       m_data(j).edf_filename = edf_filename;
       m_data(j).mat_index = mat_index;
       m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
+      m_data(j).screen_rect = scr_rect;
     end
 
     data_.(m_str) = m_data;
