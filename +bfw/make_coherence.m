@@ -1,16 +1,22 @@
 function make_coherence(varargin)
 
+ff = @fullfile;
+
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
 defaults.step_size = 50;
-defaults.sample_rate = 1e3;
-defaults.reference_subtract = true;
+defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
-output_p = bfw.get_intermediate_directory( 'coherence' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+aligned_p = bfw.gid( ff('event_aligned_lfp', isd), conf );
+rng_p = bfw.gid( ff('rng', isd), conf );
+output_p = bfw.gid( ff('coherence', osd), conf );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
@@ -29,6 +35,8 @@ for i = 1:numel(lfp_mats)
     continue;
   end
   
+  rng_file = shared_utils.io.fload( fullfile(rng_p, un_filename) );
+  
   shared_utils.io.require_dir( output_p );
   
   if ( lfp.is_link )
@@ -41,6 +49,14 @@ for i = 1:numel(lfp_mats)
   end
   
   lfp_cont = lfp.lfp;
+  
+  if ( params.filter )
+    f1 = params.f1;
+    f2 = params.f2;
+    filt_order = params.filter_order;
+    fs = params.sample_rate;
+    lfp_cont.data = bfw.zpfilter( lfp_cont.data, f1, f2, fs, filt_order );
+  end
   
   if ( params.reference_subtract )
     lfp_cont = bfw.ref_subtract( lfp_cont );
@@ -67,15 +83,20 @@ for i = 1:numel(lfp_mats)
   channels_reg_a = lfp_cont.uniques_where( 'channel', regions{1} );
   channels_reg_b = lfp_cont.uniques_where( 'channel', regions{2} );
   
-  combinations = bfw.allcombn( {1:numel(channels_reg_a), 1:numel(channels_reg_b)} );
+  chans_a = cellfun( @(x) str2double(x(3:4)), channels_reg_a );
+  chans_b = cellfun( @(x) str2double(x(3:4)), channels_reg_b );
   
-  is_valid = true( 1, size(combinations, 1) );  
-  res = cell( 1, size(combinations, 1) );
+  rng( rng_file.state );
+  
+  pairs = bfw.select_pairs( chans_a, chans_b, 16 );
+  
+  is_valid = true( 1, size(pairs, 1) );  
+  res = cell( 1, size(pairs, 1) );
   freqs = cell( size(res) );
   
-  parfor j = 1:size(combinations, 1)    
-    channel_a = channels_reg_a{ combinations{j, 1} };
-    channel_b = channels_reg_b{ combinations{j, 2} };
+  parfor j = 1:size(pairs, 1)    
+    channel_a = num2str_zeropad( 'FP', pairs(j, 1) );
+    channel_b = num2str_zeropad( 'FP', pairs(j, 2) );
     
     index_a = lfp_cont.where( {regions{1}, channel_a} );
     index_b = lfp_cont.where( {regions{2}, channel_b} );
@@ -126,7 +147,18 @@ for i = 1:numel(lfp_mats)
   coh_struct.params = params;
   coh_struct.align_params = lfp.params;
   
-  do_save( output_filename, coh_struct, '-v7.3' );
+%   do_save( output_filename, coh_struct, '-v7.3' );
+  do_save( output_filename, coh_struct );
+end
+
+end
+
+function n = num2str_zeropad(pref, n)
+
+if ( n < 10 )
+  n = sprintf( '%s0%d', pref, n );
+else
+  n = sprintf( '%s%d', pref, n );
 end
 
 end

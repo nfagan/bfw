@@ -1,4 +1,4 @@
-function make_events(varargin)
+function make_events_cc(varargin)
 
 import shared_utils.logical.find_starts;
 

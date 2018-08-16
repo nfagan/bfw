@@ -1,10 +1,16 @@
 function separate_eyes_from_face(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
 
-bound_p = bfw.get_intermediate_directory( 'bounds' );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+bound_p = bfw.gid( ff('bounds', isd), conf );
 
 bounds = bfw.require_intermediate_mats( params.files, bound_p, params.files_containing );
 
@@ -13,7 +19,7 @@ for i = 1:numel(bounds)
   
   bound = shared_utils.io.fload( bounds{i} );
   
-  fields = { 'm1', 'm2' };
+  fields = intersect( {'m1', 'm2'}, fieldnames(bound) );
   
   for j = 1:numel(fields)
     c_bounds = bound.(fields{j}).bounds;

@@ -40,7 +40,7 @@ for i = 1:numel(coh_mats)
     got_freqs = true;
   end
   
-  coh = coh.append( c_coh.coherence );
+  coh = coh.append( c_coh.measure );
 end
 
 coh = SignalContainer( coh );

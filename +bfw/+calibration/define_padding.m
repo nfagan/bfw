@@ -1,8 +1,8 @@
 function pad = define_padding()
 
 pad = struct();
-pad.eyes.x = 2.5;
-pad.eyes.y = 2.5;
+pad.eyes.x = 2.75;
+pad.eyes.y = 2.75;
 
 pad.mouth.x = 2;
 pad.mouth.y = 2;

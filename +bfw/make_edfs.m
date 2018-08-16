@@ -1,13 +1,18 @@
 function make_edfs(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
 
-data_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'edf' );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+data_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('edf', osd), conf );
 
 data_root = conf.PATHS.data_root;
 

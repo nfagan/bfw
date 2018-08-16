@@ -10,6 +10,11 @@ function out = require_intermediate_mats( user_files, intermediate_path, contain
 %     OUT:
 %       - `out` (cell array of strings)
 
+if ( nargin == 1 && ischar(user_files) )
+  out = shared_utils.io.find( user_files, '.mat' );
+  return;
+end
+
 if ( nargin < 3 )
   containing = [];
 end

@@ -33,7 +33,8 @@ for i = 1:numel(spike_mats)
   spk_params = spikes.params;
   
   if ( ~got_t )
-    psth_t = spikes.psth_t;
+%     psth_t = spikes.psth_t;
+    psth_t = c_full_psth.psth_t;
     raster_t = spikes.raster_t;
     got_t = true;
   end
@@ -61,6 +62,25 @@ if ( ~isempty(missing_unit_ids) )
   c_psth = c_psth.rm( missing_unit_ids );
 end
 
+%%  z score within condition
+
+z_each = { 'unit_uuid', 'channel', 'looks_to', 'looks_by' };
+[I, C] = c_psth.get_indices( z_each );
+c_psth = c_psth.require_fields( 'is_z' );
+c_psth( 'is_z' ) = 'is_z__true';
+new_dat = c_psth.data;
+
+for i = 1:numel(I)
+  fprintf( '\n %d of %d', i, numel(I) );
+  
+  c_data = new_dat(I{i}, :);
+  means = nanmean( c_data(:) );
+  devs = nanstd( c_data(:) );
+  
+  c_data = (c_data - means) ./ devs;
+  
+  new_data(I{i}, :) = c_data;
+end
 
 %%  calculate modulation index
 
@@ -552,7 +572,7 @@ for j = 1:size(all_c, 1)
   reg_combs = plt_psth.pcombs( cmbs_each );
   
 %   n_bins = 20; 
-  n_bins = -1:0.1:1;
+  bin_size_samples = -1:0.1:1;
   ylims = [0, 70];
   
   for i = 1:size(reg_combs, 1)
@@ -575,7 +595,7 @@ for j = 1:size(all_c, 1)
     
     reg = reg_combs{i, find(strcmp(cmbs_each, 'region'))};
     
-    histogram( ax2, X, n_bins, 'facecolor', colors(reg) );
+    histogram( ax2, X, bin_size_samples, 'facecolor', colors(reg) );
     xlim( ax2, [-1, 1] );
     ylim( ax2, ylims );
     xlabel( ax2, 'Eyes over Face' );
@@ -591,7 +611,7 @@ for j = 1:size(all_c, 1)
       text( med1+0.1, ylims(2), p_str, 'parent', ax2 );    
     end
     
-    histogram( ax3, Y, n_bins, 'facecolor', colors(reg) );
+    histogram( ax3, Y, bin_size_samples, 'facecolor', colors(reg) );
     xlim( ax3, [-1, 1] );
     ylim( ax3, ylims );
     xlabel( ax3, 'Mutual over Exclusive' );
@@ -640,3 +660,320 @@ for j = 1:size(all_c, 1)
   shared_utils.plot.save_fig( f3, fullfile(save_plot_p, fname_hist2), formats, true );
   
 end
+
+%%
+
+start_t = 0;
+stop_t = 0.3;
+t_ind = psth_t >= start_t & psth_t < stop_t;
+
+should_keep_trials = false;
+
+m_psth = c_psth;
+m_psth = m_psth.only( {'m1', 'mutual', 'face', 'eyes'} );
+
+m_psth.data = nanmean( m_psth.data(:, t_ind), 2 );
+
+mean_each = { 'channel', 'unit_uuid', 'looks_to', 'looks_by' };
+
+if ( should_keep_trials )
+  max_keep = 12;
+
+  rebuilt = Container();
+  [I, C] = m_psth.get_indices( mean_each );
+  for i = 1:numel(I)
+    subset = m_psth(I{i});
+
+    n_keep = randperm( min(max_keep, shape(subset, 1)) );
+    subset = subset(n_keep);  
+    rebuilt = append( rebuilt, subset );  
+  end
+
+  m_psth = rebuilt;
+end
+
+func_t = 'nanmean';
+
+if ( strcmp(func_t, 'nanmean') )
+  summary_func = @rowops.nanmean;
+elseif ( strcmp(func_t, 'nanmedian') );
+  summary_func = @rowops.nanmedian;
+end
+
+m_psth = m_psth.each1d( mean_each, summary_func );
+
+m_psth = m_psth.require_fields( 'summary_func_t' );
+m_psth('summary_func_t') = strrep( func2str(summary_func), '.', '' );
+
+%%
+
+conf = bfw.config.load();
+save_p = fullfile( conf.PATHS.plots, 'population_response', datestr(now, 'mmddyy'), 'scatter' );
+
+outer_plt_psth = m_psth;
+% plt_psth = plt_psth({'unit_rating__3'});
+
+outer_plt_psth = outer_plt_psth.collapse( 'unit_rating' );
+
+figures_are = 'unit_rating';
+
+[I2, C2] = outer_plt_psth.get_indices( figures_are );
+
+base_filename = sprintf( '%d_%d', abs(start_t*1e3), abs(stop_t*1e3) );
+
+for i = 1:numel(I2)
+  
+plt_psth = outer_plt_psth(I2{i});
+
+[I, C] = plt_psth.get_indices( {'region', 'unit_rating'} );
+
+subp_shape = shared_utils.plot.get_subplot_shape( numel(I) );
+
+f = figure(1);
+clf( f );
+
+colors = containers.Map( {'accg', 'bla', 'ofc', 'dmpfc'}, {'r', 'g', 'b', 'c'} );
+
+titles_are = { 'region', 'unit_rating', 'summary_func_t' };
+fnames_are = unique( [titles_are, {'unit_rating', 'region'}] );
+
+for idx = 1:numel(I)
+  
+  subset_psth = plt_psth(I{idx});
+  
+  reg = C{idx, 1};
+  
+  subplot( subp_shape(1), subp_shape(2), idx );
+  
+  func = @(x, first, sec) (x({first}) - x({sec})) ./ (x({first}) + x({sec}));
+  
+  subset_psth = subset_psth.collapse( {'channel', 'look_order', 'session_name', 'unified_filename'} );  
+  m_ratio_eyes_face = subset_psth.for_each( 'region', @(x) func(x, 'eyes', 'face') );
+  m_ratio_mut_excl = subset_psth.for_each( 'region', @(x) func(x, 'mutual', 'm1') );
+  
+  assert( eq_ignoring(m_ratio_eyes_face.labels, m_ratio_mut_excl.labels ...
+    , {'looks_by', 'looks_to'}) );
+  
+  X = m_ratio_mut_excl.data;
+  Y = m_ratio_eyes_face.data;
+  
+  non_nans = ~isnan(X) & ~isnan(Y);
+  
+  [r, p] = corr( X, Y, 'rows', 'complete' );
+  ps = polyfit( X(non_nans), Y(non_nans), 1 );
+  res = polyval( ps, [-1, 1] );
+  
+  if ( p < 0.05 )
+    hold on;
+    plot( 1, 1, 'k*' );
+    plot( [-1, 1], res );
+  end
+  
+  scatter( X, Y, 4, colors(reg));
+  
+  ylim( [-1, 1] );
+  xlim( [-1, 1] );
+  
+  hold on;
+  
+  plot( [0, 0], [-1, 1], 'k--' );
+  plot( [-1, 1], [0, 0], 'k--' );
+  
+  title( strjoin(flat_uniques(subset_psth, titles_are), ' | ') );
+  
+  xlabel( 'Mutual over Exclusive' );
+  ylabel( 'Eyes over Face' );
+  
+end
+
+filename = strjoin( flat_uniques(plt_psth, fnames_are), '_' );
+
+filename = sprintf( '%s_%s', base_filename, filename );
+  
+shared_utils.io.require_dir( save_p );
+shared_utils.plot.save_fig( f, fullfile(save_p, filename), {'epsc', 'png', 'fig'}, true );
+end
+
+%%  sliding window correlation
+
+m_psth = c_psth;
+m_psth = m_psth.only( {'m1', 'mutual', 'face', 'eyes'} );
+
+bin_size = 0.3;
+step_size = 0.3;
+
+bin_size_samples = round( bin_size / (psth_t(2) - psth_t(1)) );
+
+%%
+
+[I, C] = m_psth.get_indices( {'region'} );
+
+means_each = { 'looks_to', 'looks_by', 'unit_uuid', 'channel' };
+
+contrast_rs = Container();
+contrast_ps = Container();
+
+noncontrast_rs = Container();
+noncontrast_ps = Container();
+
+for i = 1:numel(I)
+  
+  one_reg = m_psth(I{i});
+  
+  one_reg_means = one_reg.each1d( means_each, @rowops.nanmean );
+  
+  %   get contrast ratio
+  func = @(x, first, sec) (x({first}) - x({sec})) ./ (x({first}) + x({sec}));
+  
+  one_reg_means = one_reg_means.collapse( {'channel', 'look_order', 'session_name', 'unified_filename'} );  
+  m_ratio_eyes_face = one_reg_means.for_each( 'region', @(x) func(x, 'eyes', 'face') );
+  m_ratio_mut_excl = one_reg_means.for_each( 'region', @(x) func(x, 'mutual', 'm1') );
+  
+  eyes_face_data = squeeze( nanmean(shared_utils.array.bin3d(m_ratio_eyes_face.data, bin_size_samples), 2) );
+  mut_excl_data = squeeze( nanmean(shared_utils.array.bin3d(m_ratio_mut_excl.data, bin_size_samples), 2) );
+  
+  %   get non contrast ratio
+  collapsed_looks_by = one_reg_means.each1d( setdiff(means_each, 'looks_by'), @rowops.nanmean );
+  nc_eyes_face_data = get_data( collapsed_looks_by );
+  collapsed_looks_to = one_reg_means.each1d( setdiff(means_each, 'looks_to'), @rowops.nanmean );
+  nc_mut_excl_data = get_data( collapsed_looks_to );
+  
+  nc_mut_excl_data = squeeze( nanmean(shared_utils.array.bin3d(nc_mut_excl_data, bin_size_samples), 2) );
+  nc_eyes_face_data = squeeze( nanmean(shared_utils.array.bin3d(nc_eyes_face_data, bin_size_samples), 2) );
+  
+  rs = zeros( 1, size(eyes_face_data, 2) );
+  ps = zeros( size(rs) );
+  
+  for j = 1:size(mut_excl_data, 2)
+    
+    X = mut_excl_data(:, j);
+    Y = eyes_face_data(:, j);
+    
+    [r, p] = corr( X, Y, 'rows', 'complete' );
+    
+    rs(j) = r;
+    ps(j) = p;
+  end
+  
+  contrast_rs = append( contrast_rs, set_data(one(one_reg), rs) );
+  contrast_ps = append( contrast_ps, set_data(one(one_reg), ps) );
+  
+  eye_face_rs = zeros( size(rs) );
+  eye_face_ps = zeros( size(ps) );
+  
+  mut_excl_rs = zeros( size(rs) );
+  mut_excl_ps = zeros( size(rs) );
+  
+  for j = 1:size(nc_mut_excl_data, 2)
+
+    eyes = nc_eyes_face_data( collapsed_looks_by.where('eyes'), j );
+    face = nc_eyes_face_data( collapsed_looks_by.where('face'), j );
+    mut = nc_mut_excl_data( collapsed_looks_to.where('mutual'), j );
+    excl = nc_mut_excl_data( collapsed_looks_to.where('m1'), j );
+    
+    [eye_face_rs(j), eye_face_ps(j)] = corr( eyes, face, 'rows', 'complete' );
+    [mut_excl_rs(j), mut_excl_ps(j)] = corr( mut, excl, 'rows', 'complete' );
+    
+  end
+  
+  roi_rs = set_data( one(collapsed_looks_by), eye_face_rs );
+  roi_ps = set_data( one(collapsed_looks_by), eye_face_ps );
+  
+  roi_rs('looks_to') = 'eyes_face';
+  roi_rs = roi_rs.collapse( 'looks_by' );
+  roi_ps('looks_to') = 'eyes_face';
+  roi_ps = roi_ps.collapse( 'looks_by' );
+  
+  look_type_rs = set_data( one(collapsed_looks_to), mut_excl_rs );
+  look_type_ps = set_data( one(collapsed_looks_to), mut_excl_ps );
+  
+  look_type_rs('looks_by') = 'mut_excl';
+  look_type_rs = look_type_rs.collapse( 'looks_to' );
+  look_type_ps('looks_by') = 'mut_excl';
+  look_type_ps = look_type_ps.collapse( 'looks_to' );
+  
+  noncontrast_rs = extend( noncontrast_rs, roi_rs, look_type_rs );
+  noncontrast_ps = extend( noncontrast_ps, roi_ps, look_type_ps );
+end
+
+%%
+
+save_p = fullfile( conf.PATHS.plots, 'population_response', datestr(now, 'mmddyy') ...
+  , 'corrs_over_time' );
+
+subps_are = { 'region' };
+titles_are = unique( [subps_are] );
+
+kind = 'contrast';
+
+switch ( kind )
+  case 'mut_excl'
+    ylab = 'R (mutual vs. exclusive)';
+    to_plt_rs = noncontrast_rs({kind});
+    to_plt_ps = noncontrast_ps({kind});
+  case 'eyes_face'
+    ylab = 'R (eyes vs. face)';
+    to_plt_rs = noncontrast_rs({kind});
+    to_plt_ps = noncontrast_ps({kind});
+  case 'contrast'
+    ylab = 'R (contrast)';
+    to_plt_rs = contrast_rs;
+    to_plt_ps = contrast_ps;
+end
+
+[I, C] = to_plt_rs.get_indices( subps_are );
+
+subp_shape = shared_utils.plot.get_subplot_shape( numel(I) );
+
+f = figure(1);
+clf( f );
+
+ts = psth_t(1:bin_size_samples:numel(psth_t));
+
+axs = gobjects( 1, numel(I) );
+
+for i = 1:numel(I)
+  axs(i) = subplot( subp_shape(1), subp_shape(2), i );
+  
+  subset_r = to_plt_rs(I{i});
+  subset_p = to_plt_ps(I{i});
+  
+  assert( shapes_match(subset_r, subset_p) && shape(subset_r, 1) == 1 );
+  
+  plot( ts, subset_r.data );  
+  hold on;
+  
+  xlabel( '(s) from event' );
+  
+  if ( i == 1 )
+    ylabel( ylab );
+  end
+  
+  title( strjoin(flat_uniques(subset_r, titles_are), ' | ') );
+    
+end
+
+ylims = cell2mat( arrayfun(@(x) get(x, 'ylim'), axs, 'un', false)' );
+lims = [ min(ylims(:, 1)), max(ylims(:, 2)) ];
+
+set( axs, 'ylim', lims );
+set( axs, 'nextplot', 'add' );
+
+[~, zero_ind] = min( abs(0 - psth_t) );
+
+arrayfun( @(x) plot(x, [psth_t(zero_ind), psth_t(zero_ind)], lims, 'k--'), axs );
+
+for i = 1:numel(I)
+  
+  subset_p = to_plt_ps(I{i});
+  
+  is_sig = find( subset_p.data < 0.05 );
+  
+  for j = 1:numel(is_sig)
+    plot( axs(i), ts(is_sig(j)), max(ylims(:, 2)), 'k*', 'markersize', 4 );
+  end
+end
+
+fname = sprintf( '%s_%s', kind, strjoin(flat_uniques(to_plt_rs, {'looks_to', 'looks_by'})) );
+shared_utils.io.require_dir( save_p );
+shared_utils.plot.save_fig( f, fullfile(save_p, fname), {'epsc', 'png', 'fig'}, true );

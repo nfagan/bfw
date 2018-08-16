@@ -20,9 +20,9 @@ spike_map = containers.Map();
 
 look_back = -0.5;
 look_ahead = 0.5;
-spike_bin_size = 0.1;
+spike_bin_size = 0.1; % 100 ms
 
-fs = 1e3;
+fs = 1e3; % 
 
 for i = 1:numel(event_files)
   fprintf( '\n %d of %d', i, numel(event_files) );
@@ -107,8 +107,9 @@ for i = 1:numel(event_files)
     channel_str = unit.channel_str;
     region = unit.region;
     unit_name = unit.name;
-    unified_filename = spikes.unified_filename;
-    mat_directory_name = unified.m1.mat_directory_name;    
+    % unified_filename = spikes.unified_filename;
+    unified_filename = unified.m1.unified_filename;
+    mat_directory_name = unified.m1.mat_directory_name;
     
     event_times = events.times{row, col};
     
@@ -125,7 +126,8 @@ for i = 1:numel(event_files)
     
     mat_spikes = bfw.clock_a_to_b( spike_times, clock_a, clock_b );
     
-    [raw_psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
+    % [raw_psth, bint] = looplessPSTH( mat_spikes, event_times, look_back, look_ahead, 0.1 );
+    raw_psth = zeros( 1, 2 );
     raster = bfw.make_raster( mat_spikes, event_times, look_back, look_ahead, fs );
     
     n_events = numel( event_times );
@@ -163,3 +165,50 @@ for i = 1:size(C, 1)
   ind = rasters.where(C(i, :));
   rasters('unit_id', ind) = sprintf( 'unit__%d', i );
 end
+all_spike_times = all_spike_times.require_fields( 'unit_id' );
+for i = 1:size(C, 1)
+  ind = all_spike_times.where(C(i, :));
+  all_spike_times('unit_id', ind) = sprintf( 'unit__%d', i );
+end
+%%
+
+all_runs = all_spike_times( 'unified_filename' );
+
+one_run = all_runs{1};
+
+one_run_events = all_event_times.only( one_run );
+one_run_spikes = all_spike_times.only( one_run );
+
+one_run_eye_m1_events = all_event_times.only( {one_run, 'eyes', 'm1'} );
+
+one_run_unit_ids = one_day_spikes( 'unit_id' );
+
+one_run_unit = one_day_spikes( {one_run_unit_ids{1}, 'eyes', 'm1'} );
+
+one_run_unit = one_run_unit(1);
+
+%%
+
+[I, C] = all_spike_times.get_indices( {'unit_id', 'unified_filename'} );
+
+for i = 1:size(C, 1)
+  one_unit = all_spike_times.only( C(i, :) );
+  one_unit = one_unit(1);
+  
+  session_name = one_unit( 'unified_filename' );
+  
+  one_session_events = all_event_times.only( session_name );
+  one_session_lengths = all_event_lengths.only( session_name );
+  
+  [all_event_indices, all_event_combination] = one_session_events.get_indices( {'looks_to', 'looks_by', 'unified_filename'} );
+  
+  for j = 1:numel(all_event_indices)
+    
+    unique_events = one_session_events( all_event_indices{j} );
+    unique_event_lengths = one_session_lengths.only( all_event_combination(j, :) );
+    
+  end
+end
+
+
+

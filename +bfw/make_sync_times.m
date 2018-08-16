@@ -1,15 +1,20 @@
 function make_sync_times(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
 
 data_root = conf.PATHS.data_root;
 
-data_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'sync' );
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+data_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('sync', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
@@ -22,8 +27,8 @@ for i = 1:numel(mats)
   
   unified = shared_utils.io.fload( mats{i} );
   
-  fields = fieldnames( unified );
-  first = fields{1};
+  sync_id = bfw.field_or( unified.m1, 'plex_sync_id', 'm2' );
+  first = 'm1';
   
   unified_filename = unified.(first).unified_filename;
   output_filename = fullfile( save_p, unified_filename );
@@ -58,8 +63,9 @@ for i = 1:numel(mats)
   sync_index = unified.(first).plex_sync_index;
   
   if ( sync_index < 1 || sync_index > numel(binned_sync) )
-    error( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...
+    warning( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...
       , mats{i}, numel(binned_sync), sync_index ); 
+    continue;
   end
   
   id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
@@ -73,8 +79,8 @@ for i = 1:numel(mats)
       , mats{i}, sync_index );
   end
   
-  mat_sync = unified.m2.plex_sync_times;
-  mat_reward_sync = unified.m2.reward_sync_times;
+  mat_sync = unified.(sync_id).plex_sync_times;
+  mat_reward_sync = unified.(sync_id).reward_sync_times;
   
   assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
     , ' number of plex reward sync and mat reward sync pulses.'] );

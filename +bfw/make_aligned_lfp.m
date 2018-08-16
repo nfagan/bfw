@@ -1,6 +1,7 @@
 function make_aligned_lfp(varargin)
 
 import shared_utils.io.fload;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.window_size = 150;
@@ -10,9 +11,13 @@ defaults.sample_rate = 1e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-lfp_p = bfw.get_intermediate_directory( 'lfp' );
-event_p = bfw.get_intermediate_directory( 'events_per_day' );
-output_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+lfp_p = bfw.gid( ff('lfp', isd), conf );
+event_p = bfw.gid( ff('events_per_day', isd), conf );
+output_p = bfw.gid( ff('event_aligned_lfp', osd), conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 
