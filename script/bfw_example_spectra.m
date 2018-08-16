@@ -8,7 +8,11 @@ lfp_mats = shared_utils.io.find( lfp_dir, '.mat' );
 t_ind = true( size(t) );
 f_ind = freqs <= 100;
 
-I = findall( labs, 'region' );
+%%
+
+basemask = find( labs, 'bla_ofc' );
+
+I = findall( labs, 'region', basemask );
 
 selectors = { 'mutual', 'm1', 'eyes', 'face' };
 

@@ -1,11 +1,11 @@
-folders = {};
+folders = { '08102018' };
 file_spec = folders;
 
-input_subdir = '';
-output_subdir = 'who_looked_first';
+input_subdir = 'cc08152018';
+output_subdir = 'cc08152018';
 
 shared_inputs = { 'input_subdir', input_subdir, 'output_subdir', output_subdir ...
-  , 'files_containing', file_spec, 'overwrite', true };
+  , 'files_containing', file_spec, 'overwrite', false };
 
 %%  unified
 
@@ -14,6 +14,25 @@ bfw.make_unified( folders, shared_inputs{:} );
 %%  sync times
 
 bfw.make_sync_times( shared_inputs{:} );
+
+%%  events
+
+bfw.make_events( shared_inputs{:} ...
+  , 'duration', 100 ...
+  , 'fill_gaps', true ...
+  , 'fill_gaps_duration', 150 ...
+);
+
+% %   classify events as m1 leading m2, vs. m2 leading m1
+% bfw.adjust.add_m_ordering( shared_inputs{:} ...
+%   , 'max_lag', 2 ...
+% );
+
+%   convert to plexon time
+bfw.adjust.events_to_plex_time( shared_inputs{:} );
+
+%   concatenate events within day
+bfw.make_events_per_day( shared_inputs{:} );
 
 %%
 

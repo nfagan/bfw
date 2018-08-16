@@ -34,7 +34,7 @@ parfor i = 1:numel(mats)
   onefreqs = get_freqs( lfpfile );
   
   data{i} = measure.data;
-  labs{i} = setcat( addcat(fcat.from(measure.labels), 'measure'), 'measure', meast );
+  labs{i} = addsetcat( fcat.from(measure.labels), 'measure', meast );
   t{i} = onet;
   freqs{i} = onefreqs;
   

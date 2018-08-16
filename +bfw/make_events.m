@@ -109,7 +109,9 @@ for i = 1:numel(bound_mats)
       [mutual_bounds, mutual] = fill_gaps( mutual_bounds, mutual, adjusted_fill_gaps_duration );
     end 
     
-    [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
+%     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
+    looked_first_index = who_looked_first( mutual, m1_evts, m2_evts );
+    looked_first_distance = NaN;
     
     %   NEW -- ensure exclusive events are truly exclusive of mutual
     m1_evts = setdiff( m1_evts, mutual );
@@ -169,33 +171,54 @@ save( filename, 'events' );
 
 end
 
-function [out, distance] = who_looked_first( mutual_evts, bounds_a, bounds_b )
+function out = who_looked_first(mutual_evts, m1_evts, m2_evts)
 
-starts_a = arrayfun( @(x) find_start_looking_back_from(x, bounds_a), mutual_evts );
-starts_b = arrayfun( @(x) find_start_looking_back_from(x, bounds_b), mutual_evts );
+%   mutual begins once the *other* monkey enters the roi, so these are
+%   flipped.
+[~, m2_began] = ismember( m1_evts, mutual_evts );
+[~, m1_began] = ismember( m2_evts, mutual_evts );
 
-out = zeros( size(mutual_evts) );
-distance = zeros( size(mutual_evts) );
+common = intersect( m1_evts, m2_evts );
+[~, common_ind] = ismember( common, mutual_evts );
 
-for i = 1:numel(out)
-  a = starts_a(i);
-  b = starts_b(i);
-  
-  if ( a == b )
-    %   both initiate simultaneously
-    continue;
-  elseif ( a < b )
-    %   m1 initiates
-    out(i) = 1;
-    distance(i) = mutual_evts(i) - a;
-  else
-    %   m2 initiates
-    out(i) = 2;
-    distance(i) = mutual_evts(i) - b;
-  end
-end
+m2_began = m2_began( m2_began > 0 );
+m1_began = m1_began( m1_began > 0 );
+
+out = nan( size(mutual_evts) );
+
+out(m1_began) = 1;
+out(m2_began) = 2;
+out(common_ind) = 0;
 
 end
+
+% function [out, distance] = who_looked_first( mutual_evts, bounds_a, bounds_b )
+% 
+% starts_a = arrayfun( @(x) find_start_looking_back_from(x, bounds_a), mutual_evts );
+% starts_b = arrayfun( @(x) find_start_looking_back_from(x, bounds_b), mutual_evts );
+% 
+% out = zeros( size(mutual_evts) );
+% distance = zeros( size(mutual_evts) );
+% 
+% for i = 1:numel(out)
+%   a = starts_a(i);
+%   b = starts_b(i);
+%   
+%   if ( a == b )
+%     %   both initiate simultaneously
+%     continue;
+%   elseif ( a < b )
+%     %   m1 initiates
+%     out(i) = 1;
+%     distance(i) = mutual_evts(i) - a;
+%   else
+%     %   m2 initiates
+%     out(i) = 2;
+%     distance(i) = mutual_evts(i) - b;
+%   end
+% end
+% 
+% end
 
 function bounds_copy = missing_mutual_fill0(bounds)
 
