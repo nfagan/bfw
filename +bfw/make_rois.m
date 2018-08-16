@@ -66,9 +66,6 @@ for i = 1:numel(mats)
     rois.(fields{j}).roi_directory = save_p;
     rois.(fields{j}).rects = rect_map;
   end  
-
-  % added by chengchi 0418/2018, add out_face_ROI based on DBSCAN clustering
-  rois = add_out_face_ROI(rois,i);
   
   shared_utils.io.require_dir( save_p );
   save( full_filename, 'rois' );
