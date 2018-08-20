@@ -111,7 +111,7 @@ for i = 1:numel(bound_mats)
     
 %     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
     looked_first_index = who_looked_first( mutual, m1_evts, m2_evts );
-    looked_first_distance = NaN;
+    looked_first_distance = nan( size(looked_first_index) );
     
     %   NEW -- ensure exclusive events are truly exclusive of mutual
     m1_evts = setdiff( m1_evts, mutual );
