@@ -5,7 +5,7 @@ input_subdir = '';
 output_subdir = '';
 
 shared_inputs = { 'input_subdir', input_subdir, 'output_subdir', output_subdir ...
-  , 'files_containing', file_spec, 'overwrite', true };
+  , 'files_containing', file_spec, 'overwrite', false };
 
 %%  unified
 
