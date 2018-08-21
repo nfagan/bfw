@@ -4,8 +4,10 @@ file_spec = folders;
 input_subdir = '';
 output_subdir = '';
 
+conf = bfw.config.load();
+
 shared_inputs = { 'input_subdir', input_subdir, 'output_subdir', output_subdir ...
-  , 'files_containing', file_spec, 'overwrite', true };
+  , 'files_containing', file_spec, 'overwrite', true, 'config', conf };
 
 %%  unified
 
