@@ -48,10 +48,13 @@ for i = 1:numel(mats)
   if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   for j = 1:numel(fields)
+    m_id = fields{j};
+    c_meta = meta.(m_id);
+    
     rect_map = containers.Map();
-    roi_map = meta.(fields{j}).far_plane_key_map;
-    calibration = meta.(fields{j}).far_plane_calibration;
-    screen_rect = meta.(fields{j}).screen_rect;
+    roi_map = c_meta.far_plane_key_map;
+    calibration = c_meta.far_plane_calibration;
+    screen_rect = bfw.field_or( c_meta, 'screen_rect', default_screen_rect() );
     
     for k = 1:numel(event_func_keys)
       key = event_func_keys{k};
@@ -61,16 +64,20 @@ for i = 1:numel(mats)
     end
     
     for k = 1:numel(copy_fields)
-      rois.(fields{j}).(copy_fields{k}) = meta.(fields{j}).(copy_fields{k});
+      rois.(m_id).(copy_fields{k}) = c_meta.(copy_fields{k});
     end
     
-    rois.(fields{j}).roi_filename = r_filename;
-    rois.(fields{j}).roi_directory = save_p;
-    rois.(fields{j}).rects = rect_map;
+    rois.(m_id).roi_filename = r_filename;
+    rois.(m_id).roi_directory = save_p;
+    rois.(m_id).rects = rect_map;
   end  
   
   shared_utils.io.require_dir( save_p );
   save( full_filename, 'rois' );
 end
 
+end
+
+function r = default_screen_rect()
+r = [ 0, 0, 1024*3, 768 ];
 end
