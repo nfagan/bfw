@@ -11,6 +11,7 @@ conf = params.config;
 isd = params.input_subdir;
 
 fix_p = bfw.gid( ff('fixations', isd), conf );
+save_p = bfw.gid( ff('fixation', osd), conf );
 
 fix_mats = bfw.require_intermediate_mats( params.files, fix_p, params.files_containing );
 
@@ -18,8 +19,15 @@ parfor i = 1:numel(fix_mats)
   fprintf( '\n %d of %d', i, numel(fix_mats) );
   
   fix_file = shared_utils.io.fload( fix_mats{i} );
+  un_filename = fix_file.m1.unified_filename;
   
   fields = { 'm1', 'm2' };
+  
+  output_file = fullfile( save_p, un_filename );
+  
+  if ( bfw.conditional_skip_file(output_file, params.overwrite) )
+    continue;
+  end
   
   for j = 1:numel(fields)
     
@@ -53,7 +61,7 @@ parfor i = 1:numel(fix_mats)
   
   fix_file.adjust_params = params;
   
-  do_save( fix_mats{i}, fix_file );
+  do_save( output_file, fix_file );
 end
 
 end
