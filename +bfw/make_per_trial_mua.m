@@ -1,5 +1,7 @@
 function make_per_trial_mua(varargin)
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 defaults.look_back = -0.5;
 defaults.look_ahead = 0.5;
@@ -8,9 +10,13 @@ defaults.window_size = 0.15;
 
 params = bfw.parsestruct( defaults, varargin );
 
-mua_p = bfw.get_intermediate_directory( 'mua_spikes' );
-events_p = bfw.get_intermediate_directory( 'events_per_day' );
-output_p = bfw.get_intermediate_directory( 'per_trial_mua' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+mua_p = bfw.gid( ff('mua_spikes', isd), conf );
+events_p = bfw.gid( ff('events_per_day', isd), conf );
+output_p = bfw.gid( ff('per_trial_mua', osd), conf );
 
 lb = params.look_back;
 la = params.look_ahead;

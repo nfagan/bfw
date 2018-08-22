@@ -45,6 +45,7 @@ upper_distance_threshold = 1; % longest time allowed between events
 lower_distance_threshold = 100 / 1e3;  % shortest time between events, ms
 
 for i = 1:numel(event_files)
+
   fprintf( '\n %d of %d', i, numel(event_files) );
   
   events = fload( event_files{i} );
@@ -81,7 +82,7 @@ for i = 1:numel(event_files)
   
   C = bfw.allcomb( {rois, monks, unit_indices} );
   C1 = bfw.allcomb( {rois, monks} );
-  
+  hell0 = 1
   %   first get event info
   
   for j = 1:size(C1, 1)
@@ -234,7 +235,7 @@ if ( update_spikes )
     rasters('unit_id', ind) = sprintf( 'unit__%d', i );
   end
 end
-
+hello = 1
 %%  plot population response matrix
 
 psth = cont;
@@ -613,6 +614,7 @@ for i = 185:numel(I)
   pl.vertical_lines_at = 0;
 %   pl.shape = [3, 2];
   pl.order_panels_by = { 'mutual', 'm1' };
+  pl.add_legend = false;
   
   clf(fig);
   

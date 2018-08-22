@@ -1,7 +1,6 @@
 function make_mua_spikes(varargin)
 
-conf = bfw.config.load();
-data_p = conf.PATHS.data_root;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults = bfw.get_common_lfp_defaults( defaults );
@@ -12,9 +11,14 @@ defaults.sample_rate = 40e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-input_p = bfw.get_intermediate_directory( 'lfp' );
-un_p = bfw.get_intermediate_directory( 'unified' );
-output_p = bfw.get_intermediate_directory( 'mua_spikes' );
+conf = params.config;
+data_p = conf.PATHS.data_root;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+input_p = bfw.gid( ff('lfp', isd), conf );
+un_p = bfw.gid( ff('unified', isd), conf );
+output_p = bfw.gid( ff('mua_spikes', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, input_p, params.files_containing );
 

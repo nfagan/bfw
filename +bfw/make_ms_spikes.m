@@ -1,18 +1,21 @@
 function make_ms_spikes(varargin)
 
 import shared_utils.char.containsi;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.sample_rate = 40e3;
 
 params = bfw.parsestruct( defaults, varargin );
 
-conf = bfw.config.load();
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
 data_root = conf.PATHS.data_root;
 
-unified_p = bfw.get_intermediate_directory( 'unified' );
-save_p = bfw.get_intermediate_directory( 'spikes' );
+unified_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('spikes', osd), conf );
 
 shared_utils.io.require_dir( save_p );
 

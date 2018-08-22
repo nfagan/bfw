@@ -1,13 +1,17 @@
 function events_to_plex_time(varargin)
 
 import shared_utils.io.fload;
+ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-event_p = bfw.get_intermediate_directory( 'events' );
-sync_p = bfw.get_intermediate_directory( 'sync' );
+event_p = bfw.gid( ff('events', isd), conf );
+sync_p = bfw.gid( ff('sync', isd), conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 

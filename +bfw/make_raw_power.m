@@ -1,5 +1,7 @@
 function make_raw_power(varargin)
 
+ff = @fullfile;
+
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
@@ -8,8 +10,12 @@ defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
-output_p = bfw.get_intermediate_directory( 'raw_power' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+aligned_p = bfw.gid( ff('event_aligned_lfp', isd), conf );
+output_p = bfw.gid( ff('raw_power', osd), conf );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 

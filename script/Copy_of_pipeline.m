@@ -1,13 +1,7 @@
-% folders = { '02082018', '02092018' };
-% file_spec = folders;
-% 
-% shared_inputs = { 'files_containing', file_spec, 'overwrite', true };
+folders = { '02082018', '02092018' };
+file_spec = folders;
 
-%   if just wanting to re-process all files:
-shared_inputs = { 'overwrite', true };
-
-addpath( '~/Documents/MATLAB/repositories/bfw' );
-bfw.add_depends();
+shared_inputs = { 'files_containing', file_spec, 'overwrite', true };
 
 %%  unified
 
@@ -18,7 +12,7 @@ bfw.make_unified( folders );
 bfw.make_sync_times( shared_inputs{:} );
 
 %%  edfs
- 
+
 bfw.make_edfs( shared_inputs{:} );
 
 %%  blink info
@@ -29,24 +23,19 @@ bfw.make_edf_blink_info( shared_inputs{:} );
 
 bfw.make_edf_aligned( shared_inputs{:} );
 
-%% add plex time
+%%  add plex time
 
-bfw.adjust.add_plex_time_to_aligned;
+bfw.adjust.add_plex_time_to_aligned( shared_inputs{:} );
 
 %%  fixations
 
-% bfw.make_edf_fixations( shared_inputs{:} );
-bfw.make_eye_mmv_fixations( shared_inputs{:} ...
-  , 't1', 20 ...
-  , 't2', 15 ...
-  , 'min_duration', 0.03 ...
-);
+bfw.make_edf_fixations( shared_inputs{:} );
 
 %%  restrict fixations to at least N ms
 
-% bfw.adjust.set_fixation_criterion( shared_inputs{:} ...
-%   , 'duration', 10 ... % remove fixations less than n ms.
-% );
+bfw.adjust.set_fixation_criterion( shared_inputs{:} ...
+  , 'duration', 10 ... % remove fixations less than n ms.
+);
 
 %%  rois
 
@@ -54,29 +43,22 @@ bfw.make_rois( shared_inputs{:} );
 
 %%  bounds
 
-%   `require_fixation` -- if true, bounds will be set false if the monkey
-%    is not fixating at a given time-point, even if they are technically
-%    in the roi boundary.
-
 bfw.make_bounds( shared_inputs{:} ...
   , 'window_size', 10 ...
   , 'step_size', 10 ...
   , 'remove_blink_nans', true ...
   , 'require_fixation', true ...
 );
-% addpath('/Users/chuchengchi/Desktop/CC analysis/tmp');
-% varargin = {shared_inputs{:}, 'window_size', 10, 'step_size', 10, 'remove_blink_nans', true, 'require_fixation', true}; 
-% bfw.make_bounds
+
 %   separate eyes from face
 bfw.adjust.separate_eyes_from_face( shared_inputs{:} );
-bfw.adjust.separate_mouth_from_face( shared_inputs{:} );
 
 %%  events
 
 bfw.make_events( shared_inputs{:} ...
-  , 'duration', 10 ...              %   minimum duration for an event to register.
+  , 'duration', 10 ...
   , 'fill_gaps', true ...
-  , 'fill_gaps_duration', 150 ...   %   minimum inter-event duration
+  , 'fill_gaps_duration', 150 ...
 );
 
 % %   classify events as m1 leading m2, vs. m2 leading m1

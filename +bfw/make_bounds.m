@@ -1,5 +1,7 @@
 function make_bounds(varargin)
 
+ff = @fullfile;
+
 import shared_utils.cell.percell;
 
 defaults = bfw.get_common_make_defaults();
@@ -12,20 +14,21 @@ defaults.require_fixation = true;
 defaults.single_roi_fixations = false;
 
 params = bfw.parsestruct( defaults, varargin );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-data_p = bfw.get_intermediate_directory( 'aligned' );
-blink_p = bfw.get_intermediate_directory( 'blinks' );
-fix_p = bfw.get_intermediate_directory( 'fixations' );
+data_p = bfw.gid( ff('aligned', isd), conf );
+blink_p = bfw.gid( ff('blinks', isd), conf );
+fix_p = bfw.gid( ff('fixations', isd), conf );
+unified_p = bfw.gid( ff('unified', isd), conf );
+save_p = bfw.gid( ff('bounds', osd), conf );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
-unified_p = bfw.get_intermediate_directory( 'unified' );
-
-roi_p = bfw.get_intermediate_directory( 'rois' );
+roi_p = bfw.gid( 'rois' );
 roi_mats = shared_utils.io.find( roi_p, '.mat' );
 rects = percell( @shared_utils.io.fload, roi_mats );
-
-save_p = bfw.get_intermediate_directory( 'bounds' );
 
 copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 
@@ -37,18 +40,19 @@ parfor i = 1:numel(aligned_mats)
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
   
-  fields = { 'm1', 'm2' };
+  fields = intersect( {'m1', 'm2'}, fieldnames(aligned) );
+  first = fields{1};
   
   un_f = aligned.(fields{1}).unified_filename;
   
-  roi_index = cellfun( @(x) strcmp(aligned.m1.unified_filename, x.m1.unified_filename), rects );
+  roi_index = cellfun( @(x) strcmp(aligned.(first).unified_filename, x.(first).unified_filename), rects );
   
   assert( sum(roi_index) == 1, 'Expected 1 roi to be associated with "%s"; instead there were %d' ...
     , un_f, sum(roi_index) );
   
   rect = rects{roi_index};
   
-  rect_keys = rect.m1.rects.keys();
+  rect_keys = rect.(first).rects.keys();
   
   bounds = struct();
   
@@ -175,6 +179,7 @@ parfor i = 1:numel(aligned_mats)
             fix_index = matching_fix(h);
             start_index = c_fix.start_indices(fix_index);
             stop_index = c_fix.stop_indices(fix_index);
+            stop_index = min( stop_index, numel(adjusted_fix_vec) );
             adjusted_fix_vec(start_index:stop_index) = true;
           end
 

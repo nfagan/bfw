@@ -1,5 +1,7 @@
 function make_coherence(varargin)
 
+ff = @fullfile;
+
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
@@ -8,9 +10,13 @@ defaults = bfw.get_common_lfp_defaults( defaults );
 
 params = bfw.parsestruct( defaults, varargin );
 
-aligned_p = bfw.get_intermediate_directory( 'event_aligned_lfp' );
-rng_p = bfw.get_intermediate_directory( 'rng' );
-output_p = bfw.get_intermediate_directory( 'coherence' );
+conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
+
+aligned_p = bfw.gid( ff('event_aligned_lfp', isd), conf );
+rng_p = bfw.gid( ff('rng', isd), conf );
+output_p = bfw.gid( ff('coherence', osd), conf );
 
 lfp_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
