@@ -9,9 +9,10 @@ params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 
 isd = params.input_subdir;
+osd = params.output_subdir;
 
 fix_p = bfw.gid( ff('fixations', isd), conf );
-save_p = bfw.gid( ff('fixation', osd), conf );
+save_p = bfw.gid( ff('fixations', osd), conf );
 
 fix_mats = bfw.require_intermediate_mats( params.files, fix_p, params.files_containing );
 
@@ -19,7 +20,7 @@ parfor i = 1:numel(fix_mats)
   fprintf( '\n %d of %d', i, numel(fix_mats) );
   
   fix_file = shared_utils.io.fload( fix_mats{i} );
-  un_filename = fix_file.m1.unified_filename;
+  un_filename = fix_file.unified_filename;
   
   fields = { 'm1', 'm2' };
   
@@ -58,6 +59,8 @@ parfor i = 1:numel(fix_mats)
     
     fix_file.(fields{j}) = c_fix_file;
   end
+  
+  shared_utils.io.require_dir( save_p );
   
   fix_file.adjust_params = params;
   
