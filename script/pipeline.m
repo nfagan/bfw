@@ -2,7 +2,7 @@ folders = {};
 file_spec = folders;
 
 input_subdir = '';
-output_subdir = 'who_looked_first';
+output_subdir = '';
 
 shared_inputs = { 'input_subdir', input_subdir, 'output_subdir', output_subdir ...
   , 'files_containing', file_spec, 'overwrite', true };

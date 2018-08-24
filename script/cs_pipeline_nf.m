@@ -2,7 +2,9 @@ folders = {};
 file_spec = folders;
 % file_spec = [ file_spec, '04242018_position_2' ];
 
-shared_inputs = { 'files_containing', file_spec, 'overwrite', false };
+conf = bfw.config.load();
+
+shared_inputs = { 'files_containing', file_spec, 'overwrite', false, 'config', conf };
 
 %%
 

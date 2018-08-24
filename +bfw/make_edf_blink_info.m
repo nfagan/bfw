@@ -17,7 +17,7 @@ shared_utils.io.require_dir( save_p );
 
 edfs = bfw.require_intermediate_mats( params.files, edf_p, params.files_containing );
 
-for i = 1:numel(edfs)
+parfor i = 1:numel(edfs)
   fprintf( '\n %d of %d', i, numel(edfs) );
   
   edf = shared_utils.io.fload( edfs{i} );
@@ -45,5 +45,5 @@ for i = 1:numel(edfs)
     blink_info.(fields{j}).unified_filename = edf.(fields{j}).unified_filename;
   end
   
-  save( filename, 'blink_info' );
+  shared_utils.io.psave( filename, blink_info );
 end

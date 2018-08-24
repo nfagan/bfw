@@ -43,7 +43,7 @@ parfor i = 1:numel(aligned_mats)
   monks = { 'm1', 'm2' };
   
   fix_struct = struct();
-  fix_struct.unified_filename = unified_file;
+  fix_struct.unified_filename = unified_file.m1.unified_filename;
   fix_struct.params = params;
   
   for j = 1:numel(monks)    

@@ -1,4 +1,4 @@
-function bounds = rect_outside2(calibration_data, key_map, padding_info, const)
+function bounds = rect_outside2(calibration_data, key_map, padding_info, const, screen_rect)
 
 face_rect = bfw.calibration.rect_face( calibration_data, key_map, padding_info, const );
 
