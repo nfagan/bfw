@@ -4,7 +4,12 @@
 % shared_inputs = { 'files_containing', file_spec, 'overwrite', true };
 
 %   if just wanting to re-process all files:
-shared_inputs = { 'overwrite', true };
+folders = {};
+
+shared_inputs = { 'overwrite', false ...
+    , 'input_subdir', '' ...
+    , 'output_subdir', 'cc' ...
+};
 
 addpath( '~/Documents/MATLAB/repositories/bfw' );
 bfw.add_depends();

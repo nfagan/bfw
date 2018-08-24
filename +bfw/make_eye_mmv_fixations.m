@@ -25,6 +25,7 @@ t2 = params.t2;
 min_duration = params.min_duration;
 
 parfor i = 1:numel(aligned_mats)
+
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned_file = shared_utils.io.fload( aligned_mats{i} );
