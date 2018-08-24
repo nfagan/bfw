@@ -35,8 +35,13 @@ parfor i = 1:numel(edfs)
   for j = 1:numel(fields)
     c_edf = edf.(fields{j}).edf;
     
-    s_blinks = c_edf.Events.Eblink.start;
-    e_blinks = c_edf.Events.Eblink.end;
+    if ( isfield(c_edf.Events, 'Eblink') )
+      s_blinks = c_edf.Events.Eblink.start;
+      e_blinks = c_edf.Events.Eblink.end;
+    else
+      s_blinks = [];
+      e_blinks = [];
+    end
     
     blink_info.(fields{j}).starts = s_blinks;
     blink_info.(fields{j}).ends = e_blinks;
