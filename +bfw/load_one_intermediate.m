@@ -24,7 +24,7 @@ if ( nargin < 2 ), name = ''; end
 
 bfw.util.assertions.assert__is_config( conf );
 
-intermediate_dir = bfw.get_intermediate_directory( kind );
+intermediate_dir = bfw.get_intermediate_directory( kind, conf );
 
 mats = shared_utils.io.find( intermediate_dir, '.mat' );
 
