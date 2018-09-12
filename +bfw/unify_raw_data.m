@@ -44,7 +44,12 @@ for i = 1:numel(dat)
     new_dat(i).time = t;
     new_dat(i).pupil_size = nan( 1, size(dat(i).position, 2) );
   else
-    assert( isfield(dat, 'gaze'), 'Expected data to have a "gaze" or "position" field.' );
+    if ( ~isfield(dat, 'gaze') )
+      new_dat(i).position = nan( 2, 1 );
+      new_dat(i).time = NaN;
+      new_dat(i).pupil_size = NaN;
+      continue;
+    end
     
     sz = size( dat(i).gaze, 1 );
 

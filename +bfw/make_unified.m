@@ -87,10 +87,29 @@ for idx = 1:numel(outerdirs)
       continue;
     end
     
+    m_nscontrol_p = fullfile( m_dir, 'nonsocial_control' );
     m_cal_dir = fullfile( m_dir, 'calibration' );
     m_mats = shared_utils.io.find( m_dir, '.mat' );
     m_edfs = shared_utils.io.find( m_dir, '.edf' );
+    m_edf_subdirs = repmat( {''}, size(m_edfs) );
     m_edf_map = shared_utils.io.find( m_dir, '.json' );
+    
+    %
+    %   incorporate nonsocial-control mat files
+    %
+    task_types = repmat( {'free_viewing'}, size(m_mats) );
+    
+    if ( exist(m_nscontrol_p, 'dir') == 7 )
+      nsc_mats = shared_utils.io.find( m_nscontrol_p, '.mat' );
+      nsc_edfs = shared_utils.io.find( m_nscontrol_p, '.edf' );
+      nsc_task_types = repmat( {'nonsocial_control'}, size(nsc_mats) );
+      nsc_edf_subdirs = nsc_task_types;
+      
+      m_mats = [ m_mats, nsc_mats ];
+      task_types = [ task_types, nsc_task_types ];
+      m_edfs = [ m_edfs, nsc_edfs ];      
+      m_edf_subdirs = [ m_edf_subdirs, nsc_edf_subdirs ];
+    end
     
     m_dir_components = all_dir_components;
     m_dir_components{end+1} = m_str;
@@ -113,11 +132,10 @@ for idx = 1:numel(outerdirs)
       end
     end
     
-    m_data = cellfun( load_func, m_mats );
+    m_data = reconcile_task_data( cellfun(load_func, m_mats, 'un', 0) );
     
-    if ( i > 1 )
-      assert( numel(m_mats) == n_last_mats, ['Number of .mat files' ...
-        , ' must match between m1 and m2.'] );
+    if ( i > 1 && numel(m_mats) ~= n_last_mats )
+      warning( 'Number of .mat files does not match between m1 and m2.' );
     end
   
     %
@@ -164,7 +182,13 @@ for idx = 1:numel(outerdirs)
         mat_nums = get_filenumbers( m_filenames );
         for j = 1:numel(mat_nums)
           ind = edf_nums == mat_nums(j);
-          assert( sum(ind) == 1, 'Mismatch between edf + position numbers.' );
+          
+          if ( sum(ind) ~= 1 )
+            if ( numel(unique(m_edf_subdirs(ind))) == 1 )
+              error( 'Mismatch between edf + position numbers.' );
+            end
+          end
+          
           edf_map( m_filenames{j} ) = [m_edfs{ind}, '.edf'];
         end
       end
@@ -249,7 +273,7 @@ for idx = 1:numel(outerdirs)
       end
     end
     
-    for j = 1:numel(m_data)
+    for j = 1:numel(m_data)      
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
       m_data(j).plex_sync_id = plex_sync_id;
@@ -265,10 +289,11 @@ for idx = 1:numel(outerdirs)
       m_data(j).mat_directory_name = last_dir;
       m_data(j).mat_filename = m_filenames{j};
       m_data(j).unified_filename = bfw.make_intermediate_filename( last_dir, m_filenames{j} );
-      m_data(j).edf_filename = edf_filename;
+      m_data(j).edf_filename = fullfile( m_edf_subdirs{j}, edf_filename );
       m_data(j).mat_index = mat_index;
       m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
       m_data(j).screen_rect = scr_rect;
+      m_data(j).task_type = task_types{j};
     end
 
     data_.(m_str) = m_data;
@@ -283,21 +308,48 @@ for idx = 1:numel(outerdirs)
     end
   end
   
+ 
+  [max_n_files, max_ind] = max( structfun(@numel, data_) );
+  all_fields = fieldnames( data_ );
+  max_field = all_fields{max_ind};
   
-  for i = 1:numel(data_.(m_dirs{1}))
+  for i = 1:max_n_files 
     data = struct();
-    m_filename = data_.(m_dirs{1})(i).mat_filename;
+    
+    m_filename = data_.(max_field)(i).mat_filename;
     u_filename = bfw.make_intermediate_filename( last_dir, m_filename );
-    for j = 1:numel(m_dirs)
+    
+    for j = 1:numel(all_fields)
+      current_m_field = all_fields{j};
+      current_m_data = data_.(current_m_field);
       
-      if ( ~isfield(data_, m_dirs{j}) )
-        continue;
+      match_ind = arrayfun( @(x) strcmp(x.mat_filename, m_filename), current_m_data );
+      n_match = sum( match_ind );
+      
+      switch ( n_match )
+        case 0
+          continue;
+        case 1
+          data.(current_m_field) = current_m_data(match_ind);
+          data.(current_m_field).unified_filename = u_filename;
+          data.(current_m_field).unified_directory = unified_output_dir;
+        otherwise
+          error( 'Too many matches.' );
       end
-      
-      data.(m_dirs{j}) = data_.(m_dirs{j})(i);
-      data.(m_dirs{j}).unified_filename = u_filename;
-      data.(m_dirs{j}).unified_directory = unified_output_dir;
     end
+%     
+%     for j = 1:numel(m_dirs)
+%       
+%       current_mdir = m_dirs{j};
+%       
+%       if ( ~isfield(data_, current_mdir) || i > numel(data_.(current_mdir)) )
+%         continue;
+%       end
+%       
+%       data.(current_mdir) = data_.(current_mdir)(i);
+%       data.(current_mdir).unified_filename = u_filename;
+%       data.(current_mdir).unified_directory = unified_output_dir;
+%     end
     shared_utils.io.require_dir( unified_output_dir );
     file = fullfile( unified_output_dir, u_filename );
     save( file, 'data' );
@@ -350,6 +402,30 @@ for i = 1:numel(mats)
   save( fullfile(save_p, unified_filename), 'unified_file' );    
 end
 
+
+end
+
+function m_data = reconcile_task_data( m_data )
+
+fs = cellfun( @fieldnames, m_data, 'un', 0 );
+unqs = unique( csvertcat(fs{:}) );
+
+for i = 1:numel(m_data)
+  tmp = m_data{i};
+  
+  missing_fields = unqs( ~isfield(tmp, unqs) );
+  
+  for j = 1:numel(missing_fields)
+    f = missing_fields{j};
+    
+    tmp.(f) = NaN;
+  end
+  
+  m_data{i} = tmp;
+end
+
+m_data = m_data(:);
+m_data = vertcat( m_data{:} );
 
 end
 
