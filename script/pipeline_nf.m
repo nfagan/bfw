@@ -1,4 +1,4 @@
-folders = { '04202018', '04242018', '04252018' };
+folders = { '09112018' };
 file_spec = folders;
 
 input_subdir = '';
@@ -7,7 +7,7 @@ output_subdir = '';
 conf = bfw.config.load();
 
 shared_inputs = { 'input_subdir', input_subdir, 'output_subdir', output_subdir ...
-  , 'files_containing', file_spec, 'overwrite', true, 'config', conf };
+  , 'files_containing', file_spec, 'overwrite', false, 'config', conf };
 
 %%  unified
 

@@ -1,4 +1,4 @@
-folders = {};
+folders = { '09112018' };
 file_spec = folders;
 % file_spec = [ file_spec, '04242018_position_2' ];
 

@@ -180,6 +180,7 @@ function out = who_looked_first(mutual_evts, m1_evts, m2_evts)
 
 common = intersect( m1_evts, m2_evts );
 [~, common_ind] = ismember( common, mutual_evts );
+common_ind = common_ind(common_ind > 0);
 
 m2_began = m2_began( m2_began > 0 );
 m1_began = m1_began( m1_began > 0 );
