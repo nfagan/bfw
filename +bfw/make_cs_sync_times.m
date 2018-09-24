@@ -80,8 +80,14 @@ for i = 1:numel(mats)
   end
   
   mat_sync = cs_unified.data.sync.sync_times(1:cs_unified.data.sync.sync_stp-1);
-  assert( numel(mat_sync) == numel(current_plex_sync), ['Mismatch between' ...
-    , ' number of plex sync and mat sync pulses.'] );
+  
+  try 
+    assert( numel(mat_sync) == numel(current_plex_sync), ['Mismatch between' ...
+      , ' number of plex sync and mat sync pulses for "%s".'], unified_filename );
+  catch err
+    warning( err.message );
+    continue;
+  end
   
   current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
   
