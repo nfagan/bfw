@@ -253,6 +253,9 @@ for idx = 1:numel(outerdirs)
     
     if ( shared_utils.io.dexists(mountain_sort_directory_path) )
       ms_firings_channel_map_files = shared_utils.io.dirnames( mountain_sort_directory_path, '.xlsx', false );
+      
+      ms_firings_channel_map_files = exclude_leading( ms_firings_channel_map_files, {'~', '_'} );
+      
       if ( numel(ms_firings_channel_map_files) == 0 )
         fprintf( ['\n Warning: moutain sort directory "%s" exists, but' ...
           , ' no channel map excel file exists.'] );
@@ -426,6 +429,22 @@ end
 
 m_data = m_data(:);
 m_data = vertcat( m_data{:} );
+
+end
+
+function files = exclude_leading(files, patterns)
+
+if ( ~iscell(patterns) ), patterns = { patterns }; end
+
+for i = 1:numel(patterns)
+  if ( i == 1 )
+    ind = cellfun( @(x) shared_utils.char.starts_with(x, patterns{i}), files );
+  else
+    ind = ind | cellfun( @(x) shared_utils.char.starts_with(x, patterns{i}), files );
+  end
+end
+
+files = files(~ind);
 
 end
 
