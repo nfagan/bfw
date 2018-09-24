@@ -82,13 +82,24 @@ for i = 1:numel(mats)
   mat_sync = unified.(sync_id).plex_sync_times;
   mat_reward_sync = unified.(sync_id).reward_sync_times;
   
-  assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
-    , ' number of plex reward sync and mat reward sync pulses.'] );
+  try 
+    assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
+      , ' number of plex reward sync and mat reward sync pulses.'] );
+  catch err
+    warning( err.message );
+    continue;
+  end
   
   %   current_sync should have one fewer element than mat_sync. This is
   %   because the first mat_sync time corresponds to the start_sync pulse
-  assert( numel(mat_sync) == numel(current_plex_sync) + 1, ['Mismatch between' ...
-    , ' number of plex sync and mat sync pulses.'] );
+  
+  try 
+    assert( numel(mat_sync) == numel(current_plex_sync) + 1, ['Mismatch between' ...
+      , ' number of plex sync and mat sync pulses.'] );
+  catch err
+    warning( err.message );
+    continue;
+  end
   
   current_plex_sync = [ current_plex_start; current_plex_sync ];
   current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
