@@ -254,7 +254,7 @@ for idx = 1:numel(outerdirs)
     if ( shared_utils.io.dexists(mountain_sort_directory_path) )
       ms_firings_channel_map_files = shared_utils.io.dirnames( mountain_sort_directory_path, '.xlsx', false );
       
-      ms_firings_channel_map_files = exclude_leading( ms_firings_channel_map_files, {'~', '_'} );
+      ms_firings_channel_map_files = exclude_leading( ms_firings_channel_map_files, {'.', '_', '~'} );
       
       if ( numel(ms_firings_channel_map_files) == 0 )
         fprintf( ['\n Warning: moutain sort directory "%s" exists, but' ...
@@ -317,6 +317,7 @@ for idx = 1:numel(outerdirs)
   max_field = all_fields{max_ind};
   
   for i = 1:max_n_files 
+    fprintf( '\n\t Saving %d of %d', i, max_n_files );
     data = struct();
     
     m_filename = data_.(max_field)(i).mat_filename;

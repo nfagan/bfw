@@ -1,4 +1,12 @@
-folders = { '09112018' };
+%days = { '0827', '0829', '0830', '0831', '0904', '0907', '0908', '0910' };
+%days = cellfun( @(x) sprintf('%s2018', x), days, 'un', 0 );
+
+%days = { '11', '12', '13', '15', '16', '17', '18', '19', '20' };
+days = { '18' };
+
+days = cellfun( @(x) sprintf('09%s2018', x), days, 'un', 0 );
+
+folders = days;
 file_spec = folders;
 
 input_subdir = '';
