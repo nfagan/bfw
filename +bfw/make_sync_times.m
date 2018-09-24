@@ -84,7 +84,8 @@ for i = 1:numel(mats)
   
   try 
     assert( numel(mat_reward_sync) == numel(current_plex_reward), ['Mismatch between' ...
-      , ' number of plex reward sync and mat reward sync pulses.'] );
+      , ' number of plex reward sync and mat reward sync pulses for "%s".'] ...
+      , unified_filename );
   catch err
     warning( err.message );
     continue;
@@ -95,7 +96,8 @@ for i = 1:numel(mats)
   
   try 
     assert( numel(mat_sync) == numel(current_plex_sync) + 1, ['Mismatch between' ...
-      , ' number of plex sync and mat sync pulses.'] );
+      , ' number of plex sync and mat sync pulses for "%s".'] ...
+      , unified_filename );
   catch err
     warning( err.message );
     continue;
