@@ -172,11 +172,11 @@ for idx = 1:numel(outerdirs)
       end
     else
       if ( numel(m_edfs) ~= numel(m_data) )
-        fprintf( ['\n WARNING: Number of edfs for %s does not match' ...
+        error( ['\nNumber of edfs for %s does not match' ...
           , ' number of .mat files.'], outerdir );
-        for j = 1:numel(m_data)
-          edf_map(m_filenames{j}) = '';
-        end
+%         for j = 1:numel(m_data)
+%           edf_map(m_filenames{j}) = '';
+%         end
       else
         edf_nums = get_filenumbers( m_edfs );
         mat_nums = get_filenumbers( m_filenames );
