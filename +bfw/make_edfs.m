@@ -20,7 +20,7 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n Processing %d of %d', i, numel(mats) );
   
   current = shared_utils.io.fload( mats{i} );
@@ -28,6 +28,7 @@ for i = 1:numel(mats)
   first = current.(fields{1});
   
   if ( isempty(first.edf_filename) )
+    fprintf( '\nNo edf filename given for: "%s".', first.unified_filename );
     continue;
   end
   
@@ -67,7 +68,7 @@ for i = 1:numel(mats)
   end
 
   shared_utils.io.require_dir( save_p );
-  save( full_filename, 'edf' );
+  shared_utils.io.psave( full_filename, edf, 'edf' );
 end
 
 end

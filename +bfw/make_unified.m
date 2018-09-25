@@ -189,7 +189,10 @@ for idx = 1:numel(outerdirs)
             end
           end
           
-          edf_map( m_filenames{j} ) = [m_edfs{ind}, '.edf'];
+          num_ind = find( ind );
+          num_ind = num_ind(1);
+          
+          edf_map( m_filenames{j} ) = [m_edfs{num_ind}, '.edf'];
         end
       end
     end
