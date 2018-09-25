@@ -127,13 +127,9 @@ for i = 1:numel(un_mats)
   sorted_subdir = un0.plex_directory{end};
   pl2_fullfile = fullfile( pl2_dir, sorted_subdir, pl2_file );
   
-  unit_map_file = fullfile( pl2_dir, un0.plex_unit_map_filename );
   region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
   
-  all_maps = bfw.get_plex_region_and_unit_maps( region_map_file, unit_map_file );
-  
-  unit_map = all_maps.units;
-  region_map = all_maps.regions;
+  region_map = bfw.unify_plex_region_map( bfw.jsondecode(region_map_file) );
   
   all_units = {};
   stp = 1;
