@@ -5,7 +5,7 @@ base_save_p = fullfile( conf.PATHS.data_root, 'plots', 'stim' ...
 
 %%
 look_ahead = 2;
-event_info = bin_look_events_by_stim( look_ahead, {'05032018'} );
+event_info = bin_look_events_by_stim( look_ahead, {'04252018'} );
 
 %%
 event_info2 = debug__check_m1_sync();

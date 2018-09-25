@@ -3,13 +3,12 @@ function debug_stim_in_bounds()
 mats = bfw.require_intermediate_mats( [], bfw.gid('aligned'), '04252018' );
 
 for idx = 1:numel(mats)
+  shared_utils.general.progress( idx, numel(mats) );
   
   pos_file = shared_utils.io.fload( mats{idx} );
 
   stim_file = bfw.load1( 'stim', pos_file.m1.unified_filename );
   roi_file = bfw.load1( 'rois', pos_file.m1.unified_filename );
-
-  %%
 
   lb = -0.5;
   la = 1;
