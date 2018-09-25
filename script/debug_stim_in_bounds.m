@@ -1,23 +1,39 @@
 function debug_stim_in_bounds()
 
-mats = bfw.require_intermediate_mats( [], bfw.gid('aligned'), '04252018' );
+persistent loaded;
+
+if ( isempty(loaded) && ~isa(loaded, 'containers.Map') )
+  loaded = containers.Map();
+end
+
+mats = bfw.require_intermediate_mats( [], bfw.gid('aligned') );
+
+all_ib = [];
+all_labs = fcat();
+
+lb = -0.5;
+la = 1;
+sr = 1e3;
+bin_size = 5;
+pad_amt = 0.05;
+
+t = lb:1/sr:la-1/sr;
+t = cellfun( @(x) x(1), shared_utils.vector.bin(t, bin_size) );
 
 for idx = 1:numel(mats)
   shared_utils.general.progress( idx, numel(mats) );
   
-  pos_file = shared_utils.io.fload( mats{idx} );
+  if ( isKey(loaded, mats{idx}) )
+    pos_file = loaded(mats{idx});
+  else
+    pos_file = shared_utils.io.fload( mats{idx} );
+    loaded(mats{idx}) = pos_file;
+  end
 
   stim_file = bfw.load1( 'stim', pos_file.m1.unified_filename );
   roi_file = bfw.load1( 'rois', pos_file.m1.unified_filename );
-
-  lb = -0.5;
-  la = 1;
-  sr = 1e3;
-  bin_size = 10;
-  pad_amt = 4;
-
-  t = lb:1/sr:la-1/sr;
-  t = cellfun( @(x) x(1), shared_utils.vector.bin(t, bin_size) );
+  
+  if ( isempty(stim_file) ), continue; end
 
   m1_pos = pos_file.m1.position;
   m1_time = pos_file.m1.plex_time;
@@ -27,10 +43,6 @@ for idx = 1:numel(mats)
 
   fs = { 'stimulation_times', 'sham_times' };
   stim_labs = { 'stim', 'sham' };
-
-  all_ib = [];
-  all_ts = [];
-  all_labs = fcat();
 
   for i = 1:numel(fs)
     times = stim_file.(fs{i});
@@ -45,10 +57,9 @@ for idx = 1:numel(mats)
       roi = roi_names{col(2)};
 
       rect = rects(roi);
-      rect = bfw.bounds.rect_pad( rect, pad_amt, pad_amt );
+      rect = bfw.bounds.rect_pad_frac( rect, pad_amt, pad_amt );
 
       t_ind = m1_time >= (time + lb) & m1_time <= (time + la);
-      m1_t = m1_time(t_ind);
       ib = bfw.bounds.rect( m1_pos(1, t_ind), m1_pos(2, t_ind), rect );
 
       labs = fcat.create( ...
@@ -59,7 +70,8 @@ for idx = 1:numel(mats)
       );
 
       binned_ib = shared_utils.vector.bin( ib, bin_size );
-      binned_ib = cellfun( @pnz, binned_ib );
+      binned_ib = cellfun( @(x) double(any(x)), binned_ib );
+      
       binned_ib = binned_ib(1:numel(t));
 
       all_ib = [ all_ib; binned_ib ];
@@ -74,17 +86,18 @@ end
 pltdat = all_ib;
 pltlabs = all_labs';
 
-mask = fcat.mask( pltlabs, @find, {'eyes'}, @findnone, {'trial__2'} );
+mask = fcat.mask( pltlabs, @find, {'eyes_nf'} );
 
 pltdat = pltdat(mask, :);
 pltlabs = pltlabs(mask);
 
-pl = plotlabeled();
+pl = plotlabeled.make_common();
 
 pl.x = t;
-pl.add_errors = false;
+pl.add_errors = true;
+pl.add_legend = false;
 
-pcats = { 'roi', 'stim_type' };
+pcats = { 'roi' };
 gcats = { };
 
 figure(1);
@@ -94,6 +107,4 @@ axs = pl.lines( pltdat, pltlabs, gcats, pcats );
 
 shared_utils.plot.hold( axs, 'on' );
 shared_utils.plot.add_vertical_lines( axs, [-0.15, 0], 'k--' );
-
-
 
