@@ -96,7 +96,7 @@ for i = 1:numel(un_mats)
   ms_unit_ratings = cellfun( @(x) x, ms_channel_map(2:end, rating_ind) );
   
   c_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );
-  hello = 1
+  
   if ( ~any(c_day_ind) )
     fprintf( '\n Warning: No mountain sort units were defined for "%s"', un0.mat_directory_name );
     continue;
