@@ -56,6 +56,11 @@ for i = 1:numel(mats)
     calibration = c_meta.far_plane_calibration;
     screen_rect = bfw.field_or( c_meta, 'screen_rect', default_screen_rect() );
     
+    if ( isnan(calibration) || isnan(roi_map) )
+      warning( 'Missing calibration data for file: "%s".', m_filename );
+      continue;
+    end
+    
     for k = 1:numel(event_func_keys)
       key = event_func_keys{k};
       func = event_funcs(key);
