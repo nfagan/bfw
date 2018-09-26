@@ -51,7 +51,7 @@ for i = 1:numel(unified_mats)
     sync_times = unified_file.(fs{j}).plex_sync_times;
     
     try 
-      fixed_times = fix_edf( edf, sync_times );
+      [fixed_times, start_time] = fix_edf( edf, sync_times );
     catch err
       save_sync_times = false;
       print_skip_message( unified_filename, sprintf('an error occurred: %s', err.message) );
@@ -60,6 +60,7 @@ for i = 1:numel(unified_mats)
     
     sync_times_file.(fs{j}).unified_filename = unified_filename;
     sync_times_file.(fs{j}).edf_sync_times = fixed_times;
+    sync_times_file.(fs{j}).edf_start_time = start_time;
   end
   
   if ( ~save_sync_times )
@@ -72,7 +73,7 @@ end
 
 end
 
-function fixed_times = fix_edf(edf, sync_times)
+function [fixed_times, start_time] = fix_edf(edf, sync_times)
 
 t = edf.Events.Messages.time;
 info = edf.Events.Messages.info;
@@ -94,7 +95,8 @@ is_valid_resync = [ true, diffed_t > 100 ];
 assert( sum(is_valid_resync) == numel(sync_times)-1 ...
   , 'Number of resync times does not match given number of mat sync times.' );
 
-fixed_times = [ t(is_sync_msg), resync_t(is_valid_resync) ];
+fixed_times = resync_t(is_valid_resync);
+start_time = t(is_sync_msg);
 
 end
 
