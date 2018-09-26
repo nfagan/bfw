@@ -74,7 +74,7 @@ parfor i = 1:numel(mats)
       if ( ~isempty(edf_sync_file) )
         edf_sync_times = edf_sync_file.(m_id).edf_sync_times;
       else
-        edf_sync_times = get_sync_times( edf );
+        edf_sync_times = get_sync_times( edf_obj );
       end
       
       aligned.(m_id) = dummy_align( edf_obj, edf_sync_times, mat_edf_sync, fs, N );
