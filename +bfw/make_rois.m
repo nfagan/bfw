@@ -56,8 +56,8 @@ for i = 1:numel(mats)
     calibration = c_meta.far_plane_calibration;
     screen_rect = bfw.field_or( c_meta, 'screen_rect', default_screen_rect() );
     
-    if ( isnan(calibration) || isnan(roi_map) )
-      warning( 'Missing calibration data for file: "%s".', m_filename );
+    if ( isequaln(calibration, nan) || isequaln(roi_map, nan) )
+      warning( 'Missing calibration data for file: "%s".', r_filename );
       continue;
     end
     
