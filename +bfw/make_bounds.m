@@ -22,13 +22,10 @@ data_p = bfw.gid( ff('aligned', isd), conf );
 blink_p = bfw.gid( ff('blinks', isd), conf );
 fix_p = bfw.gid( ff('fixations', isd), conf );
 unified_p = bfw.gid( ff('unified', isd), conf );
+roi_p = bfw.gid( ff('rois', isd), conf );
 save_p = bfw.gid( ff('bounds', osd), conf );
 
 aligned_mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
-
-roi_p = bfw.gid( 'rois' );
-roi_mats = shared_utils.io.find( roi_p, '.mat' );
-rects = percell( @shared_utils.io.fload, roi_mats );
 
 copy_fields = { 'unified_filename', 'aligned_filename', 'aligned_directory' };
 
@@ -45,13 +42,14 @@ parfor i = 1:numel(aligned_mats)
   
   un_f = aligned.(fields{1}).unified_filename;
   
-  roi_index = cellfun( @(x) strcmp(aligned.(first).unified_filename, x.(first).unified_filename), rects );
+  roi_filename = fullfile( roi_p, un_f );
   
-  assert( sum(roi_index) == 1, 'Expected 1 roi to be associated with "%s"; instead there were %d' ...
-    , un_f, sum(roi_index) );
+  if ( ~shared_utils.io.fexists(roi_filename) )
+    warning( 'Missing roi file for "%s".', un_f );
+    continue;
+  end
   
-  rect = rects{roi_index};
-  
+  rect = shared_utils.io.fload( roi_filename );
   rect_keys = rect.(first).rects.keys();
   
   bounds = struct();

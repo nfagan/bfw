@@ -29,7 +29,7 @@ copy_fields = { 'unified_filename' };
 
 allow_overwrite = params.overwrite;
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   current_edf_file = shared_utils.io.fload( mats{i} );
@@ -53,7 +53,13 @@ for i = 1:numel(mats)
     edf_sync = current_meta.(m_id).plex_sync_times(2:end);
     
     aligned = struct();
-    aligned.(m_id) = dummy_align( current_edf_file.(m_id).edf, edf_sync, fs, N );
+    
+    try 
+      aligned.(m_id) = dummy_align( current_edf_file.(m_id).edf, edf_sync, fs, N );
+    catch err
+      warning( err.message );
+      continue;
+    end
   else
     m1 = current_edf_file.m1;
     m2 = current_edf_file.m2;
@@ -83,14 +89,17 @@ for i = 1:numel(mats)
       assert( numel(m1t) == numel(edf_sync_m1), 'Mismatch between .mat and .edf sync times.' );
       assert( numel(m2t) == numel(edf_sync_m2), 'Mismatch between .mat and .edf sync times.' );
     catch err
-      fprintf( '\n WARNING: %s; truncating "%s".', err.message, current_meta.m1.unified_filename );
-      n = min( numel(m1t), numel(m2t) );
-      m1t = m1t(1:n);
-      m2t = m2t(1:n);
-      edf_sync_m1 = edf_sync_m1(1:n);
-      edf_sync_m2 = edf_sync_m2(1:n);
-      sync_m1_m2 = sync_m1_m2(1:n);
-      sync_m2 = sync_m2(1:n);
+      fprintf( '\n WARNING: %s; skipping "%s".', err.message, current_meta.m1.unified_filename );
+      
+      continue;
+      
+%       n = min( numel(m1t), numel(m2t) );
+%       m1t = m1t(1:n);
+%       m2t = m2t(1:n);
+%       edf_sync_m1 = edf_sync_m1(1:n);
+%       edf_sync_m2 = edf_sync_m2(1:n);
+%       sync_m1_m2 = sync_m1_m2(1:n);
+%       sync_m2 = sync_m2(1:n);
     end
 
     t_m1 = m1_edf.Samples.time;
