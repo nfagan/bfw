@@ -16,6 +16,7 @@ osd = params.output_subdir;
 
 data_p = bfw.gid( ff('edf', isd), conf );
 unified_p = bfw.gid( ff('unified', isd), conf );
+edf_sync_p = bfw.gid( ff('edf_sync', isd), conf );
 save_p = bfw.gid( ff('aligned', osd), conf );
 
 shared_utils.io.require_dir( save_p );
@@ -40,22 +41,43 @@ parfor i = 1:numel(mats)
   m_filename = current_meta.m1.mat_filename;
   a_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   
-  full_filename = fullfile( save_p, a_filename );
+  edf_sync_filename = fullfile( edf_sync_p, a_filename );
   
-  if ( bfw.conditional_skip_file(full_filename, allow_overwrite) ), continue; end
+  %   use corrected sync times for this edf file
+  if ( shared_utils.io.fexists(edf_sync_filename) )
+    edf_sync_file = shared_utils.io.fload( edf_sync_filename );
+  else
+    edf_sync_file = [];
+  end
+  
+  output_filename = fullfile( save_p, a_filename );
+  
+  if ( bfw.conditional_skip_file(output_filename, allow_overwrite) ), continue; end
   
   edf_fields = fieldnames( current_edf_file );
   n_edf_fields = numel( edf_fields );
   
   if ( n_edf_fields ~= 2 )
+    %
+    %   no need to align in cases where only one subject's computer ran the
+    %   task
+    %
     assert( n_edf_fields == 1, 'Expected 1 or 2 fields, but got %d', n_edf_fields );
     m_id = edf_fields{1};
-    edf_sync = current_meta.(m_id).plex_sync_times(2:end);
+    mat_edf_sync = current_meta.(m_id).plex_sync_times(2:end);
     
     aligned = struct();
     
     try 
-      aligned.(m_id) = dummy_align( current_edf_file.(m_id).edf, edf_sync, fs, N );
+      edf_obj = current_edf_file.(m_id).edf;
+      
+      if ( ~isempty(edf_sync_file) )
+        edf_sync_times = edf_sync_file.(m_id).edf_sync_times;
+      else
+        edf_sync_times = get_sync_times( edf );
+      end
+      
+      aligned.(m_id) = dummy_align( edf_obj, edf_sync_times, mat_edf_sync, fs, N );
     catch err
       warning( err.message );
       continue;
@@ -151,7 +173,7 @@ parfor i = 1:numel(mats)
   
   aligned.params = params;
   
-  do_save( aligned, full_filename );
+  do_save( aligned, output_filename );
 end
 
 end
@@ -172,9 +194,7 @@ t = edf.Events.Messages.time( msg_ind );
 
 end
 
-function aligned = dummy_align(edf, mat_clock, fs, N)
-
-m1t = get_sync_times( edf );
+function aligned = dummy_align(edf, edf_sync_times, mat_clock, fs, N)
 
 edf_time = edf.Samples.time;
 
@@ -182,7 +202,7 @@ m1_edf_start = edf_time(1);
 
 edf_time = edf_time - m1_edf_start;
 
-edf_clock = m1t - m1_edf_start;
+edf_clock = edf_sync_times - m1_edf_start;
 
 %   make eyelink clock -> matlab clock  
 mat_time = bfw.clock_a_to_b( edf_time, edf_clock, mat_clock*1e3 ) / 1e3;
