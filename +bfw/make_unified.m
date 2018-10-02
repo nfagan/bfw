@@ -70,13 +70,21 @@ for idx = 1:numel(outerdirs)
   %   get plex sync map
   %
   
+  need_provide_plex_sync_index = false;
+  got_plex_sync_index = false;
+  
   sync_file = 'plex_sync_map.json';
 
   m_plex_sync_map_file = shared_utils.io.find( pl2_dir, sync_file );
   
-  assert__n_files( m_plex_sync_map_file, 1, sync_file, pl2_dir );
-  
-  m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
+  if ( isempty(m_plex_sync_map_file) )
+    need_provide_plex_sync_index = true;    
+  else
+    assert__n_files( m_plex_sync_map_file, 1, sync_file, pl2_dir );
+    m_plex_sync_map = get_plex_sync_map( bfw.jsondecode(m_plex_sync_map_file{1}) );
+    
+    got_plex_sync_index = true;
+  end
   
   for i = 1:numel(m_dirs)
     m_str = m_dirs{i};
@@ -149,6 +157,13 @@ for idx = 1:numel(outerdirs)
     if ( numel(plex_sync_id_file) ~= 0 )
       plex_sync_id_struct = bfw.jsondecode( plex_sync_id_file{1} );
       plex_sync_id = plex_sync_id_struct.plex_sync_id;
+    end
+    
+    if ( need_provide_plex_sync_index && ~got_plex_sync_index && strcmpi(m_str, plex_sync_id) )
+      
+      m_plex_sync_map = get_plex_sync_map_from_data( m_data, m_filenames );
+      
+      got_plex_sync_index = true;
     end
     
     %
@@ -278,9 +293,17 @@ for idx = 1:numel(outerdirs)
       end
     end
     
+    %
+    %
+    %
+    assert( got_plex_sync_index, 'Missing plex sync index map for "%s".', m_dir );
+    
     for j = 1:numel(m_data)      
       mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
       edf_filename = edf_map(m_filenames{j});
+      
+      current_plex_sync_index = m_plex_sync_map( m_filenames{j} );
+      
       m_data(j).plex_sync_id = plex_sync_id;
       m_data(j).plex_directory = plex_dir_components;
       m_data(j).plex_filename = pl2_file;
@@ -296,7 +319,7 @@ for idx = 1:numel(outerdirs)
       m_data(j).unified_filename = bfw.make_intermediate_filename( last_dir, m_filenames{j} );
       m_data(j).edf_filename = fullfile( m_edf_subdirs{j}, edf_filename );
       m_data(j).mat_index = mat_index;
-      m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
+      m_data(j).plex_sync_index = current_plex_sync_index;
       m_data(j).screen_rect = scr_rect{j};
       m_data(j).task_type = task_types{j};
     end
@@ -400,7 +423,12 @@ for i = 1:numel(mats)
   unified_file.mat_directory_name = session_dir;
   
   unified_file.mat_index = mat_filenumbers(i);
-  unified_file.plex_sync_index = plex_sync_map(fname);
+  
+  if ( isfield(data.sync, 'sync_index') )
+    unified_file.plex_sync_index = data.sync.sync_index + 1;
+  else
+    unified_file.plex_sync_index = plex_sync_map(fname);
+  end
   
   save_p = fullfile( cs_unified_p, m_dir );
   
@@ -411,7 +439,7 @@ end
 
 end
 
-function m_data = reconcile_task_data( m_data )
+function m_data = reconcile_task_data(m_data)
 
 fs = cellfun( @fieldnames, m_data, 'un', 0 );
 unqs = unique( csvertcat(fs{:}) );
@@ -451,12 +479,12 @@ files = files(~ind);
 
 end
 
-function assert__n_files( files, N, kind, directory )
+function assert__n_files(files, N, kind, directory)
 assert( numel(files) == N, ['Expected to find %d "%s"' ...
     , ' file in "%s", but there were %d.'], N, kind, directory, numel(files) );
 end
 
-function nums = get_filenumbers( m_edfs, kind )
+function nums = get_filenumbers(m_edfs, kind)
 
 if ( nargin < 2 ), kind = 'edf'; end
 
@@ -471,7 +499,7 @@ validateattributes( nums, {'double'}, {'real', 'integer'} );
 
 end
 
-function map = get_plex_sync_map( plex_sync_struct )
+function map = get_plex_sync_map(plex_sync_struct)
 
 map = containers.Map();
 
@@ -479,6 +507,19 @@ fields = fieldnames( plex_sync_struct );
 
 for i = 1:numel(fields)
   map(fields{i}) = plex_sync_struct.(fields{i});
+end
+
+end
+
+function map = get_plex_sync_map_from_data(data, filenames)
+
+assert( isfield(data, 'plex_sync_index'), 'Missing "plex_sync_index" field.' );
+assert( numel(data) == numel(filenames), 'Filenames do not match data.' );
+
+map = containers.Map();
+
+for i = 1:numel(data)
+  map(filenames{i}) = data(i).plex_sync_index + 1;  % indices start from 0.
 end
 
 end
