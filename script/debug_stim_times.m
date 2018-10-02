@@ -19,7 +19,7 @@ fs = 1/1e3;
 
 plot_t = look_back:fs:look_ahead;
 
-mats = shared_utils.io.find( stim_p, '.mat' );
+mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_con
 
 for i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats) );
@@ -39,7 +39,7 @@ for i = 1:numel(mats)
 
   [ib, labs] = one_file( stim_file, sync_file, edf_file, roi_file, process_params );
   
-  
+  d = 10;
   
 end
 

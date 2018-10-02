@@ -32,22 +32,27 @@ parfor i = 1:numel(mats)
   position_file = struct();
   position_file.unified_filename = unified_filename;
   
-  for j = 1:numel(m_fields)
-    m_str = m_fields{j};
-    
-    edf = edf_file.(m_str).edf;
-    
-    x = edf.Samples.posX;
-    y = edf.Samples.posY;
-    t = edf.Samples.time;
-    ps = edf.Samples.pupilSize;
-    
-    position_file.(m_str).x = x;
-    position_file.(m_str).y = y;
-    position_file.(m_str).t = t;
-    position_file.(m_str).pupil = ps;
+  try 
+    for j = 1:numel(m_fields)
+      m_str = m_fields{j};
+
+      edf = edf_file.(m_str).edf;
+
+      x = edf.Samples.posX;
+      y = edf.Samples.posY;
+      t = edf.Samples.time;
+      ps = edf.Samples.pupilSize;
+
+      position_file.(m_str).x = x;
+      position_file.(m_str).y = y;
+      position_file.(m_str).t = t;
+      position_file.(m_str).pupil = ps;
+    end
+  catch err
+    warning( 'Processing "%s" failed with message: %s', unified_filename, err.message );
+    continue;
   end
-  
+
   shared_utils.io.require_dir( save_p );
   shared_utils.io.psave( output_filename, position_file, 'position' );
 end
