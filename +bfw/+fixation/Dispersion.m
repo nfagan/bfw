@@ -34,15 +34,12 @@ classdef Dispersion < handle
       tf = false( size(x) );
       
       while ( stp <= numel(tf) )
-        if ( isnan(last_update) || stp - last_update > obj.update_interval )
+        if ( isnan(last_update) || stp - last_update >= obj.update_interval )
           insert_coordinate( obj, x(stp), y(stp) );
           
-          dispersion = obj.get_dispersion();
-          
-          tmp_is_fix = dispersion < obj.threshold;
-          
           stop = min( stp+obj.update_interval-1, numel(tf) );
-          tf(stp:stop) = tmp_is_fix;
+          
+          tf(stp:stop) = obj.get_dispersion() < obj.threshold;
           
           last_update = stp;
         end
@@ -62,8 +59,8 @@ classdef Dispersion < handle
       else
         %   place index is past maximum
         obj.shift_left();
-        obj.x_coordinates(obj.place_index-1) = x;
-        obj.y_coordinates(obj.place_index-1) = y;
+        obj.x_coordinates(obj.n_samples) = x;
+        obj.y_coordinates(obj.n_samples) = y;
       end
     end
     
@@ -76,8 +73,7 @@ classdef Dispersion < handle
     
     function d = get_dispersion(obj)
       
-      first_iteration = true;
-      maxs = struct( 'x', nan, 'y', nan );
+      maxs = struct( 'x', -Inf, 'y', -Inf );
       
       for i = 1:obj.place_index-2
         for j = i+1:obj.place_index-1
@@ -90,15 +86,13 @@ classdef Dispersion < handle
           dx = abs(ax - bx);
           dy = abs(ay - by);
           
-          if ( first_iteration || dx > maxs.x )
+          if ( dx > maxs.x )
             maxs.x = dx;
           end
           
-          if ( first_iteration || dy > maxs.y )
+          if ( dy > maxs.y )
             maxs.y = dy;
           end
-          
-          first_iteration = false;
         end
       end
       

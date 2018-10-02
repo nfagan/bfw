@@ -1,4 +1,4 @@
-function [ib, is_fix, labs, plot_t, params] = debug_stim_times(varargin)
+function [outs, plot_t, params] = debug_stim_times(varargin)
 
 import shared_utils.io.fload;
 
@@ -32,6 +32,8 @@ mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_contain
 all_ib = cell( size(mats) );
 all_is_fix = cell( size(mats) );
 all_labs = cell( size(mats) );
+all_x = cell( size(mats) );
+all_y = cell( size(mats) );
 is_ok = true( size(mats) );
 
 parfor i = 1:numel(mats)
@@ -60,7 +62,7 @@ parfor i = 1:numel(mats)
   process_params.pad = params.pad;
 
   try 
-    [ib, is_fix, labs] = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
+    outs = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
   catch err
     warning( '"%s" (%d) failed with message: "%s"', unified_filename, i, err.message );
     is_ok(i) = false;
@@ -68,9 +70,11 @@ parfor i = 1:numel(mats)
   end
   
   try
-    all_ib{i} = ib;
-    all_is_fix{i} = is_fix;
-    all_labs{i} = labs;
+    all_ib{i} = outs.ib;
+    all_is_fix{i} = outs.is_fix;
+    all_labs{i} = outs.labs;
+    all_x{i} = outs.x;
+    all_y{i} = outs.y;
   catch err
     warning( '"%s" (%d) failed with message: "%s"', unified_filename, i, err.message );
     is_ok(i) = false;
@@ -81,14 +85,25 @@ end
 all_ib(~is_ok) = [];
 all_is_fix(~is_ok) = [];
 all_labs(~is_ok) = [];
+all_x(~is_ok) = [];
+all_y(~is_ok) = [];
 
 ib = vertcat( all_ib{:} );
 is_fix = vertcat( all_is_fix{:} );
+x = vertcat( all_x{:} );
+y = vertcat( all_y{:} );
 labs = vertcat( fcat(), all_labs{:} );
+
+outs = struct();
+outs.labs = labs;
+outs.x = x;
+outs.y = y;
+outs.ib = ib;
+outs.is_fix = is_fix;
 
 end
 
-function [all_aligned_ib, all_is_fixation, all_labs] = one_file(un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, params)
+function outs = one_file(un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, params)
 
 lb = params.look_back;
 la = params.look_ahead;
@@ -115,8 +130,10 @@ comb_indices = combvec( 1:numel(roi_names) );
 all_labs = fcat();
 all_aligned_ib = [];
 all_is_fixation = [];
+all_aligned_x = [];
+all_aligned_y = [];
 
-dispersion_checker = bfw.fixation.Dispersion();
+dispersion_checker = bfw.fixation.Dispersion( 20, 4, 1 );
 is_fix = dispersion_checker.detect( edf_x, edf_y );
 
 for idx = 1:size(comb_indices, 2)
@@ -154,8 +171,10 @@ for idx = 1:size(comb_indices, 2)
 
     aligned_ib(i, 1:use_n) = ib(index_vec);
     aligned_is_fix(i, 1:use_n) = is_fix(index_vec);
+    aligned_x(i, 1:use_n) = edf_x(index_vec);
+    aligned_y(i, 1:use_n) = edf_y(index_vec);
 
-    append( labs, fcat.create(...
+    append( labs, fcat.create( ...
         'unified_filename', stim_file.unified_filename ...
       , 'session', un_file.m1.mat_directory_name ...
       , 'stim_type', stim_types{stim_type_indices(i)} ...
@@ -165,7 +184,16 @@ for idx = 1:size(comb_indices, 2)
   
   all_aligned_ib = [ all_aligned_ib; aligned_ib ];
   all_is_fixation = [ all_is_fixation; aligned_is_fix ];
+  all_aligned_x = [ all_aligned_x; aligned_x ];
+  all_aligned_y = [ all_aligned_y; aligned_y ];
+  
   append( all_labs, labs );
 end
+
+outs.labs = all_labs;
+outs.ib = all_aligned_ib;
+outs.x = all_aligned_x;
+outs.y = all_aligned_y;
+outs.is_fix = all_is_fixation;
 
 end
