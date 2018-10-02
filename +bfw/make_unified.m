@@ -224,7 +224,7 @@ for idx = 1:numel(outerdirs)
         m_data(j).far_plane_calibration = m_roi;
       end
     end
-    
+      
     m_screen_rect = shared_utils.io.find( m_cal_dir, '.json' );
     
     if ( numel(m_screen_rect) > 0 )
@@ -239,14 +239,14 @@ for idx = 1:numel(outerdirs)
     %
     
     if ( ~isfield(m_data, 'far_plane_key_map') )
-      m_map_mats = shared_utils.io.find( outerdir, 'calibration_key_map.mat' );
-      assert__n_files( m_map_mats, 1, 'calibration key map', outerdir );
-      m_key_map = shared_utils.io.fload( m_map_mats{1} );
-      for j = 1:numel(m_data)
-        m_data(j).far_plane_key_map = m_key_map;
-      end
+       m_map_mats = shared_utils.io.find( outerdir, 'calibration_key_map.mat' );
+       assert__n_files( m_map_mats, 1, 'calibration key map', outerdir );
+       m_key_map = shared_utils.io.fload( m_map_mats{1} );
+       for j = 1:numel(m_data)
+         m_data(j).far_plane_key_map = m_key_map;
+       end
     end
-    
+     
     %
     %   attach mountain sort filename to data, if it exists
     %
@@ -458,6 +458,17 @@ for i = 1:numel(m_data)
   m_data{i} = tmp;
 end
 
+% because nonsocial control raw data (e.g. dot_2.mat in ~/09122018/m1/nonsocial
+% _control/) did not have the calibration info, I
+% directly copy it from other position (e.g. position 1)
+calif = {'far_plane_calibration','far_plane_constants','far_plane_key_map','far_plane_padding'};
+for i = 1:numel(m_data)
+    for i_c = 1:numel(calif)
+        if isequaln( m_data{i}.(calif{i_c}), NaN) 
+           m_data{i}.(calif{i_c}) = m_data{1}.(calif{i_c});
+        end
+    end
+end    
 m_data = m_data(:);
 m_data = vertcat( m_data{:} );
 

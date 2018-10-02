@@ -29,6 +29,7 @@ duration = params.duration;
 assert( ~isnan(duration), 'Specify a valid "duration".' );
 
 for i = 1:numel(bound_mats)
+
   fprintf( '\n %d of %d', i, numel(bound_mats) );
   
   bounds = shared_utils.io.fload( bound_mats{i} );
@@ -291,8 +292,12 @@ function l = get_event_length( index, bounds )
 
 l = 0;
 
-while ( index+1 < numel(bounds) && bounds(index+l) )
-  l = l + 1;
-end
-
+% try
+  while ( index+l <= numel(bounds) && bounds(index+l) )
+   l = l + 1;
+  end
+% catch err
+%   d = 10;
+% end
+  
 end

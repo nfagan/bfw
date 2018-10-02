@@ -127,9 +127,9 @@ for i = 1:numel(un_mats)
   sorted_subdir = un0.plex_directory{end};
   pl2_fullfile = fullfile( pl2_dir, sorted_subdir, pl2_file );
   
-  region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
+  %region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
   
-  region_map = bfw.unify_plex_region_map( bfw.jsondecode(region_map_file) );
+  %region_map = bfw.unify_plex_region_map( bfw.jsondecode(region_map_file) );
   
   all_units = {};
   stp = 1;
@@ -144,11 +144,23 @@ for i = 1:numel(un_mats)
       current_file_map = firings_file_map(j);
     end
     
-    firings_filename = current_file_map.file_name;
+    if ( isfield(current_file_map,'file_name') )
+       firings_filename = current_file_map.file_name;
+    elseif ( isfield(current_file_map,'filename') )
+       firings_filename = current_file_map.filename;
+    else
+       error('wrong field name!, should be either file_name or filename')
+    end  
+    
+    %firings_filename = current_file_map.file_name;
     firings_channels = bfw.parse_json_channel_numbers( current_file_map.channels );
     firings_channels = sort( firings_channels );
     
-    firings_full_file = fullfile( data_root, un0.ms_firings_directory{:}, firings_filename );
+    %firings_full_file = fullfile( data_root, un0.ms_firings_directory{:}, firings_filename );
+    name_info = strsplit(firings_filename,'_');
+    region_info = name_info{1};
+    mdaout_name = strcat(region_info,'_',strrep(un0.plex_filename,'.pl2','.mda'));
+    firings_full_file = fullfile(data_root,un0.ms_firings_directory{:},mdaout_name);
     
     if ( ~shared_utils.io.fexists(firings_full_file) )
       fprintf( '\n Warning: missing firings_out file "%s" for "%s".' ...
@@ -176,7 +188,8 @@ for i = 1:numel(un_mats)
         continue;
       end
       
-      region_name = get_region_name_from_channel_n( region_map, xls_channel_id );
+      %region_name = get_region_name_from_channel_n( region_map, xls_channel_id );
+      region_name = region_info; 
       
       if ( isempty(region_name) )
         fprintf( '\n Warning: No region was defined for channel %d in "%s".', xls_channel_id, un_filename );
@@ -209,7 +222,7 @@ for i = 1:numel(un_mats)
         ms_unit_id_ind = ms_unit_ids_from1 == unit_n_this_channel;
         
         complete_ms_index( ms_channel_id_ind ) = ms_unit_id_ind;
-        
+      
         if ( ~any(ms_unit_id_ind) )
 %           fprintf( '\n Warning: No units matched id %d for "%s".', unit_n_this_channel, un_filename );
           error( 'No units matched id %d for channel %d in "%s".' ...
