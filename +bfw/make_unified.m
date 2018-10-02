@@ -214,10 +214,9 @@ for idx = 1:numel(outerdirs)
     
     if ( numel(m_screen_rect) > 0 )
       scr_rect = bfw.jsondecode( m_screen_rect{1} );
-      scr_rect = scr_rect.screen_rect;
+      scr_rect = arrayfun( @(x) scr_rect.screen_rect, 1:numel(m_data), 'un', 0 );
     else
-      warning( 'No screen rect specified; using default' );
-      scr_rect = [0, 0, 1024*3, 768];
+      scr_rect = get_screen_rect( m_data );
     end
     
     %
@@ -298,7 +297,7 @@ for idx = 1:numel(outerdirs)
       m_data(j).edf_filename = fullfile( m_edf_subdirs{j}, edf_filename );
       m_data(j).mat_index = mat_index;
       m_data(j).plex_sync_index = m_plex_sync_map( m_filenames{j} );
-      m_data(j).screen_rect = scr_rect;
+      m_data(j).screen_rect = scr_rect{j};
       m_data(j).task_type = task_types{j};
     end
 
@@ -480,6 +479,27 @@ fields = fieldnames( plex_sync_struct );
 
 for i = 1:numel(fields)
   map(fields{i}) = plex_sync_struct.(fields{i});
+end
+
+end
+
+function s = get_screen_rect(m_data)
+
+base_rect = [ 0, 0, 1024*3, 768 ];
+
+if ( ~isfield(m_data, 'config') )
+  warning( 'No screen rect specified; using default' );
+  s = arrayfun( @(x) base_rect, 1:numel(m_data), 'un', 0 );
+else
+  adjust_rect = [ -1024, 0, 1024, 0 ];
+  
+  s = cell( size(m_data) );
+  
+  for i = 1:numel(m_data)
+    cal_rect = m_data(i).config.CALIBRATION.cal_rect;
+    
+    s{i} = cal_rect + adjust_rect;
+  end
 end
 
 end

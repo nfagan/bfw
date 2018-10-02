@@ -5,7 +5,7 @@ base_save_p = fullfile( conf.PATHS.data_root, 'plots', 'stim' ...
 
 %%
 look_ahead = 2;
-event_info = bin_look_events_by_stim( look_ahead, {'04252018'} );
+event_info = bin_look_events_by_stim( look_ahead, {'04242018'} );
 
 %%
 event_info2 = debug__check_m1_sync();
@@ -125,7 +125,7 @@ panels_are = {'unified_filename', 'look_ahead', 'looks_to' };
 
 to_plt = fix_dur';
 
-prune( only(to_plt, {'04242018', '04252018'}) );
+prune( only(to_plt, {'04242018'}) );
 
 is_dur = all( strcmp(to_plt('meas_type'), 'duration') );
 is_nfix = all( strcmp(to_plt('meas_type'), 'n_fix') );
@@ -165,9 +165,10 @@ groups_are = { 'meas_type', 'look_ahead' };
 panels_are = { 'session', 'day', 'looks_to' };
 
 plt = vel';
+plt = n_fix';
 setdata( plt, plt.data );
 
-prune( only(plt, {'042418', '042518'}) );
+prune( only(plt, {'042418'}) );
 
 to_rm = bfw.num2cat( 2:6, 'session__' );
 to_keep = setdiff( 1:size(plt, 1), find(plt, ['042418', to_rm]) );

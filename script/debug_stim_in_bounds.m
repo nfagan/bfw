@@ -9,7 +9,9 @@ if ( isempty(loaded) && ~isa(loaded, 'containers.Map') )
 end
 
 %%
-mats = bfw.require_intermediate_mats( [], bfw.gid('aligned', conf) );
+aligned_p = bfw.gid( 'aligned', conf );
+
+mats = bfw.require_intermediate_mats( [], aligned_p );
 
 all_ib = [];
 all_labs = fcat();
