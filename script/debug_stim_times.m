@@ -1,4 +1,4 @@
-function [ib, labs, plot_t, params] = debug_stim_times(varargin)
+function [ib, is_fix, labs, plot_t, params] = debug_stim_times(varargin)
 
 import shared_utils.io.fload;
 
@@ -27,6 +27,7 @@ plot_t = look_back:fs:look_ahead;
 mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_containing );
 
 all_ib = cell( size(mats) );
+all_is_fix = cell( size(mats) );
 all_labs = cell( size(mats) );
 is_ok = true( size(mats) );
 
@@ -56,7 +57,7 @@ parfor i = 1:numel(mats)
   process_params.pad = params.pad;
 
   try 
-    [ib, labs] = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
+    [ib, is_fix, labs] = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
   catch err
     warning( '"%s" (%d) failed with message: "%s"', unified_filename, i, err.message );
     is_ok(i) = false;
@@ -65,6 +66,7 @@ parfor i = 1:numel(mats)
   
   try
     all_ib{i} = ib;
+    all_is_fix{i} = is_fix;
     all_labs{i} = labs;
   catch err
     warning( '"%s" (%d) failed with message: "%s"', unified_filename, i, err.message );
@@ -74,14 +76,16 @@ parfor i = 1:numel(mats)
 end
 
 all_ib(~is_ok) = [];
+all_is_fix(~is_ok) = [];
 all_labs(~is_ok) = [];
 
-labs = vertcat( fcat(), all_labs{:} );
 ib = vertcat( all_ib{:} );
+is_fix = vertcat( all_is_fix{:} );
+labs = vertcat( fcat(), all_labs{:} );
 
 end
 
-function [all_aligned_ib, all_labs] = one_file(un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, params)
+function [all_aligned_ib, all_is_fixation, all_labs] = one_file(un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, params)
 
 lb = params.look_back;
 la = params.look_ahead;
@@ -107,6 +111,10 @@ comb_indices = combvec( 1:numel(roi_names) );
 
 all_labs = fcat();
 all_aligned_ib = [];
+all_is_fixation = [];
+
+dispersion_checker = bfw.fixation.Dispersion();
+is_fix = dispersion_checker.detect( edf_x, edf_y );
 
 for idx = 1:size(comb_indices, 2)
   
@@ -125,7 +133,8 @@ for idx = 1:size(comb_indices, 2)
   stim_type_indices = [ ones(numel(stim_times), 1); repmat(2, numel(sham_times), 1) ];
 
   aligned_ib = false( numel(stim_events), numel(t) );
-
+  aligned_is_fix = false( size(aligned_ib) );
+  
   labs = fcat();
 
   for i = 1:numel(stim_events)
@@ -137,8 +146,11 @@ for idx = 1:size(comb_indices, 2)
 
     c_n = stop_ind - start_ind + 1;
     use_n = min( c_n, numel(t) );
+    
+    index_vec = start_ind:start_ind+use_n-1;
 
-    aligned_ib(i, 1:use_n) = ib(start_ind:start_ind+use_n-1);
+    aligned_ib(i, 1:use_n) = ib(index_vec);
+    aligned_is_fix(i, 1:use_n) = is_fix(index_vec);
 
     append( labs, fcat.create(...
         'unified_filename', stim_file.unified_filename ...
@@ -149,6 +161,7 @@ for idx = 1:size(comb_indices, 2)
   end
   
   all_aligned_ib = [ all_aligned_ib; aligned_ib ];
+  all_is_fixation = [ all_is_fixation; aligned_is_fix ];
   append( all_labs, labs );
 end
 
