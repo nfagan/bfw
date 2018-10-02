@@ -1,4 +1,4 @@
-function debug_stim_times(varargin)
+function [ib, labs, plot_t] = debug_stim_times(varargin)
 
 import shared_utils.io.fload;
 
@@ -23,6 +23,7 @@ mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_contain
 
 all_ib = cell( size(mats) );
 all_labs = cell( size(mats) );
+is_ok = true( size(mats) );
 
 parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats) );
@@ -31,30 +32,49 @@ parfor i = 1:numel(mats)
 
   unified_filename = stim_file.unified_filename;
 
-  un_file = fload( fullfile(unified_p, unified_filename) );
-  sync_file = fload( fullfile(sync_p, unified_filename) );
-  edf_file = fload( fullfile(edf_p, unified_filename) );
-  roi_file = fload( fullfile(roi_p, unified_filename) );
+  try
+    un_file = fload( fullfile(unified_p, unified_filename) );
+    sync_file = fload( fullfile(sync_p, unified_filename) );
+    edf_file = fload( fullfile(edf_p, unified_filename) );
+    roi_file = fload( fullfile(roi_p, unified_filename) );
+  catch err
+    warning( err.message );
+    is_ok(i) = false;
+    continue;
+  end
 
   process_params = struct();
   process_params.look_ahead = look_ahead;
   process_params.look_back = look_back;
   process_params.time = plot_t;
 
-  [ib, labs] = one_file( stim_file, sync_file, edf_file, roi_file, process_params );
+  try 
+    [ib, labs] = one_file( un_file, stim_file, sync_file, edf_file, roi_file, process_params );
+  catch err
+    warning( err.message );
+    is_ok(i) = false;
+    continue;
+  end
   
-  all_ib{i} = ib;
-  all_labs{i} = labs;
+  try
+    all_ib{i} = ib;
+    all_labs{i} = labs;
+  catch err
+    warning( err.message );
+    is_ok(i) = false;
+    continue;
+  end
 end
+
+all_ib(~is_ok) = [];
+all_labs(~is_ok) = [];
 
 labs = vertcat( fcat(), all_labs{:} );
 ib = vertcat( all_ib{:} );
 
-d = 10;
-
 end
 
-function [aligned_ib, labs] = one_file(stim_file, sync_file, edf_file, roi_file, params)
+function [aligned_ib, labs] = one_file( un_file, stim_file, sync_file, edf_file, roi_file, params)
 
 lb = params.look_back;
 la = params.look_ahead;
@@ -106,6 +126,7 @@ for i = 1:numel(stim_events)
   
   append( labs, fcat.create(...
       'unified_filename', stim_file.unified_filename ...
+    , 'session', un_file.m1.mat_directory_name ...
     , 'stim_type', stim_types{stim_type_indices(i)} ...
   ));
 end
