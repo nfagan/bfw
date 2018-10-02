@@ -43,6 +43,8 @@ classdef Dispersion < handle
           
           stop = min( stp+obj.update_interval-1, numel(tf) );
           tf(stp:stop) = tmp_is_fix;
+          
+          last_update = stp;
         end
         
         stp = stp + 1;
@@ -58,7 +60,7 @@ classdef Dispersion < handle
         obj.y_coordinates(obj.place_index) = y;
         obj.place_index = obj.place_index + 1;
       else
-        %   place index is past
+        %   place index is past maximum
         obj.shift_left();
         obj.x_coordinates(obj.place_index-1) = x;
         obj.y_coordinates(obj.place_index-1) = y;

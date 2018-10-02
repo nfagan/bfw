@@ -2,6 +2,8 @@ function [ib, is_fix, labs, plot_t, params] = debug_stim_times(varargin)
 
 import shared_utils.io.fload;
 
+ff = @fullfile;
+
 defaults = bfw.get_common_make_defaults();
 defaults.look_ahead = 5;
 defaults.look_back = -1;
@@ -10,13 +12,14 @@ defaults.pad = 0;
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
 
-unified_p = bfw.gid( 'unified', conf );
-stim_p = bfw.gid( 'stim', conf );
-mat_sync_p = bfw.gid( 'sync', conf );
-edf_samples_p = bfw.gid( 'edf_raw_samples', conf );
-edf_sync_p = bfw.gid( 'edf_sync', conf );
-roi_p = bfw.gid( 'rois', conf );
+unified_p =     bfw.gid( ff('unified', isd), conf );
+stim_p =        bfw.gid( ff('stim', isd), conf );
+mat_sync_p =    bfw.gid( ff('sync', isd), conf );
+edf_samples_p = bfw.gid( ff('edf_raw_samples', isd), conf );
+edf_sync_p =    bfw.gid( ff('edf_sync', isd), conf );
+roi_p =         bfw.gid( ff('rois', isd), conf );
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;
