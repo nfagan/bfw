@@ -1,8 +1,12 @@
-function [ib, labs, plot_t] = debug_stim_times(varargin)
+function [ib, labs, plot_t, params] = debug_stim_times(varargin)
 
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
+defaults.look_ahead = 5;
+defaults.look_back = -1;
+defaults.pad = 0;
+
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
@@ -14,8 +18,8 @@ edf_samples_p = bfw.gid( 'edf_raw_samples', conf );
 edf_sync_p = bfw.gid( 'edf_sync', conf );
 roi_p = bfw.gid( 'rois', conf );
 
-look_ahead = 5;
-look_back = -1;
+look_ahead = params.look_ahead;
+look_back = params.look_back;
 fs = 1/1e3;
 
 plot_t = look_back:fs:look_ahead;
@@ -49,6 +53,7 @@ parfor i = 1:numel(mats)
   process_params.look_ahead = look_ahead;
   process_params.look_back = look_back;
   process_params.time = plot_t;
+  process_params.pad = params.pad;
 
   try 
     [ib, labs] = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
@@ -81,6 +86,7 @@ function [all_aligned_ib, all_labs] = one_file(un_file, stim_file, mat_sync_file
 lb = params.look_back;
 la = params.look_ahead;
 t = params.time;
+pad = params.pad;
 
 m_ind = strcmp( mat_sync_file.sync_key, 'mat' );
 p_ind = strcmp( mat_sync_file.sync_key, 'plex' );
@@ -105,7 +111,7 @@ all_aligned_ib = [];
 for idx = 1:size(comb_indices, 2)
   
   target_roi_name = roi_names{comb_indices(1, idx)};
-  target_roi = roi_file.m1.rects(target_roi_name);
+  target_roi = bfw.bounds.rect_pad_frac( roi_file.m1.rects(target_roi_name), pad, pad );
 
   allow_oob = false;
   edf_plex_time = edf_to_plex_time( edf_time, edf_sync_times, plex_sync_times, allow_oob );
