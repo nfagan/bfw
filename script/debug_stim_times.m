@@ -113,8 +113,7 @@ for idx = 1:size(comb_indices, 2)
   target_roi_name = roi_names{comb_indices(1, idx)};
   target_roi = bfw.bounds.rect_pad_frac( roi_file.m1.rects(target_roi_name), pad, pad );
 
-  allow_oob = false;
-  edf_plex_time = edf_to_plex_time( edf_time, edf_sync_times, plex_sync_times, allow_oob );
+  edf_plex_time = shared_utils.sync.cinterp( edf_time, edf_sync_times, plex_sync_times );
 
   ib = bfw.bounds.rect( edf_x(:), edf_y(:), target_roi );
 
@@ -151,68 +150,6 @@ for idx = 1:size(comb_indices, 2)
   
   all_aligned_ib = [ all_aligned_ib; aligned_ib ];
   append( all_labs, labs );
-end
-
-end
-
-function events_b = edf_to_plex_time(events_a, clock_a, clock_b, allow_oob)
-
-events_b = nan( size(events_a) );
-
-assert( ~allow_oob, 'Not yet implemented.' );
-
-for i = 1:numel(events_a)
-  t = events_a(i);
-  
-  [~, I] = min( abs(clock_a - t) );
-  
-  sync_a = clock_a(I);
-  
-  % times match exactly
-  if ( sync_a == t )
-    events_b(i) = clock_b(I);
-    continue;
-  end
-  
-  if ( t < sync_a )
-    % target-time is earlier than sync time
-    if ( I == 1 )
-      if ( allow_oob )
-        t1a = nan;
-        t1b = nan;
-      else
-        continue;
-      end
-    else
-      t1a = clock_a(I-1);
-      t1b = clock_b(I-1);
-    end
-    
-    t2a = clock_a(I);
-    t2b = clock_b(I);
-  else
-    % target-time is after sync time
-    t1a = clock_a(I);
-    t1b = clock_b(I);
-    
-    if ( I == numel(clock_a) )
-      if ( allow_oob )
-        t2a = nan;
-        t2b = nan;
-      else
-        continue;
-      end
-    else
-      t2a = clock_a(I+1);
-      t2b = clock_b(I+1);
-    end
-  end
-  
-  assert( ~(isnan(t1a) && isnan(t2a)), 'No sync times matched.' );
-  
-  frac = (t - t1a) / (t2a - t1a);
-  
-  events_b(i) = ((t2b - t1b) * frac) + t1b;
 end
 
 end
