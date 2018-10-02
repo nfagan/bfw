@@ -92,16 +92,6 @@ function print_skip_message(un_file, reason)
 fprintf( '\n Skipping "%s" because %s', un_file, reason );
 end
 
-function tf = is_ns_control(s)
-
-fs = fieldnames( s );
-f = fs{1};
-
-has_task_type = isstruct(s.(f)) && isfield( s.(f), 'task_type' );
-tf = has_task_type && strcmp( s.(f).task_type, 'nonsocial_control' );
-
-end
-
 function u = get_un_filename(s)
 
 fs = fieldnames( s );
