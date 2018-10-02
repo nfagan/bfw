@@ -11,7 +11,7 @@ isd = params.input_subdir;
 osd = params.output_subdir;
 
 edf_p = bfw.gid( ff('edf', isd), conf );
-save_p = bfw.gid( ff('edf_raw_position', osd), conf );
+save_p = bfw.gid( ff('edf_raw_samples', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, edf_p, params.files_containing );
 
