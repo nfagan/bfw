@@ -14,7 +14,7 @@ save_p = bfw.gid( fullfile('edf_sync', osd), conf );
 
 unified_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
-for i = 1:numel(unified_mats)
+parfor i = 1:numel(unified_mats)
   shared_utils.general.progress( i, numel(unified_mats) );
   
   unified_file = shared_utils.io.fload( unified_mats{i} );
@@ -77,13 +77,10 @@ is_sync_msg = strcmp( info, 'SYNCH' );
 is_resync_msg = strcmp( info, 'RESYNCH' );
 
 assert( sum(is_sync_msg) == 1, 'No starting synch message was found.' );
-
-resync_t = t(is_resync_msg);
-
-assert( sum(is_valid_resync) == numel(sync_times)-1 ...
+assert( sum(is_resync_msg) == numel(sync_times)-1 ...
   , 'Number of resync times does not match given number of mat sync times.' );
 
-fixed_times = resync_t(is_valid_resync);
+fixed_times = t(is_resync_msg);
 start_time = t(is_sync_msg);
 
 end
