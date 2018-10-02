@@ -19,9 +19,12 @@ fs = 1/1e3;
 
 plot_t = look_back:fs:look_ahead;
 
-mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_con
+mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_containing );
 
-for i = 1:numel(mats)
+all_ib = cell( size(mats) );
+all_labs = cell( size(mats) );
+
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats) );
   
   stim_file = fload( mats{i} );
@@ -33,15 +36,21 @@ for i = 1:numel(mats)
   edf_file = fload( fullfile(edf_p, unified_filename) );
   roi_file = fload( fullfile(roi_p, unified_filename) );
 
+  process_params = struct();
   process_params.look_ahead = look_ahead;
   process_params.look_back = look_back;
   process_params.time = plot_t;
 
   [ib, labs] = one_file( stim_file, sync_file, edf_file, roi_file, process_params );
   
-  d = 10;
-  
+  all_ib{i} = ib;
+  all_labs{i} = labs;
 end
+
+labs = vertcat( fcat(), all_labs{:} );
+ib = vertcat( all_ib{:} );
+
+d = 10;
 
 end
 
