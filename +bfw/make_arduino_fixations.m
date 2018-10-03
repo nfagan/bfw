@@ -5,7 +5,7 @@ ff = @fullfile;
 defaults = bfw.get_common_make_defaults();
 defaults.threshold = 20;
 defaults.n_samples = 4;
-defaults.update_interval = 50;
+defaults.update_interval = 1;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -21,7 +21,7 @@ output_p = bfw.gid( ff('fixations', osd), conf );
 aligned_mats = bfw.require_intermediate_mats( params.files, aligned_p, params.files_containing );
 
 ui = params.update_interval;
-thresh = params.thresh;
+thresh = params.threshold;
 nsamp = params.n_samples;
 
 parfor i = 1:numel(aligned_mats)
