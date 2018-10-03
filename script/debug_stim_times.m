@@ -7,7 +7,7 @@ ff = @fullfile;
 defaults = bfw.get_common_make_defaults();
 defaults.look_ahead = 5;
 defaults.look_back = -1;
-defaults.pad = 0;
+defaults.roi_pad = 0;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -59,10 +59,11 @@ parfor i = 1:numel(mats)
   process_params.look_ahead = look_ahead;
   process_params.look_back = look_back;
   process_params.time = plot_t;
-  process_params.pad = params.pad;
+  process_params.roi_pad = params.roi_pad;
 
   try 
-    outs = one_file( un_file, stim_file, mat_sync_file, edf_sync_file, edf_samples_file, roi_file, process_params );
+    outs = one_file( un_file, stim_file, mat_sync_file, edf_sync_file ...
+      , edf_samples_file, roi_file, process_params );
   catch err
     warning( '"%s" (%d) failed with message: "%s"', unified_filename, i, err.message );
     is_ok(i) = false;
@@ -108,7 +109,7 @@ function outs = one_file(un_file, stim_file, mat_sync_file, edf_sync_file, edf_s
 lb = params.look_back;
 la = params.look_ahead;
 t = params.time;
-pad = params.pad;
+pad = params.roi_pad;
 
 m_ind = strcmp( mat_sync_file.sync_key, 'mat' );
 p_ind = strcmp( mat_sync_file.sync_key, 'plex' );
@@ -135,6 +136,10 @@ all_aligned_y = [];
 
 dispersion_checker = bfw.fixation.Dispersion( 20, 4, 1 );
 is_fix = dispersion_checker.detect( edf_x, edf_y );
+
+un_filename = stim_file.unified_filename;
+session_dir = un_file.m1.mat_directory_name;
+task_type = bfw.field_or( un_file.m1, 'task_type', 'free_viewing' );
 
 for idx = 1:size(comb_indices, 2)
   
@@ -175,10 +180,11 @@ for idx = 1:size(comb_indices, 2)
     aligned_y(i, 1:use_n) = edf_y(index_vec);
 
     append( labs, fcat.create( ...
-        'unified_filename', stim_file.unified_filename ...
-      , 'session', un_file.m1.mat_directory_name ...
-      , 'stim_type', stim_types{stim_type_indices(i)} ...
-      , 'roi', target_roi_name ...
+        'unified_filename',   un_filename ...
+      , 'session',            session_dir ...
+      , 'stim_type',          stim_types{stim_type_indices(i)} ...
+      , 'roi',                target_roi_name ...
+      , 'task_type',          task_type ...
     ));
   end
   
