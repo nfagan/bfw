@@ -56,7 +56,6 @@ parfor i = 1:numel(aligned_mats)
     pos = aligned_file.(monk).position;
     time = aligned_file.(monk).time;
     
-    %   repositories/eyelink/eye_mmv
     is_fix = dispersion.detect( pos(1, :), pos(2, :) );
     
     [starts, lengths] = shared_utils.logical.find_all_starts( is_fix );
