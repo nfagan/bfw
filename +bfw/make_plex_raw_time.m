@@ -77,6 +77,7 @@ parfor i = 1:numel(mats)
   
   plex_time_file = struct();
   plex_time_file.unified_filename = unified_filename;
+  plex_time_file.sync_id = id_a;
   
   try 
     for j = 1:numel(fs)
