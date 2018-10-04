@@ -22,7 +22,7 @@ plex_time_p = bfw.gid( ff('plex_raw_time', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, samples_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   edf_samples_file = fload( mats{i} );
@@ -40,30 +40,32 @@ for i = 1:numel(mats)
   
   output_filename = fullfile( plex_time_p, unified_filename );
   
+  % skip if file exists and params.overwrite = false
   if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
     continue;
   end
   
+  % skip if no 'm1' field is present, or if no 'plex_sync_id' field is
+  % present.
   if ( ~isfield(un_file, 'm1') || ~isfield(un_file.m1, 'plex_sync_id') )
-    warning( 'Not implemented for "%s".', unified_filename );
-    continue;
-  end
-  
-  if ( ~strcmpi(un_file.m1.plex_sync_id, 'm1') )
-    warning( 'Not implemented for "%s".', unified_filename );
+    warning( '"%s": Missing ''plex_sync_id'' field.', unified_filename );
     continue;
   end
   
   id_a = un_file.m1.plex_sync_id;
   id_b = char( setdiff({'m1', 'm2'}, id_a) );
   
-  mat_sync_a = un_file.(id_a).sync_times(:, 1);
-  mat_sync_b = un_file.(id_a).sync_times(:, 2);
-
-  edf_mat_sync_b = un_file.(id_b).plex_sync_times(2:end);
+  has_multiple_fields = isfield( un_file, id_b );
   
-  %   now edf_sync_b times are in the same clock-space as mat_sync_a
-  edf_mat_sync_ab = shared_utils.sync.cinterp( edf_mat_sync_b, mat_sync_b, mat_sync_a );
+  if ( has_multiple_fields )
+    mat_sync_a = un_file.(id_a).sync_times(:, 1);
+    mat_sync_b = un_file.(id_a).sync_times(:, 2);
+
+    edf_mat_sync_b = un_file.(id_b).plex_sync_times(2:end);
+
+    %   now edf_sync_b times are in the same clock-space as mat_sync_a
+    edf_mat_sync_ab = cinterp( edf_mat_sync_b, mat_sync_b, mat_sync_a );
+  end
   
   m_ind = strcmp( plex_sync_file.sync_key, 'mat' );
   p_ind = strcmp( plex_sync_file.sync_key, 'plex' );
@@ -89,6 +91,9 @@ for i = 1:numel(mats)
         % `edf_sync_times` and `plex_sync_times`, since they are equivalent.
         edf_plex_time = cinterp( edf_time, edf_sync_times, plex_sync_times );
       else
+        assert( has_multiple_fields, ['Only a single field was present in' ...
+          , ' unified data, but ''plex_sync_id'' does not match that field.'] );
+        
         % Otherwise, we'll have to first convert the edf_times to matlab
         % time (in terms of `id_a`(s) clock), and *then* to plexon time.
         nans = isnan( edf_mat_sync_ab );
