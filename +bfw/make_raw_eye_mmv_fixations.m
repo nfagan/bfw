@@ -23,7 +23,7 @@ t1 = params.t1;
 t2 = params.t2;
 min_duration = params.min_duration;
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   samples_file = shared_utils.io.fload( mats{i} );
