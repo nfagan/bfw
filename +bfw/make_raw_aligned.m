@@ -27,6 +27,8 @@ aligned_p = bfw.gid( ff('aligned_raw_samples', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, indices_p, params.files_containing );
 
+params.is_binned = false;
+
 parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   

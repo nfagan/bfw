@@ -6,11 +6,9 @@ ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.duration = NaN;  % ms
-defaults.bin_raw = true;
-defaults.window_size = 10;
-defaults.step_size = 10;
 defaults.require_fixations = true;
 defaults.fixations_subdir = 'eye_mmv_fixations';
+defaults.samples_subdir = 'aligned_binned_raw_samples';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -18,30 +16,31 @@ conf = params.config;
 isd = params.input_subdir;
 osd = params.output_subdir;
 fsd = params.fixations_subdir;
+ssd = params.samples_subdir;
 
 duration = params.duration;
 assert( ~isnan(duration), '"duration" cannot be nan.' );
 
-aligned_samples_p = bfw.gid( ff('aligned_raw_samples', isd), conf );
+aligned_samples_p = bfw.gid( ff(ssd, isd), conf );
 
-bounds_p = ff( aligned_samples_p, 'bounds' );
 time_p = ff( aligned_samples_p, 'time' );
+bounds_p = ff( aligned_samples_p, 'bounds' );
 fixations_p = ff( aligned_samples_p, fsd );
 
-events_p = bfw.gid( ff('events', osd), conf );
+events_p = bfw.gid( ff('raw_events', osd), conf );
 
-mats = bfw.require_intermediate_mats( params.files, bounds_p, params.files_containing );
+mats = bfw.require_intermediate_mats( params.files, time_p, params.files_containing );
 
 for i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
-  bounds_file = fload( mats{i} );
+  time_file = fload( mats{i} );
   
-  unified_filename = bounds_file.unified_filename;
+  unified_filename = time_file.unified_filename;
   
   try
+    bounds_file = fload( fullfile(bounds_p, unified_filename) );
     fix_file = fload( fullfile(fixations_p, unified_filename) ); 
-    time_file = fload( fullfile(time_p, unified_filename) );
   catch err
     print_fail_warn( unified_filename, err.message );
     continue;
@@ -52,6 +51,8 @@ for i = 1:numel(mats)
   should_save = true;
   
   t = time_file.t;
+  
+  exclusive_events = struct();
   
   for j = 1:numel(monk_ids)
     monk_id = monk_ids{j};
@@ -66,6 +67,8 @@ for i = 1:numel(mats)
       should_save = false;
       break;  
     end
+    
+    exclusive_events.(monk_id) = exclusive_evts;
   end
   
   d = 10;
@@ -80,30 +83,15 @@ import shared_utils.vector.slidebin;
 
 roi_names = keys( bounds );
 
-ws = params.window_size;
-ss = params.step_size;
-should_bin_raw = params.bin_raw;
 duration = params.duration;
-
-if ( should_bin_raw )  
-  is_fix = cellfun( @any, slidebin(is_fix, ws, ss) );
-  t = cellfun( @median, slidebin(t, ws, ss) );
-  duration = round( duration / ss );
-end
 
 evts = [];
 evt_names = {};
 
 for i = 1:numel(roi_names)
   roi_name = roi_names{i};
-  
-  ib = bounds(roi_name);
-  
-  if ( should_bin_raw )
-    ib = cellfun( @any, slidebin(ib, ws, ss) );
-  end
-  
-  is_valid_sample = ib;
+    
+  is_valid_sample = bounds(roi_name);
   
   if ( params.require_fixations )
     is_valid_sample = is_valid_sample & is_fix;
@@ -117,8 +105,8 @@ for i = 1:numel(roi_names)
 end  
 
 outs.indices = evts;
+outs.times = columnize( t(evts) );
 outs.ids = evt_names;
-outs.t = t;
 
 end
 
