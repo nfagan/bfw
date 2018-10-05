@@ -86,13 +86,14 @@ for i = 1:numel(mats)
       end
       
       joined = join_events( exclusive_evts, mutual_evts );
+      repeated_roi = repmat( {roi}, rows(joined.events), 1 );
       
       events_file.events = [ events_file.events; joined.events ];
-      events_file.labels = [ events_file.labels; joined.labels ];
+      events_file.labels = [ events_file.labels; [joined.labels, repeated_roi] ];
       
       if ( j == 1 )
         events_file.event_key = joined.event_key;
-        events_file.categories = joined.categories;
+        events_file.categories = cshorzcat( joined.categories, 'roi' );
       end
       
     catch err
