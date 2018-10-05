@@ -16,7 +16,7 @@ osd = params.output_subdir;
 kinds = shared_utils.cell.ensure_cell( params.kinds );
 
 try
-  aligned_file_map = get_intermediate_dir_map( kinds, isd, conf );
+  aligned_file_map = bfw.get_raw_aligned_intermediate_dir_map( kinds, isd, conf );
 catch err
   warning( err.message );
   return;
@@ -250,31 +250,4 @@ end
 
 function d = get_default_kinds()
 d = { 'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations' };
-end
-
-function m = get_intermediate_dir_map(given_kinds, isd, conf)
-
-m = containers.Map();
-
-for i = 1:numel(given_kinds)
-  kind = given_kinds{i};
-  
-  switch ( kind )
-    case 'time'
-      mapped_kind = 'edf_raw_samples';
-    case 'position'
-      mapped_kind = 'edf_raw_samples';
-    case 'bounds'
-      mapped_kind = 'raw_bounds';
-    case 'eye_mmv_fixations'
-      mapped_kind = 'raw_eye_mmv_fixations';
-    case 'arduino_fixations'
-      mapped_kind = 'raw_arduino_fixations';
-    otherwise
-      error( 'Unrecognized kind "%s".', kind );
-  end 
-  
-  m(kind) = bfw.gid(fullfile(mapped_kind, isd), conf);
-end
-
 end

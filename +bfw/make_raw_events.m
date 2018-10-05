@@ -9,7 +9,8 @@ defaults.duration = NaN;  % ms
 defaults.bin_raw = true;
 defaults.window_size = 10;
 defaults.step_size = 10;
-defaults.fixations_subdir = 'raw_eye_mmv_fixations';
+defaults.require_fixations = true;
+defaults.fixations_subdir = 'eye_mmv_fixations';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -21,9 +22,12 @@ fsd = params.fixations_subdir;
 duration = params.duration;
 assert( ~isnan(duration), '"duration" cannot be nan.' );
 
-fixations_p = bfw.gid( ff(fsd, isd), conf );
-bounds_p = bfw.gid( ff('raw_bounds', isd), conf );
-aligned_p = bfw.gid( ff('aligned_raw_indices', isd), conf );
+aligned_samples_p = bfw.gid( ff('aligned_raw_samples', isd), conf );
+
+bounds_p = ff( aligned_samples_p, 'bounds' );
+time_p = ff( aligned_samples_p, 'time' );
+fixations_p = ff( aligned_samples_p, fsd );
+
 events_p = bfw.gid( ff('events', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, bounds_p, params.files_containing );
@@ -37,30 +41,26 @@ for i = 1:numel(mats)
   
   try
     fix_file = fload( fullfile(fixations_p, unified_filename) ); 
-    aligned_file = fload( fullfile(aligned_p, unified_filename) );
+    time_file = fload( fullfile(time_p, unified_filename) );
   catch err
     print_fail_warn( unified_filename, err.message );
     continue;
   end
   
-  fs = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
-  
-  has_multiple_fields = numel( fs ) > 1;
-  
-  if ( has_multiple_fields )
-    
-  end
+  monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
   
   should_save = true;
   
-  for j = 1:numel(fs)
-    monk_id = fs{j};
+  t = time_file.t;
+  
+  for j = 1:numel(monk_ids)
+    monk_id = monk_ids{j};
     
-    bounds = bounds_file.(monk_id).bounds;
-    is_fix = fix_file.(monk_id).is_fixation;
+    bounds = bounds_file.(monk_id);
+    is_fix = fix_file.(monk_id);
     
     try
-      exclusive_evts = find_exclusive_events( bounds, is_fix, params );
+      exclusive_evts = find_exclusive_events( t, bounds, is_fix, params );
     catch err
       print_fail_warn( unified_filename, err.message );
       should_save = false;
@@ -68,13 +68,57 @@ for i = 1:numel(mats)
     end
   end
   
+  d = 10;
+  
 end
 
 end
 
-function evts = find_exclusive_events(bounds, is_fix, params)
+function outs = find_exclusive_events(t, bounds, is_fix, params)
 
-d = 10;
+import shared_utils.vector.slidebin;
+
+roi_names = keys( bounds );
+
+ws = params.window_size;
+ss = params.step_size;
+should_bin_raw = params.bin_raw;
+duration = params.duration;
+
+if ( should_bin_raw )  
+  is_fix = cellfun( @any, slidebin(is_fix, ws, ss) );
+  t = cellfun( @median, slidebin(t, ws, ss) );
+  duration = round( duration / ss );
+end
+
+evts = [];
+evt_names = {};
+
+for i = 1:numel(roi_names)
+  roi_name = roi_names{i};
+  
+  ib = bounds(roi_name);
+  
+  if ( should_bin_raw )
+    ib = cellfun( @any, slidebin(ib, ws, ss) );
+  end
+  
+  is_valid_sample = ib;
+  
+  if ( params.require_fixations )
+    is_valid_sample = is_valid_sample & is_fix;
+  end
+  
+  evts_this_roi = shared_utils.logical.find_starts( is_valid_sample, duration );
+  evt_names_this_roi = repmat( {roi_name}, numel(evts_this_roi), 1 );
+  
+  evts = [ evts; evts_this_roi(:) ];
+  evt_names = [ evt_names; evt_names_this_roi ];
+end  
+
+outs.indices = evts;
+outs.ids = evt_names;
+outs.t = t;
 
 end
 
