@@ -240,7 +240,7 @@ function [bounds, events] = fill_gaps( bounds, events, threshold )
 
 ind = [ diff(events) <= threshold, false ];
 
-if ( ~any(ind) ), return; end;
+if ( ~any(ind) ), return; end
 
 num_inds = find( ind );
 
