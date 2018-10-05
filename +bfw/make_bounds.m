@@ -12,15 +12,18 @@ defaults.update_time = true;
 defaults.remove_blink_nans = true;
 defaults.require_fixation = true;
 defaults.single_roi_fixations = false;
+defaults.fixations_subdir = '';
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
+
 isd = params.input_subdir;
 osd = params.output_subdir;
+fsd = params.fixations_subdir;
 
 data_p = bfw.gid( ff('aligned', isd), conf );
 blink_p = bfw.gid( ff('blinks', isd), conf );
-fix_p = bfw.gid( ff('fixations', isd), conf );
+fix_p = bfw.gid( ff('fixations', fsd), conf );
 unified_p = bfw.gid( ff('unified', isd), conf );
 roi_p = bfw.gid( ff('rois', isd), conf );
 save_p = bfw.gid( ff('bounds', osd), conf );
