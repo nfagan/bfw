@@ -32,6 +32,7 @@ parfor i = 1:numel(mats)
   end
   
   aligned_file = struct();
+  aligned_file.params = params;
   aligned_file.unified_filename = unified_filename;
   
   sync_id = time_file.sync_id;

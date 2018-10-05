@@ -5,6 +5,7 @@ ff = @fullfile;
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
+defaults.padding = 0;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -19,7 +20,7 @@ bounds_p = bfw.gid( ff('raw_bounds', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, samples_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   samples_file = fload( mats{i} );
@@ -44,6 +45,7 @@ for i = 1:numel(mats)
   
   bounds_file = struct();
   bounds_file.unified_filename = unified_filename;
+  bounds_file.params = params;
   
   try 
     for j = 1:numel(fs)
@@ -59,8 +61,11 @@ for i = 1:numel(mats)
       
       for k = 1:numel(roi_names)
         roi = rects(roi_names{k});
+        pad = params.padding;
         
-        bounds(roi_names{k}) = bfw.bounds.rect( x, y, roi );
+        padded_roi = bfw.bounds.rect_pad_frac( roi, pad, pad );
+        
+        bounds(roi_names{k}) = bfw.bounds.rect( x, y, padded_roi );
       end
       
       bounds_file.(m_id).bounds = bounds;

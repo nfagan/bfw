@@ -23,9 +23,21 @@ bfw.make_edf_raw_samples( shared_inputs{:} );
 bfw.make_edf_sync_times( shared_inputs{:} );
 % bfw.make_edf_blink_info( shared_inputs{:} );
 
+%%  rois + bounds
+
+bfw.make_rois( shared_inputs{:} );
+
+bfw.make_bounds( shared_inputs{:} ...
+  , 'padding', 0 ...
+);
+
 %%  plex time
 
 bfw.make_plex_raw_time( shared_inputs{:} );
+
+%%  aligned indices
+
+bfw.make_raw_aligned_indices( shared_inputs{:} );
 
 %%  fixations
 
@@ -35,6 +47,8 @@ bfw.make_raw_eye_mmv_fixations( shared_inputs{:} ...
   , 'min_duration', 0.03 ...
 );
 
-bfw.make_arduino_fixations( shared_inputs{:} );
+bfw.make_raw_arduino_fixations( shared_inputs{:} );
 
-%%
+%%  events
+
+bfw.make_raw_events( shared_inputs{:} );
