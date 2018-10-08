@@ -14,7 +14,6 @@ isd = params.input_subdir;
 osd = params.output_subdir;
 
 samples_p = bfw.gid( ff('edf_raw_samples', isd), conf );
-unified_p = bfw.gid( ff('unified', isd), conf );
 roi_p = bfw.gid( ff('rois', isd), conf );
 bounds_p = bfw.gid( ff('raw_bounds', osd), conf );
 
@@ -34,7 +33,6 @@ parfor i = 1:numel(mats)
   end
   
   try
-    un_file = fload( fullfile(unified_p, unified_filename) );
     roi_file = fload( fullfile(roi_p, unified_filename) );
   catch err
     print_fail_warn( unified_filename, err.message );

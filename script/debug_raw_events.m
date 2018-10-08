@@ -29,9 +29,9 @@ parfor idx = 1:numel(stim_files)
   bounds_file = bfw.load1( fullfile(ssd, 'bounds'), un_filename, conf );
   fix_file = bfw.load1( fullfile(ssd, fsd), un_filename, conf );
   t_file = bfw.load1( fullfile(ssd, 'time'), un_filename, conf );
-  un_file = bfw.load1( 'unified', un_filename, conf );
+  meta_file = bfw.load1( 'meta', un_filename, conf );
   
-  if ( bfw.any_empty(bounds_file, fix_file, t_file, un_file) )
+  if ( bfw.any_empty(bounds_file, fix_file, t_file, meta_file) )
     empties(idx) = true;
     continue;
   end
@@ -109,8 +109,8 @@ parfor idx = 1:numel(stim_files)
         , 'roi', roi_name ...
         , 'looks_by', monk_id ...
         , 'unified_filename', un_filename ...
-        , 'session', un_file.m1.mat_directory_name ...
-        , 'date', un_file.m1.date ...
+        , 'session', meta_file.session ...
+        , 'date', meta_file.date ...
       );
     
       append( ib_labs, labs );
@@ -129,7 +129,9 @@ all_ib_labs(empties) = [];
 ib = vertcat( all_ib{:} );
 ib_labs = vertcat( fcat(), all_ib_labs{:} );
 
-d = 10;
+outs = struct();
+outs.ib_labels = ib_labs;
+outs.ib = ib;
 
 end
 

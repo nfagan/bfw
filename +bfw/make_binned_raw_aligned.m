@@ -8,12 +8,14 @@ defaults = bfw.get_common_make_defaults();
 defaults.window_size = 10;
 defaults.step_size = 10;
 defaults.discard_uneven = true;
+defaults.kinds = get_default_kinds();
 
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
 isd = params.input_subdir;
 osd = params.output_subdir;
+kinds = shared_utils.cell.ensure_cell( params.kinds );
 
 aligned_samples_p = bfw.gid( ff('aligned_raw_samples', isd), conf );
 time_p = fullfile( aligned_samples_p, 'time' );
@@ -31,12 +33,25 @@ parfor i = 1:numel(mats)
   
   unified_filename = time_file.unified_filename;
   
-  make_time( aligned_binned_p, time_file, params );
-  make_position( aligned_samples_p, aligned_binned_p, unified_filename, params );
-  make_bounds( aligned_samples_p, aligned_binned_p, unified_filename, params );
+  if ( ismember('time', kinds) )
+    make_time( aligned_binned_p, time_file, params );
+  end
   
-  make_fixations( 'eye_mmv_fixations', aligned_samples_p, aligned_binned_p, unified_filename, params );
-  make_fixations( 'arduino_fixations', aligned_samples_p, aligned_binned_p, unified_filename, params );
+  if ( ismember('position', kinds) )
+    make_position( aligned_samples_p, aligned_binned_p, unified_filename, params );
+  end
+  
+  if ( ismember('bounds', kinds) )
+    make_bounds( aligned_samples_p, aligned_binned_p, unified_filename, params );
+  end
+  
+  if ( ismember('eye_mmv_fixations', kinds) )
+    make_fixations( 'eye_mmv_fixations', aligned_samples_p, aligned_binned_p, unified_filename, params );
+  end
+  
+  if ( ismember('arduino_fixations', kinds) )
+    make_fixations( 'arduino_fixations', aligned_samples_p, aligned_binned_p, unified_filename, params );
+  end
 end
 
 end
@@ -197,4 +212,8 @@ end
 
 function print_fail_warn(un_file, msg)
 warning( '"%s" failed: %s', un_file, msg );
+end
+
+function d = get_default_kinds()
+d = { 'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations' };
 end
