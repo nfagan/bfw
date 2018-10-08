@@ -1,57 +1,67 @@
-folders = {};
-
-files_containing = folders;
-
 conf = bfw.config.load();
 
-shared_inputs = { 'input_subdir', '', 'output_subdir', '' ...
-  , 'files_containing', files_containing, 'overwrite', false, 'config', conf };
+inputs = struct();
+inputs.config = conf;
+inputs.input_subdir = '';
+inputs.output_subdir = '';
+inputs.overwrite = false;
+inputs.files_containing = {};
 
 %%  unified
 
-bfw.make_unified( folders, shared_inputs{:} );
+bfw.make_unified( folders, inputs );
 
 %%  plex sync + stim
 
-bfw.make_sync_times( shared_inputs{:} );
-bfw.make_stimulation_times( shared_inputs{:} );
+bfw.make_sync_times( inputs );
+bfw.make_stimulation_times( inputs );
 
 %%  edfs
 
-bfw.make_edfs( shared_inputs{:} );
-bfw.make_edf_raw_samples( shared_inputs{:} );
-bfw.make_edf_sync_times( shared_inputs{:} );
+bfw.make_edfs( inputs );
+bfw.make_edf_raw_samples( inputs );
+bfw.make_edf_sync_times( inputs );
 % bfw.make_edf_blink_info( shared_inputs{:} );
 
 %%  rois + bounds
 
-bfw.make_rois( shared_inputs{:} );
+bfw.make_rois( inputs );
 
-bfw.make_raw_bounds( shared_inputs{:} ...
+bfw.make_raw_bounds( inputs ...
   , 'padding', 0 ...
 );
 
 %%  plex time
 
-bfw.make_plex_raw_time( shared_inputs{:} );
+bfw.make_plex_raw_time( inputs );
 
 %%  fixations
 
-bfw.make_raw_eye_mmv_fixations( shared_inputs{:} ...
+bfw.make_raw_eye_mmv_fixations( inputs ...
   , 't1', 20 ...
   , 't2', 10 ...
   , 'min_duration', 0.03 ...
 );
 
-bfw.make_raw_arduino_fixations( shared_inputs{:} );
+bfw.make_raw_arduino_fixations( inputs );
 
-%%  alignment
+%%  align indices
 
-bfw.make_raw_aligned_indices( shared_inputs{:} );
-bfw.make_raw_aligned( shared_inputs{:} ...
-  , 'kinds', {'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations'} ...
+%   this takes a long time.
+bfw.make_raw_aligned_indices( inputs );
+
+%%  aligned + binned aligned samples (using aligned indices)
+
+sample_kinds = { 'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations' };
+
+bfw.make_raw_aligned( inputs ...
+  , 'kinds', sample_kinds ...
+);
+
+bfw.make_binned_raw_aligned( inputs ...
+  , 'kinds', sample_kinds ...
 );
 
 %%  events
 
-bfw.make_raw_events( shared_inputs{:} );
+bfw.make_raw_events( inputs );
