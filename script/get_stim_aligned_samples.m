@@ -28,107 +28,126 @@ lb = params.look_back;
 ssd = params.samples_subdir;
 fsd = params.fixations_subdir;
 
+samples_p = bfw.gid( ssd, conf );
+meta_p =    bfw.gid( 'meta', conf );
+
 parfor idx = 1:numel(stim_files)
   shared_utils.general.progress( idx, numel(stim_files), mfilename );
   
   stim_file = shared_utils.io.fload( stim_files{idx} );
   
   un_filename = stim_file.unified_filename;
+  
+  should_continue = true;
 
-  bounds_file = bfw.load1( fullfile(ssd, 'bounds'), un_filename, conf );
-  fix_file = bfw.load1( fullfile(ssd, fsd), un_filename, conf );
-  t_file = bfw.load1( fullfile(ssd, 'time'), un_filename, conf );
-  meta_file = bfw.load1( 'meta', un_filename, conf );
-  
-  if ( bfw.any_empty(bounds_file, fix_file, t_file, meta_file) )
-    empties(idx) = true;
-    continue;
-  end
-
-  stim_times = stim_file.stimulation_times;
-  sham_times = stim_file.sham_times;
-
-  stim_events = [ stim_times(:); sham_times(:) ];
-  stim_types = { 'stim', 'sham' };
-  stim_indices = [ rowones(numel(stim_times)); repmat(2, numel(sham_times), 1) ];
-  
-  monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
-  roi_names = keys( bounds_file.(char(monk_ids{1})) );
-  
-  C = combvec( 1:numel(monk_ids), 1:numel(roi_names) );
-  n_combs = size( C, 2 );
-  
-  t = t_file.t;
-  sf = 1e3;
-  
-  if ( bounds_file.params.is_binned )
-    sf = sf / bounds_file.params.step_size;
+  try
+    bounds_file = shared_utils.io.fload( fullfile(samples_p, 'bounds', un_filename) );
+    fix_file = shared_utils.io.fload( fullfile(samples_p, fsd, un_filename) );
+    t_file = shared_utils.io.fload( fullfile(samples_p, 'time', un_filename) );
+    meta_file = shared_utils.io.fload( fullfile(meta_p, un_filename) );
+  catch err
+    warning( err.message );
+    should_continue = false;
   end
   
-  t_series = lb:1/sf:la;
+  empties(idx) = ~should_continue;
+  
+  if ( should_continue )
+    %   NOTE -- There's a bug in r2017a parfor related to using `continue` 
+    %   in a parfor loop. Normally, we would simply employ `continue` in
+    %   the catch block above, but doing so causes strange behavior.
 
-  total_is_fix = false( numel(stim_events) * n_combs, numel(t_series) );
-  is_in_bounds = false( size(total_is_fix) );
-  
-  ib_labs = fcat();
-  
-  stp = 1;
-  
-  for i = 1:numel(stim_events)
-    evt = shared_utils.sync.nearest( t, stim_events(i) );
+    stim_times = stim_file.stimulation_times;
+    sham_times = stim_file.sham_times;
 
-    start = evt + lb * sf;
-    stop = evt + la * sf;
+    stim_events = [ stim_times(:); sham_times(:) ];
     
-    assign_start = 1;
-    assign_stop = size( total_is_fix, 2 );
-
-    if ( start < 1 )
-      assign_start = abs( start ) + 2;
-      start = 1;
+    if ( isempty(stim_events) )
+      empties(idx) = true;
+      continue;
     end
     
-    if ( stop > numel(t) )
-      overflow = stop - numel( t );
-      assign_stop = assign_stop - overflow;
-      stop = numel( t );
-    end
-    
-    stimlabs = fcat.create( ...
-        'stim_type',          stim_types{stim_indices(i)} ...
-      , 'roi',                '<roi>' ...
-      , 'looks_by',           '<looks_by>' ...
-      , 'unified_filename',   un_filename ...
-      , 'session',            meta_file.session ...
-      , 'date',               meta_file.date ...
-    );
-    
-    for j = 1:n_combs
-      monk_idx = C(1, j);      
-      roi_idx = C(2, j);
-      
-      monk_id = monk_ids{monk_idx};
-      roi_name = roi_names{roi_idx};
+    stim_types = { 'stim', 'sham' };
+    stim_indices = [ rowones(numel(stim_times)); repmat(2, numel(sham_times), 1) ];
 
-      bounds_container = bounds_file.(monk_id);
-      fix_vec = fix_file.(monk_id);
-      
-      bounds = bounds_container(roi_name);
-      
-      is_in_bounds(stp, assign_start:assign_stop) = bounds(start:stop);
-      total_is_fix(stp, assign_start:assign_stop) = fix_vec(start:stop);
-      
-      setcat( stimlabs, {'roi', 'looks_by'}, {roi_name, monk_id} );
-      append( ib_labs, stimlabs );
-      
-      stp = stp + 1;
+    monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
+    roi_names = keys( bounds_file.(char(monk_ids{1})) );
+
+    C = combvec( 1:numel(monk_ids), 1:numel(roi_names) );
+    n_combs = size( C, 2 );
+
+    t = t_file.t;
+    sf = 1e3;
+
+    if ( bounds_file.params.is_binned )
+      sf = sf / bounds_file.params.step_size;
     end
+
+    t_series = lb:1/sf:la;
+
+    total_is_fix = false( numel(stim_events) * n_combs, numel(t_series) );
+    is_in_bounds = false( size(total_is_fix) );
+
+    ib_labs = fcat();
+
+    stp = 1;
+
+    for i = 1:numel(stim_events)
+      evt = shared_utils.sync.nearest( t, stim_events(i) );
+
+      start = evt + lb * sf;
+      stop = evt + la * sf;
+
+      assign_start = 1;
+      assign_stop = size( total_is_fix, 2 );
+
+      if ( start < 1 )
+        assign_start = abs( start ) + 2;
+        start = 1;
+      end
+
+      if ( stop > numel(t) )
+        overflow = stop - numel( t );
+        assign_stop = assign_stop - overflow;
+        stop = numel( t );
+      end
+
+      stimlabs = fcat.create( ...
+          'stim_type',          stim_types{stim_indices(i)} ...
+        , 'roi',                '<roi>' ...
+        , 'looks_by',           '<looks_by>' ...
+        , 'unified_filename',   un_filename ...
+        , 'session',            meta_file.session ...
+        , 'date',               meta_file.date ...
+      );
+
+      for j = 1:n_combs
+        monk_idx = C(1, j);      
+        roi_idx = C(2, j);
+
+        monk_id = monk_ids{monk_idx};
+        roi_name = roi_names{roi_idx};
+
+        bounds_container = bounds_file.(monk_id);
+        fix_vec = fix_file.(monk_id);
+
+        bounds = bounds_container(roi_name);
+
+        is_in_bounds(stp, assign_start:assign_stop) = bounds(start:stop);
+        total_is_fix(stp, assign_start:assign_stop) = fix_vec(start:stop);
+
+        setcat( stimlabs, {'roi', 'looks_by'}, {roi_name, monk_id} );
+        append( ib_labs, stimlabs );
+
+        stp = stp + 1;
+      end
+    end
+
+    all_is_in_bounds{idx} = is_in_bounds;
+    all_is_fix{idx} = total_is_fix;
+    all_t_series{idx} = t_series;
+    all_ib_labs{idx} = ib_labs;
   end
-  
-  all_is_in_bounds{idx} = is_in_bounds;
-  all_is_fix{idx} = total_is_fix;
-  all_t_series{idx} = t_series;
-  all_ib_labs{idx} = ib_labs;
 end
 
 all_is_in_bounds(empties) = [];

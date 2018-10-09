@@ -19,6 +19,7 @@ shared_utils.io.require_dir( save_p );
 un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 pl2_visited_files = containers.Map();
+channel_map = bfw.get_plex_meta_channel_map( conf );
 
 for i = 1:numel(un_mats)
   fprintf( '\n %d of %d', i, numel(un_mats) );
@@ -57,16 +58,28 @@ for i = 1:numel(un_mats)
     continue;
   end
   
-  pl2_visited_files(pl2_fullfile) = un_filename;
+  all_sessions = channel_map( 'session' );
+  all_regions = channel_map( 'region' );
+  all_channels = channel_map( 'channels' );
   
-  region_map_file = fullfile( pl2_dir, un0.plex_region_map_filename );
-  region_map = bfw.unify_plex_region_map( bfw.jsondecode(region_map_file) );
+  session_name = un0.mat_directory_name;
+  session_ind = strcmpi( all_sessions, session_name );
+  
+  if ( nnz(session_ind) == 0 )
+    warning( 'Missing region + channel specifiers for "%s".', un_filename );
+    continue;
+  end
+  
+  regions = all_regions(session_ind);
+  channels = all_channels(session_ind);
+  
+  pl2_visited_files(pl2_fullfile) = un_filename;  
   
   stp = 1;
   
   need_preallocate = true;
   
-  total_number_of_channels = sum( arrayfun(@(x) numel(x.channels), region_map) );
+  total_number_of_channels = sum( cellfun(@numel, channels) );
   identifiers = cell( total_number_of_channels, 2 );
   rejects = false( total_number_of_channels, 1 );
   
@@ -74,13 +87,13 @@ for i = 1:numel(un_mats)
   key_cols('channel') = 1;
   key_cols('region') = 2;
     
-  for j = 1:numel(region_map)
+  for j = 1:numel(regions)
     
-    region_name = region_map(j).name;
-    channels = region_map(j).channels;
+    region_name = regions{j};
+    chans = channels{j};
     
-    for k = 1:numel(channels)
-      channel_str = channel_n_to_str( 'FP', channels(k) );
+    for k = 1:numel(chans)
+      channel_str = channel_n_to_str( 'FP', chans(k) );
       
       ad = PL2Ad( pl2_fullfile, channel_str );
       samples = ad.Values;
@@ -93,7 +106,7 @@ for i = 1:numel(un_mats)
           need_preallocate = false;
         end
 
-        lfp_mat( stp, : ) = samples;
+        lfp_mat(stp, :) = samples;
 
         identifiers{stp, 1} = channel_str;
         identifiers{stp, 2} = region_name;

@@ -10,6 +10,7 @@ inputs.files_containing = {};
 %%  unified
 
 bfw.make_unified( folders, inputs );
+bfw.make_meta( inputs );
 
 %%  plex sync + stim
 

@@ -11,7 +11,7 @@ meta_p = bfw.gid( fullfile(params.output_subdir, 'meta'), conf );
 
 mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   un_file = shared_utils.io.fload( mats{i} );

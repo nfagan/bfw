@@ -16,7 +16,7 @@ save_p = bfw.get_intermediate_directory( fullfile('cs_task_events', mid, osd), c
 
 mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats) );
   
   cs_unified_file = shared_utils.io.fload( mats{i} );
@@ -50,7 +50,7 @@ for i = 1:numel(mats)
   events_file.cs_unified_filename = sync_file.cs_unified_filename;
   
   shared_utils.io.require_dir( save_p );
-  save( output_filename, 'events_file' );  
+  shared_utils.io.psave( output_filename, events_file, 'events_file' );
 end
 
 end
