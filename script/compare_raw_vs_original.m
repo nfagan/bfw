@@ -1,3 +1,5 @@
+%%
+
 conf = bfw.config.load();
 
 outs = get_stim_aligned_samples( ...
@@ -6,14 +8,30 @@ outs = get_stim_aligned_samples( ...
   , 'samples_subdir',     'aligned_binned_raw_samples' ...
 );
 
-ib_labs = outs.labels';
-is_ib = outs.is_in_bounds;
-is_fix = outs.is_fixation;
-ib_t = outs.t;
+[outs2, t2] = debug_stim_times();
 
 %%
 
-use_fix = false;
+use_aligned = true;
+
+if ( use_aligned )
+  ib_labs = outs.labels';
+  is_ib = outs.is_in_bounds;
+  is_fix = outs.is_fixation;
+  ib_t = outs.t;
+else
+  
+  ib_labs = outs2.labs';
+  is_ib = outs2.ib;
+  is_fix = outs2.is_fix;
+  ib_t = t2;
+  
+  addsetcat( ib_labs, 'looks_by', 'm1' );  
+end
+
+%%
+
+use_fix = true;
 
 if ( use_fix )
   is_valid = double( is_ib & is_fix );
@@ -26,14 +44,14 @@ spec = { 'looks_by', 'roi', 'stim_type', 'session', 'unified_filename' };
 [plabs, I] = keepeach( ib_labs', spec );
 pdat = rowmean( is_valid, I );
 
-prune( bfw.get_region_labels(plabs) );
+prune( bfw.get_stim_region_labels(plabs) );
 
 %%
 
 pltdat = pdat;
 pltlabs = plabs';
 
-mask = fcat.mask( plabs, @find, {'eyes_nf', 'm1', '09072018'} );
+mask = fcat.mask( plabs, @find, {'eyes_nf', 'm1'} );
 
 adjust = 0.05;
 
