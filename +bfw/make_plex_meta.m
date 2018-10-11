@@ -50,6 +50,7 @@ parfor i = 1:numel(mats)
     plex_meta_file.unified_filename = un_filename;
     plex_meta_file.params = params;
     plex_meta_file.pl2_fileparts = cshorzcat( un_file.m1.plex_directory, un_file.m1.plex_filename );
+    plex_meta_file.pl2_filename = un_file.m1.plex_filename;
 
     chans = channels(session_index);
     regs = regions(session_index);
