@@ -8,7 +8,6 @@ conf = params.config;
 isd = params.input_subdir;
 osd = params.output_subdir;
 
-meta_p = bfw.gid( fullfile('meta', isd), conf );
 un_p = bfw.gid( fullfile('unified', isd), conf );
 plex_meta_p = bfw.gid( fullfile('plex_meta', osd), conf );
 
@@ -18,28 +17,26 @@ sessions = meta_map('session');
 channels = meta_map('channels');
 regions = meta_map('region');
 
-mats = bfw.require_intermediate_mats( params.files, meta_p, params.files_containing );
+mats = bfw.require_intermediate_mats( params.files, un_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
-  meta_file = shared_utils.io.fload( mats{i} );
+  un_file = shared_utils.io.fload( mats{i} );
   
-  un_filename = meta_file.unified_filename;
-  output_filename = fullfile( plex_meta_p, un_filename );
-  
-  try
-    un_file = shared_utils.io.fload( fullfile(un_p, un_filename) );
-  catch err
-    bfw.print_fail_warn( un_filename, err.message );
+  if ( ~isfield(un_file, 'm1') )
+    bfw.print_fail_warn( mats{i}, 'Unified file is missing an "m1" field.' );
     continue;
   end
+  
+  un_filename = un_file.m1.unified_filename;
+  output_filename = fullfile( plex_meta_p, un_filename );
   
   if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
     continue;
   end
   
-  session = meta_file.session;
+  session = un_file.m1.mat_directory_name;
   
   session_index = strcmp( sessions, session );
   
