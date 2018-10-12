@@ -70,9 +70,9 @@ for i = 1:size(C, 2)
 
   is_selected = is_roi_label & is_monk_label;
 
-  reformatted_times{roi_i, monk_i} = times(is_selected);
-  reformatted_lengths{roi_i, monk_i} = lengths(is_selected);
-  reformatted_durations{roi_i, monk_i} = durations(is_selected);
+  reformatted_times{roi_i, monk_i} = columnize(times(is_selected))';
+  reformatted_lengths{roi_i, monk_i} = columnize(lengths(is_selected))';
+  reformatted_durations{roi_i, monk_i} = columnize(durations(is_selected))';
 
   if ( ~isKey(monk_map, monk) )
     monk_map(monk) = monk_i;
