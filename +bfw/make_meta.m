@@ -29,6 +29,7 @@ parfor i = 1:numel(mats)
   meta_file.date = un_file.m1.date;
   meta_file.session = datestr( un_file.m1.date, 'mmddyyyy' );
   meta_file.mat_filename = un_file.m1.mat_filename;
+  meta_file.task_type = bfw.field_or( un_file.m1, 'task_type', 'free_viewing' );
   
   shared_utils.io.require_dir( meta_p );
   shared_utils.io.psave( output_filename, meta_file, 'meta_file' );
