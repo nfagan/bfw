@@ -5,7 +5,7 @@ inputs.config = conf;
 inputs.input_subdir = '';
 inputs.output_subdir = '';
 inputs.overwrite = false;
-inputs.files_containing = {};
+inputs.files_containing = '09072018_position_10';
 
 %%  unified
 
