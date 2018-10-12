@@ -33,7 +33,7 @@ prune( bfw.get_region_labels(plabs) );
 pltdat = pdat;
 pltlabs = plabs';
 
-mask = fcat.mask( plabs, @find, {'eyes_nf', 'm1', '09072018'} );
+mask = fcat.mask( plabs, @find, {'eyes_nf', 'm1', '09102018'} );
 
 adjust = 0.05;
 
