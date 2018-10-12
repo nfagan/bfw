@@ -69,6 +69,7 @@ parfor i = 1:numel(mats)
   events_file = struct();
   events_file.unified_filename = unified_filename;
   events_file.params = params;
+  events_file.params.step_size = step_size;
   
   events_file.events = [];
   events_file.labels = {};
@@ -268,7 +269,7 @@ function evt_info = get_event_info(t, evts, is_valid_sample, duration)
 [evts, evt_stops, evt_lengths] = get_event_lengths( t, evts, is_valid_sample, duration );
 
 evt_start_times = columnize( t(evts) );
-evt_stop_times = columnize(t(evt_stops)) - evt_start_times;
+evt_stop_times = columnize(t(evt_stops));
 evt_durations = evt_stop_times - evt_start_times;
 
 evt_info = [ evts, evt_stops, evt_lengths, evt_start_times, evt_stop_times, evt_durations ];

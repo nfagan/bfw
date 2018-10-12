@@ -41,7 +41,6 @@ event_key = events_file.event_key;
 
 times = events(:, event_key('start_time'));
 lengths = events(:, event_key('length'));
-durations = events(:, event_key('duration'));
 
 [~, roi_ind] = ismember( 'roi', events_file.categories );
 [~, m_ind] = ismember( 'looks_by', events_file.categories );
@@ -54,6 +53,8 @@ C = combvec( 1:numel(rois), 1:numel(monks) );
 reformatted_times = cell( numel(rois), numel(monks) );
 reformatted_lengths = cell( size(reformatted_times) );
 reformatted_durations = cell( size(reformatted_times) );
+
+step_size = events_file.params.step_size;
 
 roi_map = containers.Map();
 monk_map = containers.Map();
@@ -72,7 +73,8 @@ for i = 1:size(C, 2)
 
   reformatted_times{roi_i, monk_i} = columnize(times(is_selected))';
   reformatted_lengths{roi_i, monk_i} = columnize(lengths(is_selected))';
-  reformatted_durations{roi_i, monk_i} = columnize(durations(is_selected))';
+  %   in old format, durations was integer ms.
+  reformatted_durations{roi_i, monk_i} = columnize(lengths(is_selected))' * step_size;
 
   if ( ~isKey(monk_map, monk) )
     monk_map(monk) = monk_i;
