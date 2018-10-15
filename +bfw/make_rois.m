@@ -93,9 +93,9 @@ catch err
   return;
 end
 
-event_funcs('face_padded_small') = @bfw.calibration.rect_padded_face_small;
-event_funcs('face_padded_medium') = @bfw.calibration.rect_padded_face_medium;
-event_funcs('face_padded_large') = @bfw.calibration.rect_padded_face_large;
+event_funcs('face_padded_small') = @(varargin) bfw.calibration.rect_padded_face_small(varargin{:}, r);
+event_funcs('face_padded_medium') = @(varargin) bfw.calibration.rect_padded_face_medium(varargin{:}, r);
+event_funcs('face_padded_large') = @(varargin) bfw.calibration.rect_padded_face_large(varargin{:}, r);
 
 end
 
