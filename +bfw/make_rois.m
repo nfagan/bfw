@@ -15,14 +15,6 @@ save_p = bfw.gid( ff('rois', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
 
-event_funcs = containers.Map();
-event_funcs('face') = @bfw.calibration.rect_face;
-event_funcs('eyes_nf') = @bfw.calibration.rect_eyes;
-event_funcs('eyes') = @bfw.calibration.rect_eyes_cc;
-event_funcs('mouth') = @bfw.calibration.rect_mouth_from_eyes;
-event_funcs('outside1') = @bfw.calibration.rect_outside1;
-event_funcs('outside2') = @bfw.calibration.rect_outside2;
-
 copy_fields = { 'unified_filename', 'unified_directory' };
 
 for i = 1:numel(mats)
@@ -35,7 +27,8 @@ for i = 1:numel(mats)
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
   
-  event_func_keys = event_funcs.keys();
+  roi_funcs = get_roi_funcs(meta.(fields{1}));
+  roi_func_keys = roi_funcs.keys();
   
   rois = struct();
   
@@ -61,9 +54,9 @@ for i = 1:numel(mats)
       continue;
     end
     
-    for k = 1:numel(event_func_keys)
-      key = event_func_keys{k};
-      func = event_funcs(key);
+    for k = 1:numel(roi_func_keys)
+      key = roi_func_keys{k};
+      func = roi_funcs(key);
       rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect );
       rect_map(key) = rect;
     end
@@ -80,6 +73,29 @@ for i = 1:numel(mats)
   shared_utils.io.require_dir( save_p );
   save( full_filename, 'rois' );
 end
+
+end
+
+function event_funcs = get_roi_funcs(un_file)
+
+event_funcs = containers.Map();
+event_funcs('face') =     @bfw.calibration.rect_face;
+event_funcs('eyes_nf') =  @bfw.calibration.rect_eyes;
+event_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
+event_funcs('mouth') =    @bfw.calibration.rect_mouth_from_eyes;
+event_funcs('outside1') = @bfw.calibration.rect_outside1;
+event_funcs('outside2') = @bfw.calibration.rect_outside2;
+
+try
+  r = un_file.stimulation_params.radius;
+catch err
+  warning( 'Missing radius parameter for: "%s".', un_file.unified_filename );
+  return;
+end
+
+event_funcs('face_padded_small') = @bfw.calibration.rect_padded_face_small;
+event_funcs('face_padded_medium') = @bfw.calibration.rect_padded_face_medium;
+event_funcs('face_padded_large') = @bfw.calibration.rect_padded_face_large;
 
 end
 

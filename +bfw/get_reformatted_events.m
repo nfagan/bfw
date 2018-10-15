@@ -44,5 +44,6 @@ new_evts_file.categories = { 'looks_by', 'initiator', 'event_type', 'roi' };
 new_evts_file.events = new_events;
 new_evts_file.event_key = event_key;
 new_evts_file.params = events_file.params;
+new_evts_file.params.step_size = events_file.step_size;
 
 end
