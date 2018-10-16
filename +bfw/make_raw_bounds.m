@@ -58,8 +58,10 @@ parfor i = 1:numel(mats)
       bounds = containers.Map();
       
       for k = 1:numel(roi_names)
-        roi = rects(roi_names{k});
-        pad = params.padding;
+        roi_name = roi_names{k};
+        
+        roi = rects(roi_name);
+        pad = get_padding( params.padding, roi_name );
         
         padded_roi = bfw.bounds.rect_pad_frac( roi, pad, pad );
         
@@ -69,7 +71,7 @@ parfor i = 1:numel(mats)
       bounds_file.(m_id).bounds = bounds;
     end
   catch err
-    print_fail_warn( unified_filename, err.message );
+    bfw.print_fail_warn( unified_filename, err.message );
     continue;
   end
   
@@ -79,6 +81,31 @@ end
 
 end
 
-function print_fail_warn(un_file, msg)
-warning( '"%s" failed: %s', un_file, msg );
+function p = get_padding(padding, roi)
+
+if ( isnumeric(padding) )
+  p = padding;
+  return
+end
+
+if ( isstruct(padding) )
+  if ( ~isfield(padding, roi) )
+    p = 0;
+  else
+    p = padding.(roi);
+  end
+  return
+end
+
+if ( isa(padding, 'containers.Map') )
+  if ( ~isKey(padding, roi) )
+    p = 0;
+  else
+    p = padding(roi);
+  end
+  return
+end
+
+error( 'Padding, of type "%s", is not in a recognized format.', class(padding) );
+
 end

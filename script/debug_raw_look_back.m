@@ -24,31 +24,37 @@ samples_p = bfw.gid( samples_subdir, conf );
 
 stim_mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_containing );
 
-all_labs = fcat();
-all_traces = [];
-all_to_keep = logical([]);
-all_offsets = [];
+s = [ 1, numel(stim_mats) ];
+all_labs = cell( s );
+all_traces = cell( s );
+all_to_keep = cell( s );
+all_offsets = cell( s );
+all_ts = cell( s );
+
+is_valid = true( s );
 
 look_back = params.look_back;
 look_ahead = params.look_ahead;
 
 keep_thresh = params.keep_within_threshold;
 
-for idx = 1:numel(stim_mats)
+parfor idx = 1:numel(stim_mats)
   shared_utils.general.progress( idx, numel(stim_mats) );
   
   stim_file = shared_utils.io.fload( stim_mats{idx} );
 
   un_filename = stim_file.unified_filename;
   
+  %   dummy; see: https://www.mathworks.com/matlabcentral/answers/422906-parfor-loop-with-continue-gives-incorrect-results
+  if ( false ), is_valid(idx); end %#ok
+  
   try
     events_file = fload( fullfile(events_p, un_filename) );
     time_file =   fload( fullfile(samples_p, 'time', un_filename) );
-%     bounds_file = fload( fullfile(samples_p, 'bounds', un_filename) );
-%     fix_file =    fload( fullfile(samples_p, 'arduino_fixations', un_filename) );
     meta_file =   fload( fullfile(meta_p, un_filename) );
   catch err
     bfw.print_fail_warn( un_filename, err.message );
+    is_valid(idx) = false;
     continue;
   end
   
@@ -61,23 +67,31 @@ for idx = 1:numel(stim_mats)
   event_lengths = events_file.events(:, events_file.event_key('length'));
   t = time_file.t;
   
-  look_mask = find( event_labs, {'m1', 'eyes', 'face', 'eyes_nf'} );
+  look_mask = find( event_labs, {'m1'} );
   [look_labs, I] = keepeach( event_labs', {'roi', 'looks_by'}, look_mask );
+  
+  tmp_traces = [];
+  tmp_keep = [];
+  tmp_offsets = [];
+  tmp_labs = fcat();
+  
+  sr = 1 / (1e3/events_file.params.step_size);
+
+  plot_t = look_back:sr:look_ahead;
+
+  stim_times = stim_file.stimulation_times;
+  sham_times = stim_file.sham_times;
+
+  all_stim_times = [ stim_times(:); sham_times(:) ];
+  stim_uuids = arrayfun( @(x) shared_utils.general.uuid(), 1:numel(all_stim_times), 'un', 0 );
+  
+  assert( numel(unique(stim_uuids)) == numel(all_stim_times) );
   
   for k = 1:numel(I)
     
     evt_ind = I{k};
     evts = event_times(evt_ind);
     evt_lengths = event_lengths(evt_ind);
-
-    sr = 1 / (1e3/events_file.params.step_size);
-
-    plot_t = look_back:sr:look_ahead;
-
-    stim_times = stim_file.stimulation_times;
-    sham_times = stim_file.sham_times;
-
-    all_stim_times = [ stim_times(:); sham_times(:) ];
 
     all_ib = zeros( numel(all_stim_times), numel(plot_t) );
     to_keep = rowones( numel(all_stim_times), 'logical' );
@@ -127,49 +141,32 @@ for idx = 1:numel(stim_mats)
     stim_labs = bfw.make_stim_labels( numel(stim_times), numel(sham_times) );
     join( stim_labs, fcat.from(struct2cell(meta_file)', fieldnames(meta_file)) );
     join( stim_labs, look_labs(k) );
-
-    all_traces = [ all_traces; all_ib ];
-    all_to_keep = [ all_to_keep; to_keep ];
-    all_offsets = [ all_offsets; offsets ];
-
-    append( all_labs, stim_labs );
+    addsetcat( stim_labs, 'uuid', stim_uuids );    
+    
+    tmp_traces = [ tmp_traces; all_ib ];
+    tmp_keep = [ tmp_keep; to_keep ];
+    tmp_offsets = [ tmp_offsets; offsets ];
+    append( tmp_labs, stim_labs );    
   end
+  
+  all_traces{idx} = tmp_traces;
+  all_to_keep{idx} = tmp_keep;
+  all_offsets{idx} = tmp_offsets;
+  all_labs{idx} = tmp_labs;
+  all_ts{idx} = plot_t;
 end
 
 outs = struct();
 
-outs.t = plot_t;
-outs.labels = all_labs;
-outs.traces = all_traces;
-outs.is_within_threshold = all_to_keep;
-outs.event_offsets = all_offsets;
-
+if ( numel(all_ts) > 0 )
+  outs.t = all_ts{1};
+else
+  outs.t = [];
 end
 
-% %%
-% 
-% prune( bfw.get_region_labels(all_labs) );
-% 
-% % mask = fcat.mask( all_labs );
-% % mask = rowmask( all_labs );
-% 
-% % mask = find( all_to_keep );
-% mask = rowmask( all_labs );
-% mask = fcat.mask( all_labs, mask, @findnone, {'04202018', 'nonsocial_control'} ...
-%   , @find, {'m1', 'eyes'} ...
-%   , @find, {'accg'} );
-% 
-% [y, I] = keepeach( all_labs', {'stim_type', 'unified_filename'}, mask );
-% 
-% ps = rowmean( all_traces, I );
-% 
-% pl = plotlabeled.make_common();
-% pl.add_errors = false;
-% pl.x = plot_t;
-% pl.y_lims = [0, 1];
-% pl.fig = figure(2);
-% % pl.shape = [3, 1];
-% 
-% axs = pl.lines( ps, y, 'stim_type', {'region', 'roi', 'looks_by'} );
-% shared_utils.plot.hold( axs, 'on' );
-% shared_utils.plot.add_vertical_lines( axs, [0, -0.15] );
+outs.labels = vertcat( fcat(), all_labs{is_valid} );
+outs.traces = vertcat( all_traces{is_valid} );
+outs.is_within_threshold = vertcat( all_to_keep{is_valid} );
+outs.event_offsets = vertcat( all_offsets{is_valid} );
+
+end
