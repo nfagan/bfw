@@ -3,6 +3,7 @@ function make_rois(varargin)
 ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
+defaults.rois = 'all';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -27,11 +28,6 @@ for i = 1:numel(mats)
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
   
-  roi_funcs = get_roi_funcs(meta.(fields{1}));
-  roi_func_keys = roi_funcs.keys();
-  
-  rois = struct();
-  
   mat_dir = meta.(fields{1}).mat_directory_name;
   m_filename = meta.(fields{1}).mat_filename;
   
@@ -39,6 +35,17 @@ for i = 1:numel(mats)
   full_filename = fullfile( save_p, r_filename );
   
   if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
+  
+  rois = struct();
+  
+  roi_funcs = get_roi_funcs(meta.(fields{1}));
+  
+  try
+    roi_func_keys = get_active_roi_names( roi_funcs, params.rois );
+  catch err
+    bfw.print_fail_warn( m_filename, err.message );
+    continue;
+  end
   
   for j = 1:numel(fields)
     m_id = fields{j};
@@ -76,6 +83,30 @@ end
 
 end
 
+function active = get_active_roi_names(roi_funcs, roi_names)
+
+roi_func_keys = roi_funcs.keys();
+
+if ( strcmpi(roi_names, 'all') )
+  active = roi_func_keys;
+  return
+end
+
+roi_names = cellstr( roi_names );
+
+exists = ismember( roi_names, roi_func_keys );
+
+if ( ~all(exists) )
+  missing = roi_names( ~exists );
+  missing_str = strjoin( missing, ' | ' );
+  
+  error( 'Unrecognized roi name: "%s".', missing_str );
+end
+
+active = roi_names;
+
+end
+
 function event_funcs = get_roi_funcs(un_file)
 
 event_funcs = containers.Map();
@@ -90,7 +121,7 @@ try
   r = un_file.stimulation_params.radius;
 catch err
   warning( 'Missing radius parameter for: "%s".', un_file.unified_filename );
-  return;
+  return
 end
 
 event_funcs('face_padded_small') = @(varargin) bfw.calibration.rect_padded_face_small(varargin{:}, r);

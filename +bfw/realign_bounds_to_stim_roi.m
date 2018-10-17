@@ -1,4 +1,4 @@
-function [newdat, newlabs] = realign_bounds_to_stim_roi(dat, labs, is_ib_t0, spec, mask)
+function [newdat, newlabs, newinds] = realign_bounds_to_stim_roi(dat, labs, is_ib_t0, spec, mask)
 
 assert_ispair( dat, labs );
 

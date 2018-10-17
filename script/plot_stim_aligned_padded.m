@@ -2,7 +2,8 @@ conf = bfw.config.load();
 
 use_events = true;
 
-select_files = { '10112018', '10152018' };
+% select_files = { '10112018', '10152018', '10162018' };
+select_files = { '10162018' };
 
 if ( use_events )
   evt_outs = debug_raw_look_back( ...
@@ -11,6 +12,8 @@ if ( use_events )
     , 'look_ahead', 5 ...
     , 'keep_within_threshold', 0.3 ...
     , 'files_containing', select_files ...
+    , 'include_samples', false ...
+    , 'use_stop_time', true ...
   );
 
   labs = evt_outs.labels';
@@ -35,7 +38,6 @@ else
   t = aligned_outs.t;
 
   prune( bfw.get_region_labels(labs) );
-
 end
 
 plot_p = fullfile( bfw.dataroot, 'plots', datestr(now, 'mmddyy') );
@@ -54,7 +56,6 @@ make_exclusive = cshorzcat( ...
 
 if ( use_exclusive_bounds )
   usedat = bfw.get_exclusive_bounds( usedat, uselabs, make_exclusive, 'uuid' );
-%   usedat = bfw.get_exclusive_bounds( usedat, uselabs, {'eyes_nf', 'face'}, 'uuid' );
 end
 
 stim_t0 = t == 0;
@@ -65,7 +66,7 @@ mask = fcat.mask( uselabs ...
   , @find, csunion('eyes_nf', make_exclusive) ...
 );
 
-[newdat, newlabs] = bfw.realign_bounds_to_stim_roi( usedat, uselabs', is_ib_t0, 'uuid', mask );
+[newdat, newlabs, newinds] = bfw.realign_bounds_to_stim_roi( usedat, uselabs', is_ib_t0, 'uuid', mask );
 
 assert_ispair( newdat, newlabs );
 
@@ -80,7 +81,7 @@ fixdat = logical( newdat(:, t_ind) );
 
 %% pad small med large
 
-subdir = 't1';
+subdir = 't3';
 
 plabs = newlabs';
 pdat = newdat;
@@ -128,6 +129,8 @@ fig_I = findall( y, fig_cats );
 figs = arrayfun( @(x) figure(x), 1:4, 'un', 0 );
 
 for idx = 1:numel(fig_I)
+  shared_utils.general.progress( idx, numel(fig_I) );
+  
   ind = fig_I{idx};
   sub_ps = ps(ind, :);
 
