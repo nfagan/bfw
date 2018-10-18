@@ -136,7 +136,7 @@ end
 if ( isKey(lfp_map, unified_filename) )
   lfp_file = lfp_map(unified_filename);
 else
-  lfp_file = fload( fullfile(lfp_p, unified_filename) );
+  lfp_file = fload( fullfile(lfp_p, lfp_file.data_file) );
   lfp_map(unified_filename) = lfp_file;
 end
 
