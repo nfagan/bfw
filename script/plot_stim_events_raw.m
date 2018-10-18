@@ -24,7 +24,7 @@ t = evt_outs.t;
 pltlabs = labs';
 pltdat = traces;
 
-use_within_thresh = true;
+use_within_thresh = false;
 
 prune( bfw.get_region_labels(pltlabs) );
 
@@ -36,8 +36,8 @@ end
 
 mask = fcat.mask( pltlabs, mask ...
   , @findnone, {'04202018', 'nonsocial_control', '10112018_position_1.mat'} ...
-  , @find, {'m1', 'eyes_nf', 'accg'} ...
-  , @findnone, {'10112018'} ...
+  , @find, {'m1', 'eyes_nf'} ...
+  , @find, {'10112018', '10152018', '10162018', '10172018'} ...
 );
 
 figure(1);

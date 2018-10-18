@@ -92,15 +92,15 @@ if ( strcmpi(roi_names, 'all') )
   return
 end
 
-roi_names = cellstr( roi_names );
+roi_names = unique( cellstr(roi_names) );
 
 exists = ismember( roi_names, roi_func_keys );
 
 if ( ~all(exists) )
   missing = roi_names( ~exists );
-  missing_str = strjoin( missing, ' | ' );
+  missing_str = strjoin( missing, ', ' );
   
-  error( 'Unrecognized roi name: "%s".', missing_str );
+  error( 'Unrecognized roi names:\n\n %s\n', missing_str );
 end
 
 active = roi_names;

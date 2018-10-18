@@ -139,8 +139,8 @@ parfor idx = 1:numel(stim_mats)
       evts_in_range = evts(evt_idx);
       evt_lengths_in_range = subset_event_info(evt_idx, length_col);
       evt_stops_in_range = subset_event_info(evt_idx, stop_time_col);
-      evt_start_indices_in_range = event_info(evt_idx, start_index_col);
-      evt_stop_indices_in_range = event_info(evt_idx, stop_index_col);
+      evt_start_indices_in_range = subset_event_info(evt_idx, start_index_col);
+      evt_stop_indices_in_range = subset_event_info(evt_idx, stop_index_col);
 
       nearest_evt_idx = shared_utils.sync.nearest( range_times, evts_in_range );
       nearest_evt_stop_idx = shared_utils.sync.nearest( range_times, evt_stops_in_range );
@@ -157,8 +157,10 @@ parfor idx = 1:numel(stim_mats)
       to_keep(i) = event_offset < keep_thresh;
       offsets(i) = event_offset;
       
-      timestamps{i} = cell( numel(nearest_evt_idx), 1 );
-      positions{i} = cell( size(timestamps{i}) );
+      if ( params.include_samples )
+        timestamps{i} = cell( numel(nearest_evt_idx), 1 );
+        positions{i} = cell( size(timestamps{i}) );
+      end
 
       for j = 1:numel(nearest_evt_idx)
         evt_start = nearest_evt_idx(j);

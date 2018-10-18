@@ -1,9 +1,9 @@
 conf = bfw.config.load();
 
-use_events = true;
+use_events = false;
 
-% select_files = { '10112018', '10152018', '10162018' };
-select_files = { '10162018' };
+select_files = { '10112018', '10152018', '10162018', '10172018' };
+% select_files = { '10162018' };
 
 if ( use_events )
   evt_outs = debug_raw_look_back( ...
@@ -12,7 +12,7 @@ if ( use_events )
     , 'look_ahead', 5 ...
     , 'keep_within_threshold', 0.3 ...
     , 'files_containing', select_files ...
-    , 'include_samples', false ...
+    , 'include_samples', true ...
     , 'use_stop_time', true ...
   );
 
@@ -20,15 +20,17 @@ if ( use_events )
   ib = evt_outs.traces;
   is_fix = evt_outs.traces;
   t = evt_outs.t;
+  samples = evt_outs.samples;
+  sample_key = evt_outs.samples_key;
 
   prune( bfw.get_region_labels(labs) );
 
 else
   aligned_outs = get_stim_aligned_samples( ...
       'config', conf ...
-    , 'look_back', -2 ...
+    , 'look_back', -1 ...
     , 'look_ahead', 5 ...
-    , 'samples_subdir', 'aligned_binned_raw_samples' ...
+    , 'samples_subdir', 'aligned_raw_samples' ...
     , 'files_containing', select_files ...
   );
 
@@ -36,6 +38,8 @@ else
   ib = aligned_outs.is_in_bounds;
   is_fix = aligned_outs.is_fixation;
   t = aligned_outs.t;
+  samples = cell( rows(labs), 1 );
+  sample_key = containers.Map();
 
   prune( bfw.get_region_labels(labs) );
 end
@@ -70,6 +74,32 @@ mask = fcat.mask( uselabs ...
 
 assert_ispair( newdat, newlabs );
 
+%%  vector map
+
+samplabs = newlabs';
+sampdat = samples(newinds, :);
+
+roi_file = bfw.load1( 'rois', '10162018' );
+rects = roi_file.m1.rects;
+
+mask = fcat.mask( samplabs ...
+  , @find, '10162018' ...
+  , @find, {'stim_on_face', 'stim_on_not_face'} ...
+  , @find, 'm1' ...
+);
+
+f = figure( 1 );
+clf( f );
+axs = gca();
+
+h = plot_fixation_vector_map( sampdat, sample_key, samplabs' ...
+  , 'mask', mask ...
+  , 'axes', axs ...
+);
+
+shared_utils.plot.rect( rects('eyes_nf'), axs );
+shared_utils.plot.rect( rects('face'), axs );
+
 %%  fix
 
 t_ind = t >= 0 & t <= 5;
@@ -79,39 +109,36 @@ fixdat = logical( newdat(:, t_ind) );
 
 [nfix, totaldur] = bfw.get_fix_info_from_bounds( fixdat, subset_t );
 
-%% pad small med large
+%% time course
 
-subdir = 't3';
+subdir = 't2';
 
 plabs = newlabs';
 pdat = newdat;
 
-do_save = true;
-per_run = false;
+do_save = false;
+per_run = true;
 is_padded = false;
 
-I = findall( plabs, 'stim_roi' );
-
-all_keep = [];
-
-for i = 1:numel(I)
-  all_keep = union( all_keep, find(plabs, {'in_bounds_face', 'in_bounds_eyes_nf'}, I{i}) );
-end
+base_mask = fcat.mask( plabs ...
+  , @find, {'in_bounds_face', 'in_bounds_eyes_nf'} ...
+  , @find, '10172018' ...
+  , @findnone, '10112018_position_1.mat' ...
+);
 
 if ( is_padded )
-  mask = fcat.mask( plabs, all_keep ...
-    , @findnone, '10112018_position_1.mat'...
+  mask = fcat.mask( plabs, base_mask ...
     , @findnone, {'stim_on_eyes_nf', 'stim_on_not_eyes_nf', 'stim_on_face'} ...
     , @find, {'m1'} ...
     , @find, 'stim on in bounds' ...
   );
+
   subp_shape = [3, 1];
 else
-  mask = fcat.mask( plabs, all_keep ...
-  , @findnone,  '10112018_position_1.mat'...
-  , @find,      {'stim_on_face', 'stim_on_not_face'} ...
-  , @find,      'm1' ...
-);
+  mask = fcat.mask( plabs, base_mask ...
+    , @find,      {'stim_on_face', 'stim_on_not_face'} ...
+    , @find,      'm1' ...
+  );
 
   subp_shape = [2, 1];
 end
