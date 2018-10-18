@@ -1,7 +1,7 @@
 function make_raw_summarized_measure(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.input_subdir = '';
+defaults.measure = '';
 defaults.summary_func = @(x) nanmean(x, 1);
 
 params = bfw.parsestruct( defaults, varargin );
@@ -10,7 +10,7 @@ conf = params.config;
 isd = params.input_subdir;
 osd = params.output_subdir;
 
-meas_subdir = get_input_subdir( params );
+meas_subdir = get_measure( params );
 
 input_p = bfw.gid( fullfile(meas_subdir, isd), conf );
 output_p = bfw.gid( sprintf('summarized_%s', meas_subdir, osd), conf );
@@ -63,9 +63,9 @@ summary_file.was_reference_subtracted = meas_file.was_reference_subtracted;
 
 end
 
-function s = get_input_subdir(params)
+function s = get_measure(params)
 
-s = params.input_subdir;
-assert( ~isempty(s), 'Specify an "input_subdir".' );
+s = params.measure;
+assert( ~isempty(s), 'Specify an "measure".' );
 
 end
