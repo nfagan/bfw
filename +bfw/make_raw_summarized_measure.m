@@ -13,7 +13,7 @@ osd = params.output_subdir;
 meas_subdir = get_measure( params );
 
 input_p = bfw.gid( fullfile(meas_subdir, isd), conf );
-output_p = bfw.gid( sprintf('summarized_%s', meas_subdir, osd), conf );
+output_p = bfw.gid( fullfile(sprintf('summarized_%s', meas_subdir), osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, input_p, params.files_containing );
 
