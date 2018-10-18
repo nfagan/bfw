@@ -117,11 +117,11 @@ end
 aligned_file = struct();
 aligned_file.params = params;
 aligned_file.unified_filename = lfp_file.unified_filename;
+aligned_file.data = all_lfp_data;
 aligned_file.labels = categorical( all_labs );
 aligned_file.categories = getcats( all_labs );
 aligned_file.lfp_indices = c(1, :);
 aligned_file.event_indices = c(2, :);
-
 
 end
 
