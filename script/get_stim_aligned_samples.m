@@ -5,6 +5,7 @@ defaults.look_back = -1;
 defaults.look_ahead = 5;
 defaults.samples_subdir = 'aligned_binned_raw_samples';
 defaults.fixations_subdir = 'arduino_fixations';
+defaults.pad_bounds = 0;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -23,15 +24,18 @@ all_t_series = c;
 all_ib_labs = c;
 all_x = c;
 all_y = c;
+all_redef_is_in_bounds = c;
 
 la = params.look_ahead;
 lb = params.look_back;
+pad_amt = params.pad_bounds;
 
 ssd = params.samples_subdir;
 fsd = params.fixations_subdir;
 
 samples_p = bfw.gid( ssd, conf );
 meta_p =    bfw.gid( 'meta', conf );
+roi_p =     bfw.gid( 'rois', conf );
 
 parfor idx = 1:numel(stim_files)
   shared_utils.general.progress( idx, numel(stim_files), mfilename );
@@ -47,6 +51,7 @@ parfor idx = 1:numel(stim_files)
     fix_file = shared_utils.io.fload( fullfile(samples_p, fsd, un_filename) );
     t_file = shared_utils.io.fload( fullfile(samples_p, 'time', un_filename) );
     pos_file = shared_utils.io.fload( fullfile(samples_p, 'position', un_filename) );
+    roi_file = shared_utils.io.fload( fullfile(roi_p, un_filename) );
     meta_file = shared_utils.io.fload( fullfile(meta_p, un_filename) );
   catch err
     warning( err.message );
@@ -92,6 +97,7 @@ parfor idx = 1:numel(stim_files)
     is_in_bounds = false( size(total_is_fix) );
     subset_x = nan( size(total_is_fix) );
     subset_y = nan( size(total_is_fix) );
+    redef_is_in_bounds = false( size(total_is_fix) );
 
     ib_labs = fcat();
 
@@ -139,13 +145,21 @@ parfor idx = 1:numel(stim_files)
         bounds_container = bounds_file.(monk_id);
         fix_vec = fix_file.(monk_id);
         pos = pos_file.(monk_id);
+        
+        x = pos(1, start:stop);
+        y = pos(2, start:stop);
 
         bounds = bounds_container(roi_name);
+        rect = roi_file.(monk_id).rects(roi_name);
+        
+        r = bfw.bounds.rect_pad_frac( rect, pad_amt, pad_amt );
+        ib2 = bfw.bounds.rect( x, y, r );
 
         is_in_bounds(stp, assign_start:assign_stop) = bounds(start:stop);
         total_is_fix(stp, assign_start:assign_stop) = fix_vec(start:stop);
-        subset_x(stp, assign_start:assign_stop) = pos(1, start:stop);
-        subset_y(stp, assign_start:assign_stop) = pos(2, start:stop);
+        subset_x(stp, assign_start:assign_stop) = x;
+        subset_y(stp, assign_start:assign_stop) = y;
+        redef_is_in_bounds(stp, assign_start:assign_stop) = ib2;        
 
         setcat( stimlabs, {'roi', 'looks_by'}, {roi_name, monk_id} );
         append( ib_labs, stimlabs );
@@ -155,6 +169,7 @@ parfor idx = 1:numel(stim_files)
     end
 
     all_is_in_bounds{idx} = is_in_bounds;
+    all_redef_is_in_bounds{idx} = redef_is_in_bounds;
     all_is_fix{idx} = total_is_fix;
     all_t_series{idx} = t_series;
     all_ib_labs{idx} = ib_labs;
@@ -164,6 +179,7 @@ parfor idx = 1:numel(stim_files)
 end
 
 all_is_in_bounds(empties) = [];
+all_redef_is_in_bounds(empties) = [];
 all_is_fix(empties) = [];
 all_t_series(empties) = [];
 all_ib_labs(empties) = [];
@@ -171,6 +187,7 @@ all_x(empties) = [];
 all_y(empties) = [];
 
 is_in_bounds = vertcat( all_is_in_bounds{:} );
+redef_is_in_bounds = vertcat( all_redef_is_in_bounds{:} );
 is_fix = vertcat( all_is_fix{:} );
 ib_labs = vertcat( fcat(), all_ib_labs{:} );
 x = vertcat( all_x{:} );
@@ -179,6 +196,7 @@ y = vertcat( all_y{:} );
 outs = struct();
 outs.labels = ib_labs';
 outs.is_in_bounds = is_in_bounds;
+outs.redef_is_in_bounds = redef_is_in_bounds;
 outs.is_fixation = is_fix;
 outs.t = all_t_series{1};
 outs.x = x;

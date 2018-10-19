@@ -15,7 +15,7 @@ save_p = bfw.gid( fullfile('edf_sync', osd), conf );
 unified_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 
 parfor i = 1:numel(unified_mats)
-  shared_utils.general.progress( i, numel(unified_mats) );
+  shared_utils.general.progress( i, numel(unified_mats), mfilename );
   
   unified_file = shared_utils.io.fload( unified_mats{i} );
   unified_filename = get_un_filename( unified_file );

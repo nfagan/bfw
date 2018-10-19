@@ -28,6 +28,11 @@ validateattributes( str, {'char'}, {}, mfilename, 'str' );
 
 intermediate_p = bfw.gid( kind, conf );
 
+if ( ~shared_utils.io.dexists(intermediate_p) )
+  tf = false;
+  return;
+end
+
 all_files = shared_utils.io.dirnames( intermediate_p, '.mat' );
 
 tf = any( cellfun(@(x) ~isempty(strfind(x, str)), all_files) );

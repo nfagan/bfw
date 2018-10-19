@@ -38,7 +38,7 @@ fixations_p = bfw.gid( ff(kind, osd), conf );
 mats = bfw.require_intermediate_mats( params.files, samples_p, params.files_containing );
 
 parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats), mfilename );
+  shared_utils.general.progress( i, numel(mats), sprintf('make_%s', kind) );
   
   samples_file = shared_utils.io.fload( mats{i} );
   
