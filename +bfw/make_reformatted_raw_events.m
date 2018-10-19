@@ -12,7 +12,7 @@ output_p = bfw.gid( fullfile('raw_events_reformatted', osd) );
 
 mats = bfw.require_intermediate_mats( params.files, events_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   events_file = shared_utils.io.fload( mats{i} );
@@ -97,6 +97,7 @@ reformatted_events_file.params = params;
 reformatted_events_file.times = reformatted_times;
 reformatted_events_file.lengths = reformatted_lengths;
 reformatted_events_file.durations = reformatted_durations;
+reformatted_events_file.initiated = reformatted_initiated;
 reformatted_events_file.roi_key = roi_map;
 reformatted_events_file.monk_key = monk_map;
 reformatted_events_file.initiated_key = init_map;
