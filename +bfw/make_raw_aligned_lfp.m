@@ -44,7 +44,7 @@ for i = loop_inds
     base_lfp_file = fload( fullfile(lfp_p, unified_filename) );
     lfp_file = get_lfp_file( base_lfp_file, lfp_map, lfp_p, unified_filename );
 
-    aligned_file = get_aligned_lfp( lfp_file, events_file, params );
+    aligned_file = get_aligned_lfp( lfp_file, events_file, unified_filename, params );
     
     shared_utils.io.require_dir( aligned_p );
     shared_utils.io.psave( output_filename, aligned_file, 'aligned_file' );
@@ -59,7 +59,7 @@ end
 
 end
 
-function aligned_file = get_aligned_lfp(lfp_file, events_file, params)
+function aligned_file = get_aligned_lfp(lfp_file, events_file, unified_filename, params)
 
 events = events_file.events;
 event_key = events_file.event_key;
@@ -116,7 +116,7 @@ end
 
 aligned_file = struct();
 aligned_file.params = params;
-aligned_file.unified_filename = lfp_file.unified_filename;
+aligned_file.unified_filename = unified_filename;
 aligned_file.data = all_lfp_data;
 aligned_file.labels = categorical( all_labs );
 aligned_file.categories = getcats( all_labs );

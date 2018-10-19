@@ -21,6 +21,8 @@ all_is_in_bounds = c;
 all_is_fix = c;
 all_t_series = c;
 all_ib_labs = c;
+all_x = c;
+all_y = c;
 
 la = params.look_ahead;
 lb = params.look_back;
@@ -44,6 +46,7 @@ parfor idx = 1:numel(stim_files)
     bounds_file = shared_utils.io.fload( fullfile(samples_p, 'bounds', un_filename) );
     fix_file = shared_utils.io.fload( fullfile(samples_p, fsd, un_filename) );
     t_file = shared_utils.io.fload( fullfile(samples_p, 'time', un_filename) );
+    pos_file = shared_utils.io.fload( fullfile(samples_p, 'position', un_filename) );
     meta_file = shared_utils.io.fload( fullfile(meta_p, un_filename) );
   catch err
     warning( err.message );
@@ -87,6 +90,8 @@ parfor idx = 1:numel(stim_files)
 
     total_is_fix = false( numel(stim_events) * n_combs, numel(t_series) );
     is_in_bounds = false( size(total_is_fix) );
+    subset_x = nan( size(total_is_fix) );
+    subset_y = nan( size(total_is_fix) );
 
     ib_labs = fcat();
 
@@ -133,11 +138,14 @@ parfor idx = 1:numel(stim_files)
 
         bounds_container = bounds_file.(monk_id);
         fix_vec = fix_file.(monk_id);
+        pos = pos_file.(monk_id);
 
         bounds = bounds_container(roi_name);
 
         is_in_bounds(stp, assign_start:assign_stop) = bounds(start:stop);
         total_is_fix(stp, assign_start:assign_stop) = fix_vec(start:stop);
+        subset_x(stp, assign_start:assign_stop) = pos(1, start:stop);
+        subset_y(stp, assign_start:assign_stop) = pos(2, start:stop);
 
         setcat( stimlabs, {'roi', 'looks_by'}, {roi_name, monk_id} );
         append( ib_labs, stimlabs );
@@ -150,6 +158,8 @@ parfor idx = 1:numel(stim_files)
     all_is_fix{idx} = total_is_fix;
     all_t_series{idx} = t_series;
     all_ib_labs{idx} = ib_labs;
+    all_x{idx} = subset_x;
+    all_y{idx} = subset_y;
   end
 end
 
@@ -157,16 +167,22 @@ all_is_in_bounds(empties) = [];
 all_is_fix(empties) = [];
 all_t_series(empties) = [];
 all_ib_labs(empties) = [];
+all_x(empties) = [];
+all_y(empties) = [];
 
 is_in_bounds = vertcat( all_is_in_bounds{:} );
 is_fix = vertcat( all_is_fix{:} );
 ib_labs = vertcat( fcat(), all_ib_labs{:} );
+x = vertcat( all_x{:} );
+y = vertcat( all_y{:} );
 
 outs = struct();
 outs.labels = ib_labs';
 outs.is_in_bounds = is_in_bounds;
 outs.is_fixation = is_fix;
 outs.t = all_t_series{1};
+outs.x = x;
+outs.y = y;
 outs.params = params;
 
 end
