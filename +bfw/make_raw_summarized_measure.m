@@ -17,7 +17,7 @@ output_p = bfw.gid( fullfile(sprintf('summarized_%s', meas_subdir), osd), conf )
 
 mats = bfw.require_intermediate_mats( params.files, input_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   meas_file = shared_utils.io.fload( mats{i} );
