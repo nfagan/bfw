@@ -1,8 +1,8 @@
 conf = bfw.config.load();
 
-use_events = false;
+use_events = true;
 
-select_files = { '10112018', '10152018', '10162018', '10172018' };
+select_files = { '10112018', '10152018', '10162018', '10172018', '10182018', '10192018' };
 % select_files = { '10162018' };
 
 if ( use_events )
@@ -12,7 +12,7 @@ if ( use_events )
     , 'look_ahead', 5 ...
     , 'keep_within_threshold', 0.3 ...
     , 'files_containing', select_files ...
-    , 'include_samples', true ...
+    , 'include_samples', false ...
     , 'use_stop_time', true ...
   );
 
@@ -111,18 +111,18 @@ fixdat = logical( newdat(:, t_ind) );
 
 %% time course
 
-subdir = 't2';
+subdir = 't1';
 
 plabs = newlabs';
 pdat = newdat;
 
-do_save = false;
-per_run = true;
-is_padded = false;
+do_save = true;
+per_run = false;
+per_day = true;
+is_padded = true;
 
 base_mask = fcat.mask( plabs ...
   , @find, {'in_bounds_face', 'in_bounds_eyes_nf'} ...
-  , @find, '10172018' ...
   , @findnone, '10112018_position_1.mat' ...
 );
 
@@ -152,6 +152,9 @@ summary_dur = rowmean( totaldur, I );
 if ( ~per_run ), collapsecat( y, 'unified_filename' ); end
 
 fig_cats = { 'unified_filename', 'region', 'roi', 'task_type' };
+
+if ( per_day ), fig_cats{end+1} = 'session'; end
+
 fig_I = findall( y, fig_cats );
 figs = arrayfun( @(x) figure(x), 1:4, 'un', 0 );
 
@@ -211,7 +214,12 @@ for idx = 1:numel(fig_I)
   if ( do_save )
     plt_spec = dsp3.nonun_or_all( bar_labs, fig_cats );
     
-    run_p = ternary( per_run, 'per_run', 'across_runs' );
+    if ( per_day )
+      run_p = 'per_day';
+    else
+      run_p = ternary( per_run, 'per_run', 'across_runs' );
+    end
+    
     padded_p = ternary( is_padded, 'padded', 'binary' );
     
     common_inputs = { fullfile(plot_p, subdir, run_p, padded_p), bar_labs, plt_spec };

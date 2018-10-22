@@ -25,6 +25,7 @@ all_ib_labs = c;
 all_x = c;
 all_y = c;
 all_redef_is_in_bounds = c;
+all_rois = c;
 
 la = params.look_ahead;
 lb = params.look_back;
@@ -98,6 +99,7 @@ parfor idx = 1:numel(stim_files)
     subset_x = nan( size(total_is_fix) );
     subset_y = nan( size(total_is_fix) );
     redef_is_in_bounds = false( size(total_is_fix) );
+    rois = zeros( rows(total_is_fix), 4 );
 
     ib_labs = fcat();
 
@@ -159,7 +161,8 @@ parfor idx = 1:numel(stim_files)
         total_is_fix(stp, assign_start:assign_stop) = fix_vec(start:stop);
         subset_x(stp, assign_start:assign_stop) = x;
         subset_y(stp, assign_start:assign_stop) = y;
-        redef_is_in_bounds(stp, assign_start:assign_stop) = ib2;        
+        redef_is_in_bounds(stp, assign_start:assign_stop) = ib2;      
+        rois(stp, :) = r;
 
         setcat( stimlabs, {'roi', 'looks_by'}, {roi_name, monk_id} );
         append( ib_labs, stimlabs );
@@ -175,6 +178,7 @@ parfor idx = 1:numel(stim_files)
     all_ib_labs{idx} = ib_labs;
     all_x{idx} = subset_x;
     all_y{idx} = subset_y;
+    all_rois{idx} = rois;
   end
 end
 
@@ -185,6 +189,7 @@ all_t_series(empties) = [];
 all_ib_labs(empties) = [];
 all_x(empties) = [];
 all_y(empties) = [];
+all_rois(empties) = [];
 
 is_in_bounds = vertcat( all_is_in_bounds{:} );
 redef_is_in_bounds = vertcat( all_redef_is_in_bounds{:} );
@@ -192,6 +197,7 @@ is_fix = vertcat( all_is_fix{:} );
 ib_labs = vertcat( fcat(), all_ib_labs{:} );
 x = vertcat( all_x{:} );
 y = vertcat( all_y{:} );
+rois = vertcat( all_rois{:} );
 
 outs = struct();
 outs.labels = ib_labs';
@@ -201,6 +207,7 @@ outs.is_fixation = is_fix;
 outs.t = all_t_series{1};
 outs.x = x;
 outs.y = y;
+outs.rois = rois;
 outs.params = params;
 
 end

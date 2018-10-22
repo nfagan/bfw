@@ -16,6 +16,7 @@ osd = params.output_subdir;
 params.chronux_params.Fs = params.sample_rate;
 
 lfp_p = bfw.gid( fullfile('raw_aligned_lfp', isd), conf );
+rng_p = bfw.gid( fullfile('rng', isd), conf );
 coh_p = bfw.gid( fullfile('raw_coherence', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, lfp_p, params.files_containing );
@@ -33,7 +34,8 @@ parfor i = 1:numel(mats)
   end
   
   try
-    coh_file = coherence_main( lfp_file, params );
+    rng_file = shared_utils.io.fload( fullfile(rng_p, unified_filename) );
+    coh_file = coherence_main( lfp_file, rng_file, params );
     
     shared_utils.io.require_dir( coh_p );
     shared_utils.io.psave( output_filename, coh_file, 'coh_file' );
@@ -45,7 +47,7 @@ end
 
 end
 
-function coh_file = coherence_main(lfp_file, params)
+function coh_file = coherence_main(lfp_file, rng_file, params)
 
 lfp = lfp_file.data;
 event_indices = lfp_file.event_indices;
@@ -92,7 +94,12 @@ for i = 1:rows(inds)
   need_choose_pairs = numel( chans_a ) > 1 && numel( chans_b ) > 1;
   
   if ( need_choose_pairs )
+    % make sure pair selection is deterministic
+    rng_prev_state = rng( rng_file.state );
+    
     pairs = bfw.select_pairs( chans_a, chans_b, 16 );
+    
+    rng( rng_prev_state );
   else
     n_use = max( numel(chans_a), numel(chans_b) );
     pairs = zeros( n_use, 2 );
