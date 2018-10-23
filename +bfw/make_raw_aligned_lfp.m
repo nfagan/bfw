@@ -76,6 +76,7 @@ n_combs = size( c, 2 );
 event_times = events(:, event_key('start_time'));
 t = lfp_file.id_times;
 lfp_key = lfp_file.key;
+id_time_inds = arrayfun( @(x) shared_utils.sync.nearest(t, x), event_times );
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;
@@ -100,8 +101,7 @@ for i = 1:n_combs
   chani = c(1, i);
   evti = c(2, i);
   
-  evt = event_times(evti);
-  id_ind = shared_utils.sync.nearest( t, evt );
+  id_ind = id_time_inds(evti);
   
   start = floor( id_ind + look_back - (window_size/2) );
   stop = floor( id_ind + look_ahead + window_size - (window_size/2) );

@@ -2,7 +2,7 @@ conf = bfw.config.load();
 
 use_events = true;
 
-select_files = { '10112018', '10152018', '10162018', '10172018', '10182018', '10192018' };
+select_files = { '10112018', '10152018', '10162018', '10172018', '10182018', '10192018', '10222018' };
 % select_files = { '10162018' };
 
 if ( use_events )
@@ -83,7 +83,7 @@ roi_file = bfw.load1( 'rois', '10162018' );
 rects = roi_file.m1.rects;
 
 mask = fcat.mask( samplabs ...
-  , @find, '10162018' ...
+  , @find, '10172018' ...
   , @find, {'stim_on_face', 'stim_on_not_face'} ...
   , @find, 'm1' ...
 );
