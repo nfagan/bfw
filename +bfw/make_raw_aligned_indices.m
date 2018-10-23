@@ -19,7 +19,7 @@ aligned_p = bfw.gid( ff('aligned_raw_indices', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, time_p, params.files_containing );
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   time_file = fload( mats{i} );

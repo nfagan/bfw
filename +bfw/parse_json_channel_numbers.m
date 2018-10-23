@@ -16,21 +16,27 @@ for j = 1:numel(channels)
     continue;
   end
   if ( isa(chan, 'char') )
-    ind = strfind( chan, '-' );
-    err_msg = sprintf( ['Wrong format for string channel interval;' ...
-      , ' expected a format like this: "17-32", but got this: "%s".'] ...
-      , chan );
+    split_comma = cellfun( @strtrim, strsplit(chan, ','), 'un', 0 );
+    
+    for k = 1:numel(split_comma)
+      c_chan = split_comma{k};
+      
+      ind = strfind( c_chan, '-' );
+      err_msg = sprintf( ['Wrong format for string channel interval;' ...
+        , ' expected a format like this: "17-32", but got this: "%s".'] ...
+        , c_chan );
 
-    assert( numel(ind) == 1, err_msg );
+      assert( numel(ind) == 1, err_msg );
 
-    start = str2double( chan(1:ind-1) );
-    stop = str2double( chan(ind+1:end) );
+      start = str2double( c_chan(1:ind-1) );
+      stop = str2double( c_chan(ind+1:end) );
 
-    assert( ~isnan(start) && ~isnan(stop), err_msg );
+      assert( ~isnan(start) && ~isnan(stop), err_msg );
 
-    interval = start:stop;
+      interval = start:stop;
 
-    out(end+1:end+numel(interval)) = interval;
+      out(end+1:end+numel(interval)) = interval;
+    end
 
     continue;
   end

@@ -5,9 +5,11 @@ defaults = bfw.get_common_make_defaults();
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
+isd = params.input_subdir;
+osd = params.output_subdir;
 
-unified_p = bfw.gid( fullfile(params.input_subdir, 'unified'), conf );
-meta_p = bfw.gid( fullfile(params.output_subdir, 'meta'), conf );
+unified_p = bfw.gid( fullfile('unified', isd), conf );
+meta_p = bfw.gid( fullfile('meta', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
 

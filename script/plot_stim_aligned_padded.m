@@ -119,11 +119,12 @@ pdat = newdat;
 do_save = true;
 per_run = false;
 per_day = true;
-is_padded = true;
+is_padded = false;
 
 base_mask = fcat.mask( plabs ...
   , @find, {'in_bounds_face', 'in_bounds_eyes_nf'} ...
   , @findnone, '10112018_position_1.mat' ...
+  , @find, {'10192018', '10222018'} ...
 );
 
 if ( is_padded )

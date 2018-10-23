@@ -79,10 +79,17 @@ bfw.make_reformatted_raw_events( inputs );
 
 %%  lfp
 
+bfw.make_rng( inputs );
 bfw.make_lfp( inputs );
 bfw.make_raw_aligned_lfp( inputs );
+
 bfw.make_raw_coherence( inputs );
+bfw.make_raw_mtpower( inputs );
 
 bfw.make_raw_summarized_measure( inputs ...
-  , 'input_subdir', 'raw_coherence' ...
+  , 'measure', 'raw_coherence' ...
+);
+
+bfw.make_raw_summarized_measure( inputs ...
+  , 'measure', 'raw_mtpower' ...
 );

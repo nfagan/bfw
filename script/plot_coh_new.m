@@ -18,9 +18,12 @@ use_mats = mats;
   , 'check_continue',     @(x) false ...
 );
 
+prune( bfw.unify_region_labels(labs) );
+
 %%  zscore
 
-zspec = { 'measure', 'region', 'channel', 'roi', 'looks_by' };
+% zspec = { 'measure', 'region', 'channel', 'roi', 'looks_by' };
+zspec = { 'measure', 'region' };
 zdat = bfw.zscore_each( data, labs, zspec );
 
 %%  subtraction (eyes - face)
@@ -57,8 +60,6 @@ setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
 pltlabs = sublabs';
 pltdat = subdat;
 
-prune( bfw.unify_coherence_region_labels(pltlabs) );
-
 t_ind = true( size(t) );
 f_ind = freqs <= 100;
 
@@ -69,7 +70,9 @@ pl = plotlabeled.make_spectrogram( subf, subt );
 
 mask = fcat.mask( pltlabs ...
   , @find, 'm1' ...
-  , @(x, l, varargin) bfw.catfindnot_substr(x, 'region', l, varargin{:}), 'ref' ...
+  , @(x, varargin) bfw.catfindnot_substr(x, 'region', varargin{:}), 'ref' ...
+  , @(x, varargin) bfw.catfind_substr(x, 'region', varargin{:}), 'bla' ...
+  , @findnot, 'bla_dmpfc' ...
 );
 
 fcats = { 'measure' };
@@ -91,8 +94,6 @@ pltlabs = labs';
 pltdat = zdat;
 
 is_over_t = false;
-
-prune( bfw.unify_coherence_region_labels(pltlabs) );
 
 t_ind = t >= -100 & t <= 0;
 f_ind = freqs <= 100;
@@ -123,5 +124,34 @@ mlabs = pltlabs(mask);
 xlab = ternary( is_over_t, 'Time (ms)', 'Hz' );
 
 shared_utils.plot.xlabel( axs, xlab );
+
+%%  bar - means
+
+pltlabs = sublabs';
+pltdat = subdat;
+
+t_ind = t >= -100 & t <= 0;
+f_ind = freqs <= 100;
+
+mask = fcat.mask( pltlabs ...
+  , @find, {'m1'} ...
+  , @(x, l, m) bfw.catfindnot_substr(x, 'region', l, m), 'ref' ...
+  , @find, {'acc_bla', 'bla_dmpfc', 'bla_ofc'} ...
+);
+
+xcats = { 'looks_by', 'roi' };
+gcats = { 'region' };
+pcats = { 'measure' };
+fcats = { 'measure' };
+
+mdat = squeeze( nanmean(nanmean(pltdat(mask, f_ind, t_ind), 2), 3) );
+mlabs = pltlabs(mask);
+
+pl = plotlabeled.make_common();
+pl.error_func = @(x) 0;
+pl.x_tick_rotation = 0;
+pl.add_errors = true;
+
+[f, axs] = pl.figures( @bar, mdat, mlabs, fcats, xcats, gcats, pcats );
 
 
