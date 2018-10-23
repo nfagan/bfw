@@ -24,7 +24,15 @@ bfw.make_stimulation_times( inputs );
 bfw.make_edfs( inputs );
 bfw.make_edf_raw_samples( inputs );
 bfw.make_edf_sync_times( inputs );
-% bfw.make_edf_blink_info( shared_inputs{:} );
+
+%%  plex time
+
+bfw.make_plex_raw_time( inputs );
+
+%%  align indices
+
+%   this takes a long time.
+bfw.make_raw_aligned_indices( inputs );
 
 %%  rois + bounds
 
@@ -33,10 +41,6 @@ bfw.make_rois( inputs );
 bfw.make_raw_bounds( inputs ...
   , 'padding', 0 ...
 );
-
-%%  plex time
-
-bfw.make_plex_raw_time( inputs );
 
 %%  fixations
 
@@ -48,20 +52,15 @@ bfw.make_raw_eye_mmv_fixations( inputs ...
 
 bfw.make_raw_arduino_fixations( inputs );
 
-%%  align indices
-
-%   this takes a long time.
-bfw.make_raw_aligned_indices( inputs );
-
 %%  aligned + binned aligned samples (using aligned indices)
 
 sample_kinds = { 'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations' };
 
-bfw.make_raw_aligned( inputs ...
+bfw.make_raw_aligned_samples( inputs ...
   , 'kinds', sample_kinds ...
 );
 
-bfw.make_binned_raw_aligned( inputs ...
+bfw.make_binned_raw_aligned_samples( inputs ...
   , 'kinds', sample_kinds ...
 );
 
@@ -71,6 +70,8 @@ bfw.make_raw_events( inputs ...
   , 'duration', 10 ...
   , 'fill_gaps', true ...
   , 'fill_gaps_duration', 150 ...
+  , 'samples_subdir', 'aligned_binned_raw_samples' ...
+  , 'fixations_subdir', 'arduino_fixations' ...
 );
 
 %   formats data consistent with `make_events`

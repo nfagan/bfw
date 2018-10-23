@@ -15,10 +15,6 @@ assert( max(masked) <= rows(labels), 'Mask is out of bounds of given labels.' );
 
 is_ok = masked & ~cellfun( @isempty, data(:, 1) );
 
-y = false( size(is_ok) );
-y(find(y, 1)) = true;
-is_ok = y;
-
 usedat = data(is_ok, :);
 uselabs = labels(find(is_ok));
 

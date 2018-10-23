@@ -46,7 +46,7 @@ parfor i = 1:numel(mats)
     bounds_file = fload( fullfile(bounds_p, unified_filename) );
     fix_file = fload( fullfile(fixations_p, unified_filename) ); 
   catch err
-    print_fail_warn( unified_filename, err.message );
+    bfw.print_fail_warn( unified_filename, err.message );
     continue;
   end
   
@@ -98,7 +98,7 @@ parfor i = 1:numel(mats)
       end
       
     catch err
-      print_fail_warn( unified_filename, err.message );
+      bfw.print_fail_warn( unified_filename, err.message );
       success = false;
       break;
     end
@@ -307,10 +307,6 @@ evts(out_of_bounds) = [];
 evt_lengths(out_of_bounds) = [];
 evt_stops(out_of_bounds) = [];
 
-end
-
-function print_fail_warn(un_file, msg)
-warning( '"%s" failed: %s', un_file, msg );
 end
 
 function l = get_event_length(index, bounds)

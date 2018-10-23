@@ -41,7 +41,7 @@ parfor i = 1:numel(mats)
   assert( numel(onet) == size(data{i}, 3), 'Time series does not match data.' );
   assert( numel(onefreqs) == size(data{i}, 2), 'Frequencies do not match data.' );
   
-  empties(i) = false;
+  empties(i) = isempty( data{i} );
 end
 
 data(empties) = [];
@@ -51,8 +51,20 @@ freqs(empties) = [];
 
 data = vertcat( data{:} );
 labs = vertcat( fcat, labs{:} );
-freqs = freqs{1};
-t = t{1};
+
+assert_ispair( data, labs );
+
+if ( ~isempty(freqs) )
+  freqs = freqs{1}; 
+else
+  freqs = [];
+end
+
+if ( ~isempty(t) )
+  t = t{1};
+else
+  t = [];
+end
 
 end
 

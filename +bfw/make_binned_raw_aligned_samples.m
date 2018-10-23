@@ -1,4 +1,4 @@
-function make_binned_raw_aligned(varargin)
+function make_binned_raw_aligned_samples(varargin)
 
 import shared_utils.io.fload;
 
