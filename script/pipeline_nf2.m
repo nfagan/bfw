@@ -7,6 +7,8 @@ inputs.output_subdir = '';
 inputs.overwrite = false;
 inputs.files_containing = '';
 
+folders = {};
+
 %%  unified
 
 bfw.make_unified( folders, inputs );
@@ -73,3 +75,13 @@ bfw.make_raw_events( inputs ...
 
 %   formats data consistent with `make_events`
 bfw.make_reformatted_raw_events( inputs );
+
+%%  lfp
+
+bfw.make_lfp( inputs );
+bfw.make_raw_aligned_lfp( inputs );
+bfw.make_raw_coherence( inputs );
+
+bfw.make_raw_summarized_measure( inputs ...
+  , 'input_subdir', 'raw_coherence' ...
+);
