@@ -18,7 +18,7 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   unified_file = shared_utils.io.fload( mats{i} );
@@ -38,58 +38,82 @@ parfor i = 1:numel(mats)
   if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
   
   rois = struct();
-  
   roi_funcs = get_roi_funcs(first_unified_file);
   
   try
-    roi_func_keys = get_active_roi_names( roi_funcs, params.rois );
+    [roi_func_keys, is_all_rois] = get_active_roi_names( roi_funcs, params.rois );
   catch err
     bfw.print_fail_warn( m_filename, err.message );
     continue;
   end
   
-  for j = 1:numel(fields)
-    m_id = fields{j};
-    c_meta = unified_file.(m_id);
-    
-    rect_map = containers.Map();
-    roi_map = c_meta.far_plane_key_map;
-    calibration = c_meta.far_plane_calibration;
-    screen_rect = bfw.field_or( c_meta, 'screen_rect', default_screen_rect() );
-    
-    if ( isequaln(calibration, nan) || isequaln(roi_map, nan) )
-      warning( 'Missing calibration data for file: "%s".', r_filename );
-      continue;
-    end
-    
-    for k = 1:numel(roi_func_keys)
-      key = roi_func_keys{k};
-      func = roi_funcs(key);
-      rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect );
-      rect_map(key) = rect;
-    end
-    
-    for k = 1:numel(copy_fields)
-      rois.(m_id).(copy_fields{k}) = c_meta.(copy_fields{k});
-    end
-    
-    rois.(m_id).roi_filename = r_filename;
-    rois.(m_id).roi_directory = save_p;
-    rois.(m_id).rects = rect_map;
-  end  
+  if ( ~is_all_rois && params.append )
+    rois = try_get_current_rois( full_filename );
+  end
   
-  shared_utils.io.require_dir( save_p );
-  shared_utils.io.psave( full_filename, rois, 'rois' );
+  try
+    for j = 1:numel(fields)
+      m_id = fields{j};
+      c_meta = unified_file.(m_id);
+      
+      %   either re-use the existing rect-map (if it exists)
+      %   or create a new one.
+      rect_map = get_rect_map( rois, m_id );
+
+      roi_map = c_meta.far_plane_key_map;
+      calibration = c_meta.far_plane_calibration;
+      screen_rect = bfw.field_or( c_meta, 'screen_rect', default_screen_rect() );
+
+      if ( isequaln(calibration, nan) || isequaln(roi_map, nan) )
+        warning( 'Missing calibration data for file: "%s".', r_filename );
+        continue;
+      end
+
+      for k = 1:numel(roi_func_keys)
+        key = roi_func_keys{k};
+        func = roi_funcs(key);
+        rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect );
+        rect_map(key) = rect;
+      end
+
+      for k = 1:numel(copy_fields)
+        rois.(m_id).(copy_fields{k}) = c_meta.(copy_fields{k});
+      end
+
+      rois.(m_id).roi_filename = r_filename;
+      rois.(m_id).roi_directory = save_p;
+      rois.(m_id).rects = rect_map;
+    end  
+
+    shared_utils.io.require_dir( save_p );
+    shared_utils.io.psave( full_filename, rois, 'rois' );
+    
+  catch err
+    bfw.print_fail_warn( r_filename, err.message );
+    continue;
+  end
 end
 
 end
 
-function active = get_active_roi_names(roi_funcs, roi_names)
+function m = get_rect_map(rois, m_id)
+
+if ( ~isfield(rois, m_id) || ~isfield(rois.(m_id), 'rects') )
+  m = containers.Map();
+else
+  m = rois.(m_id).rects;
+end
+
+end
+
+function [active, is_all] = get_active_roi_names(roi_funcs, roi_names)
 
 roi_func_keys = roi_funcs.keys();
+is_all = false;
 
 if ( strcmpi(roi_names, 'all') )
   active = roi_func_keys;
+  is_all = true;
   return
 end
 
@@ -105,6 +129,16 @@ if ( ~all(exists) )
 end
 
 active = roi_names;
+
+end
+
+function r = try_get_current_rois(filename)
+
+r = struct();
+
+if ( ~shared_utils.io.fexists(filename) ), return; end
+
+r = shared_utils.io.fload( filename );
 
 end
 

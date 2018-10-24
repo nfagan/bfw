@@ -12,6 +12,7 @@ defaults.cs_monk_id = 'm1';
 defaults.input_subdir = '';
 defaults.output_subdir = '';
 defaults.overwrite = false;
+defaults.append = true;
 defaults.save = true;
 defaults.config = bfw.config.load();
 

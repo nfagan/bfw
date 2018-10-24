@@ -13,6 +13,7 @@ folders = {};
 
 bfw.make_unified( folders, inputs );
 bfw.make_meta( inputs );
+bfw.make_stim_meta( inputs );
 
 %%  plex sync + stim
 
@@ -36,7 +37,7 @@ bfw.make_raw_aligned_indices( inputs );
 
 %%  rois + bounds
 
-bfw.make_rois( inputs );
+bfw.make_raw_rois( inputs );
 
 bfw.make_raw_bounds( inputs ...
   , 'padding', 0 ...
