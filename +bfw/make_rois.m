@@ -18,6 +18,9 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
+% load outside1 and 2 roi based on clustering
+x = load('/media/chang/T2/data/bfw/tmp/DBctrs.mat');
+
 for i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
@@ -64,10 +67,33 @@ for i = 1:numel(mats)
     for k = 1:numel(roi_func_keys)
       key = roi_func_keys{k};
       func = roi_funcs(key);
-      rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect );
+      rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect ); 
       rect_map(key) = rect;
+      if k == 5 % outside1
+         [a,dayidx,runidx] = check_mats(x,mats{i});
+         if a ~= 1 %  
+            rect_map(key) = rect;
+         else   
+            ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr;
+            L_H = [rect(3) - rect(1)]/2;
+            L_V = [rect(4) - rect(2)]/2;
+            rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
+            rect_map(key) = rect; % directly assign roi based on clustering     
+         end   
+      end
+      if k == 6 % outside2
+         %[a,dayidx,runidx] = check_mats(x,mats{i});
+         if a ~= 1 %  
+            rect_map(key) = rect;
+         else   
+            ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr2;
+            L_H = [rect(3) - rect(1)]/2;
+            L_V = [rect(4) - rect(2)]/2;
+            rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
+            rect_map(key) = rect; % directly assign roi based on clustering     
+         end   
+      end          
     end
-    
     for k = 1:numel(copy_fields)
       rois.(m_id).(copy_fields{k}) = c_meta.(copy_fields{k});
     end
@@ -132,4 +158,21 @@ end
 
 function r = default_screen_rect()
 r = [ 0, 0, 1024*3, 768 ];
+end
+
+function [a, dayidx, runidx] = check_mats(x,mats)
+        dayall = x.days;
+        strs = strsplit(mats,'/');
+        info = strs(9);
+        a = sum(ismember(dayall,info{1}(1:8)));
+        dayidx = find(ismember(dayall,info{1}(1:8)));
+        strs2 = strsplit(mats,'_');
+        info2 = strs2(3);
+        stopidx = strfind(info2{1},'.');
+        runidx = str2num(info2{1}(1:[stopidx-1]));
+        if dayidx == 1  %this is for naming bug in 0116
+           if runidx > 5
+              runidx = runidx - 1;
+           end
+        end   
 end
