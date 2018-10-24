@@ -18,7 +18,7 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
   unified_file = shared_utils.io.fload( mats{i} );
