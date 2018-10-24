@@ -27,18 +27,15 @@ for i = 1:numel(mats)
   
   sync_id = unified.m1.plex_sync_id;
   
-  fields = fieldnames( unified );
-  first = sync_id;
-  
-  unified_filename = unified.(first).unified_filename;
+  unified_filename = unified.(sync_id).unified_filename;
   output_filename = fullfile( save_p, unified_filename );
   
   if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
     continue;
   end
   
-  pl2_file = unified.(first).plex_filename;
-  pl2_dir = fullfile( unified.(first).plex_directory{:} );
+  pl2_file = unified.(sync_id).plex_filename;
+  pl2_dir = fullfile( unified.(sync_id).plex_directory{:} );
   pl2_dir = fullfile( data_root, pl2_dir );
   
   pl2_file = fullfile( pl2_dir, pl2_file );
@@ -60,7 +57,7 @@ for i = 1:numel(mats)
   binned_stim = bfw.bin_pulses( stim_pulses, start_pulses );
   binned_sham = bfw.bin_pulses( sham_pulses, start_pulses );
   
-  sync_index = unified.(first).plex_sync_index;
+  sync_index = unified.(sync_id).plex_sync_index;
   
   if ( sync_index < 1 || sync_index > numel(binned_stim) )
     warning( 'Sync index for "%s" must be > 1 and <= %d; was %d.' ...
@@ -70,14 +67,14 @@ for i = 1:numel(mats)
   
   id_times = (0:numel(stim_pulse_raw.Values)-1) .* (1/stim_pulse_raw.ADFreq);
   
-  stim = struct();
-  stim.stimulation_times = id_times( binned_stim{sync_index} );
-  stim.sham_times = id_times( binned_sham{sync_index} );
-  stim.unified_filename = unified_filename;
+  stim_file = struct();
+  stim_file.stimulation_times = id_times( binned_stim{sync_index} );
+  stim_file.sham_times = id_times( binned_sham{sync_index} );
+  stim_file.unified_filename = unified_filename;
   
   shared_utils.io.require_dir( save_p );
   
-  save( output_filename, 'stim' );
+  save( output_filename, 'stim_file' );
 end
 
 end
