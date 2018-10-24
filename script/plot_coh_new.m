@@ -19,6 +19,7 @@ use_mats = mats;
 );
 
 prune( bfw.unify_region_labels(labs) );
+prune( bfw.add_monk_labels(labs) );
 
 %%  zscore
 
