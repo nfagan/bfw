@@ -8,6 +8,7 @@ defaults.look_back = -500;
 defaults.look_ahead = 500;
 defaults.sample_rate = 1e3;
 defaults.event_types = [];
+defaults.cache = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -16,6 +17,7 @@ isd = params.input_subdir;
 osd = params.output_subdir;
 files = params.files;
 fc = params.files_containing;
+do_cache = params.cache;
 
 event_p = bfw.gid( fullfile('raw_events', isd), conf );
 lfp_p = bfw.gid( fullfile('lfp', isd), conf );
@@ -42,7 +44,7 @@ for i = loop_inds
 
   try
     base_lfp_file = fload( fullfile(lfp_p, unified_filename) );
-    lfp_file = get_lfp_file( base_lfp_file, lfp_map, lfp_p, unified_filename );
+    lfp_file = get_lfp_file( base_lfp_file, lfp_map, lfp_p, unified_filename, do_cache );
 
     aligned_file = get_aligned_lfp( lfp_file, events_file, unified_filename, params );
     
@@ -125,7 +127,7 @@ aligned_file.event_indices = c(2, :);
 
 end
 
-function lfp_file = get_lfp_file(lfp_file, lfp_map, lfp_p, unified_filename)
+function lfp_file = get_lfp_file(lfp_file, lfp_map, lfp_p, unified_filename, do_cache)
 
 import shared_utils.io.fload;
 
@@ -137,7 +139,10 @@ if ( isKey(lfp_map, unified_filename) )
   lfp_file = lfp_map(unified_filename);
 else
   lfp_file = fload( fullfile(lfp_p, lfp_file.data_file) );
-  lfp_map(unified_filename) = lfp_file;
+  
+  if ( do_cache )
+    lfp_map(unified_filename) = lfp_file;
+  end
 end
 
 end
