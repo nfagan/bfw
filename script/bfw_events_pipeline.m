@@ -68,6 +68,8 @@ bfw.make_raw_bounds( params ...
   , 'padding', struct('eyes_nf', -0.05) ...
 );
 
+bfw.adjust.add_raw_face_non_eyes( params, 'overwrite', true );
+
 end
 
 function sessions = get_sessions_by_type(conf)
