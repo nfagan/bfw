@@ -18,18 +18,19 @@ mats = bfw.require_intermediate_mats( params.files, data_p, params.files_contain
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   fprintf( '\n %d of %d', i, numel(mats) );
   
-  meta = shared_utils.io.fload( mats{i} );
+  unified_file = shared_utils.io.fload( mats{i} );
   
-  fields = fieldnames( meta );
+  fields = fieldnames( unified_file );
+  first_unified_file = unified_file.(fields{1});
   
   roi_pad = bfw.calibration.define_padding();
   roi_const = bfw.calibration.define_calibration_target_constants();
   
-  mat_dir = meta.(fields{1}).mat_directory_name;
-  m_filename = meta.(fields{1}).mat_filename;
+  mat_dir = first_unified_file.mat_directory_name;
+  m_filename = first_unified_file.mat_filename;
   
   r_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
   full_filename = fullfile( save_p, r_filename );
@@ -38,7 +39,7 @@ for i = 1:numel(mats)
   
   rois = struct();
   
-  roi_funcs = get_roi_funcs(meta.(fields{1}));
+  roi_funcs = get_roi_funcs(first_unified_file);
   
   try
     roi_func_keys = get_active_roi_names( roi_funcs, params.rois );
@@ -49,7 +50,7 @@ for i = 1:numel(mats)
   
   for j = 1:numel(fields)
     m_id = fields{j};
-    c_meta = meta.(m_id);
+    c_meta = unified_file.(m_id);
     
     rect_map = containers.Map();
     roi_map = c_meta.far_plane_key_map;
@@ -78,7 +79,7 @@ for i = 1:numel(mats)
   end  
   
   shared_utils.io.require_dir( save_p );
-  save( full_filename, 'rois' );
+  shared_utils.io.psave( full_filename, rois, 'rois' );
 end
 
 end
@@ -116,6 +117,9 @@ event_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
 event_funcs('mouth') =    @bfw.calibration.rect_mouth_from_eyes;
 event_funcs('outside1') = @bfw.calibration.rect_outside1;
 event_funcs('outside2') = @bfw.calibration.rect_outside2;
+% //
+event_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
+event_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;
 
 try
   r = un_file.stimulation_params.radius;
