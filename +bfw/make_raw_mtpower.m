@@ -21,7 +21,7 @@ pow_p = bfw.gid( fullfile('raw_mtpower', osd), conf );
 mats = bfw.require_intermediate_mats( params.files, lfp_p, params.files_containing );
 
 parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats) );
+  shared_utils.general.progress( i, numel(mats), mfilename );
   
   lfp_file = shared_utils.io.fload( mats{i} );
   

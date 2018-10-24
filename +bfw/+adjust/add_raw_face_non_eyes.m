@@ -15,7 +15,7 @@ out_bounds_p = bfw.gid( fullfile('raw_bounds', osd), conf );
 
 mats = bfw.rim( params.files, in_bounds_p, params.files_containing );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   bounds_file = shared_utils.io.fload( mats{i} );
