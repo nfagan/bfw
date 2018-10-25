@@ -27,6 +27,11 @@ parfor i = 1:numel(mats)
     continue;
   end
   
+  if ( is_adjusted(bounds_file) )
+    bfw.print_fail_warn( unified_filename, 'Already contains face-non-eyes.' );
+    continue;
+  end
+  
   try
     monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
     
@@ -52,4 +57,11 @@ parfor i = 1:numel(mats)
   end
 end
 
+end
+
+function tf = is_adjusted(bounds_file)
+
+tf = isfield( bounds_file, 'adjustments' ) && ...
+  isKey( bounds_file.adjustments, 'raw_face_non_eyes' );
+  
 end
