@@ -13,8 +13,8 @@ end
 
 handle_bounds( params, sessions );
 
-bfw.make_raw_aligned_samples( params, 'kinds', 'bounds' );
-bfw.make_binned_raw_aligned_samples( params, 'kinds', 'bounds' );
+bfw.make_raw_aligned_samples( params );
+bfw.make_binned_raw_aligned_samples( params );
 
 handle_events( params, sessions );
 
