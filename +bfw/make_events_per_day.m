@@ -179,11 +179,11 @@ end
 function [c_ids, c_looked_first] = get_ids_look_first(events_file, monk, row, col, is_old)
 
 if ( is_old )
-  c_ids = double( evt.identifiers{row, col} );
+  c_ids = double( events_file.identifiers{row, col} );
   c_looked_first = nan( size(c_ids) );
 
   if ( strcmp(monk, 'mutual') )
-    c_looked_first = evt.looked_first_indices{row, 1};
+    c_looked_first = events_file.looked_first_indices{row, 1};
   end
 else
   c_ids = nan( size(events_file.times{row, col}) );
