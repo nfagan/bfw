@@ -10,4 +10,6 @@ bfw.make_raw_events( ...
   , varargin{:} ...
 );
 
+bfw.make_reformatted_raw_events( varargin{:} );
+
 end

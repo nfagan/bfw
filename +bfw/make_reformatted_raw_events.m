@@ -102,8 +102,10 @@ reformatted_events_file.roi_key = roi_map;
 reformatted_events_file.monk_key = monk_map;
 reformatted_events_file.initiated_key = init_map;
 
-shared_utils.io.require_dir( output_p );
-shared_utils.io.psave( output_filename, reformatted_events_file, 'reformatted_events_file' );
+if ( params.save )
+  shared_utils.io.require_dir( output_p );
+  shared_utils.io.psave( output_filename, reformatted_events_file, 'reformatted_events_file' );
+end
 
 end
 

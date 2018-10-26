@@ -18,8 +18,6 @@ bfw.make_binned_raw_aligned_samples( params );
 
 handle_events( params, sessions );
 
-bfw.make_reformatted_raw_events( params );
-
 end
 
 function handle_events(params, sessions)
