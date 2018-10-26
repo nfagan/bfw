@@ -4,15 +4,17 @@ import shared_utils.io.fload;
 ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
+defaults.unified_subdir = '';
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 
 isd = params.input_subdir;
+usd = params.unified_subdir;
 osd = params.output_subdir;
 
 event_p = bfw.gid( ff('events', isd), conf );
-unified_p = bfw.gid( ff('unified', isd), conf );
+unified_p = bfw.gid( ff('unified', usd), conf );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 
@@ -55,11 +57,12 @@ import shared_utils.io.fload;
 ff = @fullfile;
 
 isd = params.input_subdir;
+usd = params.unified_subdir;
 osd = params.output_subdir;
 
 if ( numel(events) == 0 ), return; end
 
-unified_p = bfw.gid( ff('unified', isd), params.config );
+unified_p = bfw.gid( ff('unified', usd), params.config );
 evt_save_p = bfw.gid( ff('events_per_day', osd), params.config );
 
 allow_overwrite = params.overwrite;
