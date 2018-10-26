@@ -5,6 +5,7 @@ ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.unified_subdir = '';
+defaults.events_subdir = 'events';
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
@@ -12,9 +13,12 @@ conf = params.config;
 isd = params.input_subdir;
 usd = params.unified_subdir;
 osd = params.output_subdir;
+esd = params.events_subdir;
 
-event_p = bfw.gid( ff('events', isd), conf );
+event_p = bfw.gid( ff(esd, isd), conf );
 unified_p = bfw.gid( ff('unified', usd), conf );
+
+is_old_evts = is_old_events( esd );
 
 event_files = bfw.require_intermediate_mats( params.files, event_p, params.files_containing );
 
@@ -26,7 +30,7 @@ for i = 1:numel(event_files)
   
   unified = fload( fullfile(unified_p, un_filename) );
   
-  if ( ~events.adjustments.isKey('to_plex_time') )
+  if ( is_old_evts && ~events.adjustments.isKey('to_plex_time') )
     fprintf( '\n Events have not yet been converted to plexon time for "%s".', un_filename );
     continue;
   end
@@ -51,6 +55,10 @@ end
 
 end
 
+function tf = is_old_events(event_subdir)
+tf = strcmp( event_subdir, 'events' );
+end
+
 function one_session( events, params )
 
 import shared_utils.io.fload;
@@ -72,6 +80,8 @@ event_info = Container();
 event_info_keys = { 'times', 'durations', 'lengths', 'ids', 'looked_first' };
 event_info_vals = 1:numel(event_info_keys);
 event_info_key = containers.Map( event_info_keys, event_info_vals );
+
+is_old_evts = is_old_events( params.events_subdir );
 
 for i = 1:numel(events)
   fprintf( '\n\t %d of %d', i, numel(events) );
@@ -98,12 +108,8 @@ for i = 1:numel(events)
       c_evt_times = evt.times{row, col};
       c_durations = evt.durations{row, col};
       c_lengths = evt.lengths{row, col};
-      c_ids = double( evt.identifiers{row, col} );
-      c_looked_first = nan( size(c_ids) );
       
-      if ( strcmp(monk, 'mutual') )
-        c_looked_first = evt.looked_first_indices{row, 1};
-      end
+      [c_ids, c_looked_first] = get_ids_look_first( evt, monk, row, col, is_old_evts );
       
       look_orders = cell( numel(c_looked_first), 1 );
       
@@ -166,6 +172,22 @@ for i = 1:numel(events)
   end
   
   save( full_save_filename, 'all_event_info' );
+end
+
+end
+
+function [c_ids, c_looked_first] = get_ids_look_first(events_file, monk, row, col, is_old)
+
+if ( is_old )
+  c_ids = double( evt.identifiers{row, col} );
+  c_looked_first = nan( size(c_ids) );
+
+  if ( strcmp(monk, 'mutual') )
+    c_looked_first = evt.looked_first_indices{row, 1};
+  end
+else
+  c_ids = nan( size(events_file.times{row, col}) );
+  c_looked_first = events_file.initiated{row, col};
 end
 
 end
