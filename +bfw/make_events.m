@@ -115,8 +115,8 @@ for i = 1:numel(bound_mats)
     looked_first_distance = nan( size(looked_first_index) );
     
     broke_first_index = who_broke_first( mutual_indices, mutual_bounds ...
-      , m1_evts, m1_bounds, m2_evts, m2_bounds );
-    
+        , m1_evts, m1_bounds, m2_evts, m2_bounds );
+
     %   NEW -- ensure exclusive events are truly exclusive of mutual
     m1_evts = setdiff( m1_evts, mutual_indices );
     m2_evts = setdiff( m2_evts, mutual_indices );
@@ -224,7 +224,7 @@ for i = 1:numel(mutual_evts)
   elseif ( is_m2_stop )
     broke_first_index(i) = 2;
   else
-    error( 'No recognized stop index.' );
+    warning( 'No recognized stop index.' );
   end
 end
 
