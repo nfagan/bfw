@@ -184,13 +184,25 @@ function keep_ind = remove_overlapping_exclusive_events(mutual, mutual_length, e
 keep_ind = true( size(exclusive) );
 
 for i = 1:numel(exclusive)
+  
   excl = exclusive(i);
+  excl_stop = excl + exclusive_length(i) - 1;
   
-  nearest_before_idx = shared_utils.sync.nearest_before( mutual, excl );
+  nearest_mut_idx = shared_utils.sync.nearest( mutual, excl );
+  nearest_mut_start = mutual(nearest_mut_idx);
+  nearest_mut_stop = nearest_mut_start + mutual_length(nearest_mut_idx)-1;
   
-  dist_between = mutual(nearest_before_idx) - excl;
+  ind_mut = nearest_mut_start:nearest_mut_stop;
+  ind_excl = excl:excl_stop;
   
-  keep_ind(i) = dist_between > exclusive_length(i);
+  keep_ind(i) = isempty( intersect(ind_mut, ind_excl) );
+  
+  
+%   nearest_before_idx = shared_utils.sync.nearest_before( mutual, excl );
+%   
+%   dist_between = mutual(nearest_before_idx) - excl;
+%   
+%   keep_ind(i) = dist_between > exclusive_length(i);
   
 %   mut_start = mutual( nearest_before_idx );
 %   mut_stop = mut_start +  mutual_length( nearest_before_idx ) - 1;
