@@ -36,6 +36,7 @@ window_size = params.window_size;
 step_size = params.step_size;
 
 parfor i = 1:numel(aligned_mats)
+
   fprintf( '\n %d of %d', i, numel(aligned_mats) );
   
   aligned = shared_utils.io.fload( aligned_mats{i} );
@@ -58,12 +59,22 @@ parfor i = 1:numel(aligned_mats)
   bounds = struct();
   
   meta = shared_utils.io.fload( fullfile(unified_p, un_f) );
-  
+  hell = 1
   if ( params.require_fixation )
+    if ( ~shared_utils.io.fexists(fullfile(fix_p, un_f)) )
+      warning( 'Missing fix file for "%s".', un_f );
+      continue;
+    end
+    
     fix_file = shared_utils.io.fload( fullfile(fix_p, un_f) );
   end
   
   if ( params.remove_blink_nans )
+    if ( ~shared_utils.io.fexists(fullfile(blink_p, un_f)) )
+      warning( 'Missing blink file for "%s".', un_f );
+      continue;
+    end
+    
     blinks = shared_utils.io.fload( fullfile(blink_p, un_f) );
   end
   

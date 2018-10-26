@@ -70,7 +70,7 @@ parfor i = 1:numel(mats)
       func = roi_funcs(key);
       rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect ); 
       rect_map(key) = rect;
-      if k == 5 % outside1
+      if k == 6 % outside1
          [a,dayidx,runidx] = check_mats(x,mats{i});
          if a ~= 1 %  
             rect_map(key) = rect;
@@ -82,7 +82,7 @@ parfor i = 1:numel(mats)
             rect_map(key) = rect; % directly assign roi based on clustering     
          end   
       end
-      if k == 6 % outside2
+      if k == 7 % outside2
          %[a,dayidx,runidx] = check_mats(x,mats{i});
          if a ~= 1 %  
             rect_map(key) = rect;

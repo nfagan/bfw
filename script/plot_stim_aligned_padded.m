@@ -1,8 +1,12 @@
 conf = bfw.config.load();
 
+session_types = bfw.get_sessions_by_stim_type( conf );
+
 use_events = true;
 
-select_files = { '10112018', '10152018', '10162018', '10172018', '10182018', '10192018', '10222018' };
+select_files = { '10112018', '10152018', '10162018', '10172018', '10182018' ...
+  , '10192018', '10222018', '10232018', '10242018' };
+
 % select_files = { '10162018' };
 
 if ( use_events )
@@ -24,7 +28,6 @@ if ( use_events )
   sample_key = evt_outs.samples_key;
 
   prune( bfw.get_region_labels(labs) );
-
 else
   aligned_outs = get_stim_aligned_samples( ...
       'config', conf ...
@@ -118,13 +121,12 @@ pdat = newdat;
 
 do_save = true;
 per_run = false;
-per_day = true;
-is_padded = false;
+per_day = false;
+is_padded = true;
 
 base_mask = fcat.mask( plabs ...
   , @find, {'in_bounds_face', 'in_bounds_eyes_nf'} ...
   , @findnone, '10112018_position_1.mat' ...
-  , @find, {'10192018', '10222018'} ...
 );
 
 if ( is_padded )

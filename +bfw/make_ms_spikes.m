@@ -24,6 +24,7 @@ un_mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_c
 ms_visited_files = containers.Map();
 
 for i = 1:numel(un_mats)
+
   fprintf( '\n %d of %d', i, numel(un_mats) );
   
   unified = shared_utils.io.fload( un_mats{i} );
@@ -43,7 +44,7 @@ for i = 1:numel(un_mats)
   ms_file_map_dir_components = un0.ms_firings_file_map_directory;
   
   ms_firings_fullfile = fullfile( data_root, ms_file_map_dir_components{:}, ms_file_map );
-  
+   
   if ( ~shared_utils.io.fexists(ms_firings_fullfile) )
     fprintf( '\n Warning: ms file map "%s" does not exist. Skipping "%s"' ...
       , ms_firings_fullfile, un_filename );
@@ -96,7 +97,7 @@ for i = 1:numel(un_mats)
   ms_unit_ratings = cellfun( @(x) x, ms_channel_map(2:end, rating_ind) );
   
   c_day_ind = strcmp( ms_day_ids, un0.mat_directory_name );
-  
+
   if ( ~any(c_day_ind) )
     fprintf( '\n Warning: No mountain sort units were defined for "%s"', un0.mat_directory_name );
     continue;
@@ -151,7 +152,7 @@ for i = 1:numel(un_mats)
     else
        error('wrong field name!, should be either file_name or filename')
     end  
-    
+  
     %firings_filename = current_file_map.file_name;
     firings_channels = bfw.parse_json_channel_numbers( current_file_map.channels );
     firings_channels = sort( firings_channels );
@@ -159,9 +160,15 @@ for i = 1:numel(un_mats)
     %firings_full_file = fullfile( data_root, un0.ms_firings_directory{:}, firings_filename );
     name_info = strsplit(firings_filename,'_');
     region_info = name_info{1};
+     b = strrep(un0.plex_filename,'.pl2','.mda');    
     mdaout_name = strcat(region_info,'_',strrep(un0.plex_filename,'.pl2','.mda'));
-    firings_full_file = fullfile(data_root,un0.ms_firings_directory{:},mdaout_name);
+     if ismember(b(1:3),{'Kur'})
+        mdaout_name = strcat(strrep(un0.plex_filename,'.pl2',''),'_',lower(name_info{4}),'_raw_out.mda');
+     hello = 1  
+     end 
     
+    firings_full_file = fullfile(data_root,un0.ms_firings_directory{:},mdaout_name);
+%      hello = 1
     if ( ~shared_utils.io.fexists(firings_full_file) )
       fprintf( '\n Warning: missing firings_out file "%s" for "%s".' ...
         , firings_filename, un_filename );
@@ -220,9 +227,9 @@ for i = 1:numel(un_mats)
         
         unit_n_this_channel = unit_ns_this_channel(h);
         ms_unit_id_ind = ms_unit_ids_from1 == unit_n_this_channel;
-        
+
         complete_ms_index( ms_channel_id_ind ) = ms_unit_id_ind;
-      
+        
         if ( ~any(ms_unit_id_ind) )
 %           fprintf( '\n Warning: No units matched id %d for "%s".', unit_n_this_channel, un_filename );
           error( 'No units matched id %d for channel %d in "%s".' ...
