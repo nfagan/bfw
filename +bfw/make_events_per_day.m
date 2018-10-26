@@ -77,7 +77,7 @@ allow_overwrite = params.overwrite;
 
 event_info = Container();
 
-event_info_keys = { 'times', 'durations', 'lengths', 'ids', 'looked_first' };
+event_info_keys = { 'times', 'durations', 'lengths', 'ids', 'looked_first', 'broke_first' };
 event_info_vals = 1:numel(event_info_keys);
 event_info_key = containers.Map( event_info_keys, event_info_vals );
 
@@ -109,26 +109,10 @@ for i = 1:numel(events)
       c_durations = evt.durations{row, col};
       c_lengths = evt.lengths{row, col};
       
-      [c_ids, c_looked_first] = get_ids_look_first( evt, monk, row, col, is_old_evts );
+      [c_ids, c_looked_first, c_broke_first] = get_ids_look_first( evt, monk, row, col, is_old_evts );
       
-      look_orders = cell( numel(c_looked_first), 1 );
-      
-      for h = 1:numel(c_looked_first)
-        look_order = c_looked_first(h);
-        
-        if ( isnan(look_order) )
-          lo = 'NaN';
-        elseif ( look_order == 0 )
-          lo = 'simultaneous';
-        elseif ( look_order == 1 )
-          lo = 'm1';
-        else
-          assert( look_order == 2, 'Unrecognized look order %d.', look_order );
-          lo = 'm2';
-        end        
-        
-        look_orders{h} = sprintf( 'look_order__%s', lo );
-      end
+      look_orders = get_look_orders( c_looked_first );
+      broke_orders = get_broke_orders( c_broke_first );
       
       labs = SparseLabels.create( ...
           'unified_filename', unified_filename ...
@@ -136,9 +120,11 @@ for i = 1:numel(events)
         , 'looks_to', roi ...
         , 'looks_by', monk ...
         , 'look_order', look_orders ...
+        , 'broke_order', broke_orders ...
       );
     
-      data = [ c_evt_times(:), c_durations(:), c_lengths(:), c_ids(:), c_looked_first(:) ];
+      data = [ c_evt_times(:), c_durations(:), c_lengths(:), c_ids(:) ...
+        , c_looked_first(:), c_broke_first(:) ];
     
       event_info = append( event_info, Container(data, labs) );
     end
@@ -176,18 +162,67 @@ end
 
 end
 
-function [c_ids, c_looked_first] = get_ids_look_first(events_file, monk, row, col, is_old)
+function look_orders = get_look_orders(c_looked_first)
+
+look_orders = cell( numel(c_looked_first), 1 );
+      
+for i = 1:numel(c_looked_first)
+  look_order = c_looked_first(i);
+
+  if ( isnan(look_order) )
+    lo = 'NaN';
+  elseif ( look_order == 0 )
+    lo = 'simultaneous';
+  elseif ( look_order == 1 )
+    lo = 'm1';
+  else
+    assert( look_order == 2, 'Unrecognized look order %d.', look_order );
+    lo = 'm2';
+  end        
+
+  look_orders{i} = sprintf( 'look_order__%s', lo );
+end
+
+end
+
+function broke_orders = get_broke_orders(c_broke_first)
+
+broke_orders = cell( numel(c_broke_first), 1 );
+      
+for i = 1:numel(c_broke_first)
+  broke_order = c_broke_first(i);
+
+  if ( isnan(broke_order) )
+    lo = 'NaN';
+  elseif ( broke_order == 0 )
+    lo = 'simultaneous';
+  elseif ( broke_order == 1 )
+    lo = 'm1';
+  else
+    assert( broke_order == 2, 'Unrecognized look order %d.', broke_order );
+    lo = 'm2';
+  end        
+
+  broke_orders{i} = sprintf( 'broke_order__%s', lo );
+end
+
+end
+
+function [c_ids, c_looked_first, c_broke_first] = get_ids_look_first(events_file, monk, row, col, is_old)
 
 if ( is_old )
   c_ids = double( events_file.identifiers{row, col} );
   c_looked_first = nan( size(c_ids) );
+  c_broke_first = nan( size(c_ids) );
 
   if ( strcmp(monk, 'mutual') )
     c_looked_first = events_file.looked_first_indices{row, 1};
+    c_broke_first = events_file.broke_first_indices{row, 1};
   end
 else
   c_ids = nan( size(events_file.times{row, col}) );
   c_looked_first = events_file.initiated{row, col};
+  c_broke_first = nan( size(c_looked_first) );
 end
 
 end
