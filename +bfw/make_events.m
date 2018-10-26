@@ -182,6 +182,10 @@ function keep_ind = remove_overlapping_exclusive_events(mutual, mutual_length, e
 
 keep_ind = true( size(exclusive) );
 
+if ( isempty(mutual) )
+  return;
+end
+
 for i = 1:numel(exclusive)
   
   excl = exclusive(i);
