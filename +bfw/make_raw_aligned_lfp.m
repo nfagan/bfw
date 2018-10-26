@@ -3,6 +3,7 @@ function make_raw_aligned_lfp(varargin)
 import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
+defaults.events_subdir = 'raw_events';
 defaults.window_size = 150;
 defaults.look_back = -500;
 defaults.look_ahead = 500;
@@ -15,11 +16,12 @@ params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
 isd = params.input_subdir;
 osd = params.output_subdir;
+esd = params.events_subdir;
 files = params.files;
 fc = params.files_containing;
 do_cache = params.cache;
 
-event_p = bfw.gid( fullfile('raw_events', isd), conf );
+event_p = bfw.gid( fullfile(esd, isd), conf );
 lfp_p = bfw.gid( fullfile('lfp', isd), conf );
 aligned_p = bfw.gid( fullfile('raw_aligned_lfp', osd), conf );
 
@@ -33,7 +35,7 @@ loop_inds = get_loop_indices( numel(mats), numlabs );
 for i = loop_inds
   shared_utils.general.progress( i, numel(mats), mfilename );
 
-  events_file = fload( mats{i} );
+  events_file = get_events_file( mats{i}, esd, event_p );
 
   unified_filename = events_file.unified_filename;
   output_filename = fullfile( aligned_p, unified_filename );
@@ -151,5 +153,66 @@ function idx = get_loop_indices(n_mats, n_workers)
 
 all_indices = shared_utils.vector.distribute( 1:n_mats, n_workers );
 idx = all_indices{labindex};
+
+end
+
+function tf = is_old_events(esd)
+tf = strcmp( esd, 'events_per_day' );
+end
+
+function events_file = get_events_file(full_filename, events_subdir, event_p)
+
+events_file = shared_utils.io.fload( full_filename );
+
+if ( ~is_old_events(events_subdir) )
+  return
+end
+
+un_filename = events_file.unified_filename;
+
+if ( events_file.is_link )
+  events_file = shared_utils.io.fload( fullfile(event_p, events_file.data_file) );
+end
+
+events_file = convert_events_per_day_to_new_format( events_file, un_filename );
+
+end
+
+function out_file = convert_events_per_day_to_new_format(events_file, unified_filename)
+
+event_info = only( events_file.event_info, unified_filename );
+
+event_info_data = event_info.data;
+event_info_labs = fcat.from( event_info.labels );
+
+renamecat( event_info_labs, 'look_order', 'initiator' );
+renamecat( event_info_labs, 'looks_to', 'roi' );
+rmcat( event_info_labs, {'session_name', 'unified_filename'} );
+
+is_mut = find( event_info_labs, 'mutual' );
+
+if ( ~isempty(event_info_labs) )
+  addsetcat( event_info_labs, 'event_type', 'exclusive_event' );
+  setcat( event_info_labs, 'event_type', 'mutual_event', is_mut );
+end
+
+replace( event_info_labs, 'look_order__m1', 'm1_initiated' );
+replace( event_info_labs, 'look_order__m2', 'm2_initiated' );
+replace( event_info_labs, 'look_order__simultaneous', '<initiator>' );
+replace( event_info_labs, 'look_order__NaN', '<initiator>' );
+
+prune( event_info_labs );
+
+event_key = containers.Map();
+event_key('duration') = events_file.event_info_key('durations');
+event_key('length') = events_file.event_info_key('lengths');
+event_key('start_time') = events_file.event_info_key('times');
+
+out_file = struct();
+out_file.unified_filename = unified_filename;
+out_file.events = event_info_data;
+out_file.categories = columnize( getcats(event_info_labs) )';
+out_file.labels = cellstr( event_info_labs );
+out_file.event_key = event_key;
 
 end

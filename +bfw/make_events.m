@@ -63,6 +63,7 @@ for i = 1:numel(bound_mats)
   all_event_durations = cell( size(all_events) );
   all_looked_first_indices = cell( numel(roi_names), 1 );
   all_looked_first_distances = cell( size(all_looked_first_indices) );
+  all_broke_first_indices = cell( size(all_looked_first_indices) );
   
   event_roi_key = containers.Map();
   monk_key = containers.Map();
@@ -110,9 +111,11 @@ for i = 1:numel(bound_mats)
       [mutual_bounds, mutual_indices] = fill_gaps( mutual_bounds, mutual_indices, adjusted_fill_gaps_duration );
     end 
     
-%     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
     looked_first_index = who_looked_first( mutual_indices, m1_evts, m2_evts );
     looked_first_distance = nan( size(looked_first_index) );
+    
+    broke_first_index = who_broke_first( mutual_indices, mutual_bounds ...
+      , m1_evts, m1_bounds, m2_evts, m2_bounds );
     
     %   NEW -- ensure exclusive events are truly exclusive of mutual
     m1_evts = setdiff( m1_evts, mutual_indices );
@@ -145,6 +148,7 @@ for i = 1:numel(bound_mats)
     
     all_looked_first_indices{j, 1} = looked_first_index;
     all_looked_first_distances{j, 1} = looked_first_distance;
+    all_broke_first_indices{j, 1} = broke_first_index;
     
     event_roi_key(roi_name) = j;
   end
@@ -155,6 +159,7 @@ for i = 1:numel(bound_mats)
   events.lengths = all_event_lengths;
   events.durations = cellfun( @(x) x .* bounds.step_size, all_event_durations, 'un', false );
   events.looked_first_indices = all_looked_first_indices;
+  events.broke_first_indices = all_broke_first_indices;
   events.looked_first_distances = all_looked_first_distances;
   events.looked_first_durations = cellfun( @(x) x .* bounds.step_size, all_looked_first_distances, 'un', false );
   
@@ -178,6 +183,53 @@ end
 
 end
 
+function broke_first_index = who_broke_first(mutual_evts, mutual_bounds, m1_evts, m1_bounds, m2_evts, m2_bounds)
+
+if ( isempty(mutual_evts) )
+  broke_first_index = [];
+  return;
+end
+
+mut_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual_evts );
+m1_length =  arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
+m2_length =  arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
+
+broke_first_index = nan( size(mutual_evts) );
+
+for i = 1:numel(mutual_evts)
+  mut_start = mutual_evts(i);
+  mut_stop = mut_start + mut_length(i) - 1;
+  
+  nearest_m1_idx = shared_utils.sync.nearest( m1_evts, mut_start );
+  nearest_m2_idx = shared_utils.sync.nearest( m2_evts, mut_start );
+  
+  m1_start = m1_evts(nearest_m1_idx);
+  m2_start = m2_evts(nearest_m2_idx);
+  
+  is_m1_start = m1_start == mut_start;
+  is_m2_start = m2_start == mut_start;
+  
+  assert( is_m1_start | is_m2_start, 'Some events did not have a reliable start index.' );
+  
+  m1_stop = m1_start + m1_length(nearest_m1_idx) - 1;
+  m2_stop = m2_start + m2_length(nearest_m2_idx) - 1;
+  
+  is_m1_stop = m1_stop == mut_stop;
+  is_m2_stop = m2_stop == mut_stop;
+  
+  if ( is_m1_stop && is_m2_stop )
+    broke_first_index(i) = 0;
+  elseif ( is_m1_stop )
+    broke_first_index(i) = 1;
+  elseif ( is_m2_stop )
+    broke_first_index(i) = 2;
+  else
+    error( 'No recognized stop index.' );
+  end
+end
+
+end
+
 function keep_ind = remove_overlapping_exclusive_events(mutual, mutual_length, exclusive, exclusive_length)
 
 keep_ind = true( size(exclusive) );
@@ -195,29 +247,6 @@ for i = 1:numel(exclusive)
   ind_excl = excl:excl_stop;
   
   keep_ind(i) = isempty( intersect(ind_mut, ind_excl) );
-  
-  
-%   nearest_before_idx = shared_utils.sync.nearest_before( mutual, excl );
-%   
-%   dist_between = mutual(nearest_before_idx) - excl;
-%   
-%   keep_ind(i) = dist_between > exclusive_length(i);
-  
-%   mut_start = mutual( nearest_before_idx );
-%   mut_stop = mut_start +  mutual_length( nearest_before_idx ) - 1;
-% 
-%   excl_stop = excl + exclusive_length(i) - 1;
-% 
-%   figure(1); clf();
-% 
-%   plot( mut_start:mut_stop, ones(1, numel(mut_start:mut_stop)), 'r', 'linewidth', 5 );
-%   hold on;
-%   
-%   if ( numel(excl:excl_stop) == 1 )
-%     plot( excl:excl_stop, zeros(1, numel(excl:excl_stop)), 'b*', 'markersize', 5);
-%   else
-%     plot( excl:excl_stop, zeros(1, numel(excl:excl_stop)), 'b', 'linewidth', 5);
-%   end
 end
 
 end

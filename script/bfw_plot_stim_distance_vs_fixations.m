@@ -40,6 +40,8 @@ fixdat = logical( ib(:, t_ind) );
 
 uselabs = labs';
 
+n_bins = 5;
+
 mask = fcat.mask( uselabs ...
   , @findnone, session_types.m1_exclusive_sessions ...
   , @find, 'm1' ...
@@ -47,7 +49,7 @@ mask = fcat.mask( uselabs ...
   , @find, 'face_padded_large' ...
 );
 
-[~, edges] = histcounts( stim_distances, 10 );
+[~, edges] = histcounts( stim_distances, n_bins );
 bin_indices = discretize( stim_distances, edges );
 
 bin_values = nan( size(bin_indices) );
@@ -72,7 +74,7 @@ meandat = [ meanfix; meandur ];
 
 %%
 
-do_save = true;
+do_save = false;
 
 pltlabs = meanlabs';
 
@@ -88,7 +90,7 @@ X(stim_ind) = X(stim_ind) + 5;
 assert_ispair( X, pltlabs );
 assert_ispair( Y, pltlabs );
 
-pl = plotlabeled();
+pl = plotlabeled.make_common();
 pl.marker_size = 10;
 
 mask = fcat.mask( pltlabs, find(~isnan(X)) ...
@@ -121,16 +123,16 @@ for i = 1:numel(I)
   
   set( ax, 'xtick', bvals );
   shared_utils.plot.xlabel( ax, 'Distance from eye-center (px)' );
-  shared_utils.plot.set_xlims( ax, [-100, 800] );
+  shared_utils.plot.match_xlims( ax );
   
   figs(i) = f;
-  
-  if ( do_save )
-    shared_utils.plot.fullscreen( f );
-    dsp3.req_savefig( f, plot_p, plt_labs, csunion(fcats, pcats), 'scatter' );
-  end
   
   all_axs = [ all_axs; ax(:) ];
 end
 
-shared_utils.plot.match_ylims( all_axs );
+if ( do_save )
+  for i = 1:numel(I)
+    shared_utils.plot.fullscreen( figs(i) );
+    dsp3.req_savefig( f, plot_p, pltlabs(I{i}), csunion(fcats, pcats), 'scatter' );
+  end
+end

@@ -21,6 +21,7 @@ samp_p = bfw.gid( samples_subdir, conf );
 fix_p = fullfile( samp_p, fsd );
 time_p = fullfile( samp_p, 'time' );
 pos_p = fullfile( samp_p, 'position' );
+stim_meta_p = bfw.gid( 'stim_meta', conf );
 
 mats = bfw.rim( params.files, stim_p, params.files_containing );
 
@@ -31,7 +32,7 @@ amps = cell( s );
 labels = cell( s );
 is_ok = true( s );
 
-for i = 1:numel(mats)
+parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   stim_file = shared_utils.io.fload( mats{i} );
@@ -45,27 +46,58 @@ for i = 1:numel(mats)
     fix_file = bfw.load_intermediate( fix_p, unified_filename );
     t_file = bfw.load_intermediate( time_p, unified_filename );
     meta_file = bfw.load_intermediate( meta_p, unified_filename );
+    stim_meta_file = bfw.load_intermediate( stim_meta_p, unified_filename );
     
-    outs = amp_vel_main( stim_file, meta_file, t_file, pos_file, fix_file, params );
+    outs = amp_vel_main( stim_file, meta_file, stim_meta_file ...
+      , t_file, pos_file, fix_file, params );
+    
+    velocities{i} = outs.velocities;
+    amps{i} = outs.amplitudes;
+    labels{i} = outs.labels;    
   catch err
     bfw.print_fail_warn( unified_filename, err.message );
+    
+    is_ok(i) = false;
     continue;
   end
 end
 
+velocities = velocities(is_ok);
+amps = amps(is_ok);
+labels = labels(is_ok);
+
+outs = struct();
+outs.velocities = vertcat( velocities{:} );
+outs.amps = vertcat( amps{:} );
+outs.labels = vertcat( fcat(), labels{:} );
+
 end
 
 
-function l = make_stim_labs(stim_file, meta_file)
+function l = make_stim_labs(stim_file, meta_file, stim_meta_file)
 
 n_stim = numel( stim_file.stimulation_times );
 n_sham = numel( stim_file.sham_times );
 
+if ( n_stim + n_sham == 0 )
+  l = fcat();
+  return
+end
+
 l = join( bfw.make_stim_labels(n_stim, n_sham), bfw.struct2fcat(meta_file) );
+
+if ( stim_meta_file.used_stimulation )
+  protocol_name = stim_meta_file.protocol_name;
+else
+  protocol_name = 'no_stimulation';
+end
+
+addsetcat( l, 'stim_protocol', protocol_name );
+addsetcat( l, 'looks_by', 'm1' );
 
 end
 
-function outs = amp_vel_main(stim_file, meta_file, t_file, pos_file, fix_file, params)
+function outs = amp_vel_main(stim_file, meta_file, stim_meta_file, t_file, pos_file, fix_file, params)
 
 stim_times = [ stim_file.stimulation_times(:); stim_file.sham_times(:) ];
 
@@ -80,7 +112,7 @@ look_ahead = params.look_ahead;
 amps = rownan( numel(stim_times) );
 vels = rownan( rows(amps) );
 
-labs = make_stim_labs( stim_file, meta_file );
+labs = make_stim_labs( stim_file, meta_file, stim_meta_file );
 
 for i = 1:numel(stim_times)
   nearest_idx = shared_utils.sync.nearest( t, stim_times(i) );
