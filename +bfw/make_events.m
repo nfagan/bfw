@@ -10,7 +10,7 @@ defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
 defaults.fill_gaps = false;
 defaults.fill_gaps_duration = 50;
-defaults.remove_overlapping_exclusive_events = false;
+defaults.remove_overlapping_exclusive_events = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -36,7 +36,6 @@ for i = 1:numel(bound_mats)
   bounds = shared_utils.io.fload( bound_mats{i} );
   
   m_fields = intersect( {'m1', 'm2'}, fieldnames(bounds) );
-  
   unified_filename = bounds.(m_fields{1}).unified_filename;
   full_filename = fullfile( save_p, unified_filename );
   
