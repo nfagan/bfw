@@ -108,8 +108,10 @@ for i = 1:numel(mats)
     continue;
   end
   
-  shared_utils.io.require_dir( events_p );
-  shared_utils.io.psave( output_filename, events_file, 'events_file' );
+  if ( params.save )
+    shared_utils.io.require_dir( events_p );
+    shared_utils.io.psave( output_filename, events_file, 'events_file' );
+  end
 end
 
 end
@@ -124,56 +126,151 @@ labels = {};
 if ( ~isempty(mutual) )
   %   Ensure that exclusive events are not also contained in mutual events
   %   (i.e., that exclusive events are truly exclusive)
-  
-  mut_events = mutual.events(:, mutual.event_key('start_index'));
-  progenitors = cell( size(mut_events) );
-  got_progenitor = false( size(mut_events) );
-  
-  for i = 1:numel(monk_ids)
-    monk_id = monk_ids{i};
-    
-    events = exclusive.(monk_id).events(:, exclusive.(monk_id).event_key('start_index'));
-    is_duplicate = ismember( events, mut_events );
-    
-    exclusive.(monk_id).events(is_duplicate, :) = [];
-    
-    is_matching = ismember( mut_events, events );
-    
-    %   The progenitor is subject that initiated the event. This is *not*
-    %   the subject for which the exclusive event time matches the mutual
-    %   time, but rather the other subject.
-    progen = char( setdiff(monk_ids, monk_id) );
-    
-    got_progenitor(is_matching) = true;
-    progenitors(is_matching) = { sprintf('%s_initiated', progen) };
-  end
-  
-  assert( all(got_progenitor), 'Some mutual events did not have a progenitor.' );
+  [mutual_labels, exclusive] = reconcile_mutual_exclusive( mutual, exclusive, monk_ids );
   
   all_event_info = mutual.events;
   looks_by = repmat( {'mutual'}, rows(all_event_info), 1 );
   event_type = repmat( {'mutual_event'}, size(looks_by) );
   
-  labels = [ labels; [looks_by, progenitors, event_type] ];
+  progenitor_ids = mutual_labels.progenitor_ids;
+  broke_ids = mutual_labels.broke_ids;
+  
+  labels = [ labels; [looks_by, progenitor_ids, broke_ids, event_type] ];
 end
 
 for i = 1:numel(monk_ids)
   monk_id = monk_ids{i};
   
   event_info = exclusive.(monk_id).events;
+  
   looks_by = repmat( monk_ids(i), rows(event_info), 1 );
-  progenitor = repmat( {'<initiator>'}, rows(event_info), 1 );
-  event_type = repmat( {'exclusive_event'}, size(progenitor) );
+  progenitor_ids = repmat( {get_initiated_label(monk_id)}, size(looks_by) );
+  broke_ids = repmat( {get_terminated_label(monk_id)}, size(looks_by) );
+  event_type = repmat( {'exclusive_event'}, size(looks_by) );
   
   all_event_info = [ all_event_info; event_info ];
-  labels = [ labels; [looks_by, progenitor, event_type] ];
+  labels = [ labels; [looks_by, progenitor_ids, broke_ids, event_type] ];
 end
 
 outs = struct();
 outs.events = all_event_info;
 outs.event_key = exclusive.(monk_ids{1}).event_key;
 outs.labels = labels;
-outs.categories = { 'looks_by', 'initiator', 'event_type' };
+outs.categories = { 'looks_by', 'initiator', 'terminator', 'event_type' };
+
+end
+
+function l = get_initiated_label(m_id)
+l = sprintf( '%s_initiated', m_id );
+end
+
+function l = get_terminated_label(m_id)
+l = sprintf( '%s_terminated', m_id );
+end
+
+function [labels, exclusive] = reconcile_mutual_exclusive(mutual, exclusive, monk_ids)
+
+mut_evt_starts = mutual.events(:, mutual.event_key('start_index'));
+mut_evt_stops = mutual.events(:, mutual.event_key('stop_index'));
+
+progenitor_ids = cell( numel(mut_evt_starts), 1 );
+broke_ids = cell( size(progenitor_ids) );
+
+matches_start = false( numel(mut_evt_starts), numel(monk_ids) );
+matches_stop = false( size(matches_start) );
+
+for i = 1:numel(monk_ids)
+  monk_id = monk_ids{i};
+  
+  excl = exclusive.(monk_id);
+  start_col_idx = excl.event_key('start_index');
+  stop_col_idx = excl.event_key('stop_index');
+  
+  start_indices = excl.events(:, start_col_idx);
+  stop_indices = excl.events(:, stop_col_idx);
+  
+  matches_start(:, i) = arrayfun( @(x) any(x == start_indices), mut_evt_starts );
+  matches_stop(:, i) = arrayfun( @(x) any(x == stop_indices), mut_evt_stops );
+  
+  % check whether, for each start:stop of an exclusive event, a mutual
+  % event falls within that range. if so, remove it.
+  needs_removal = rowzeros( numel(start_indices), 'logical' );
+  
+  for j = 1:numel(start_indices)
+    excl_evt_range = start_indices(j):stop_indices(j);
+    
+    for k = 1:numel(mut_evt_starts)
+      mut_evt_range = mut_evt_starts(k):mut_evt_stops(k);
+      
+      if ( ~isempty(intersect(mut_evt_range, excl_evt_range)) )
+        needs_removal(j) = true;
+        break;
+      end
+    end
+  end
+  
+  % remove exclusive events that overlap.
+  exclusive.(monk_id).events(needs_removal, :) = [];
+end
+
+mult_starts = sum( matches_start, 2 );
+mult_stops = sum( matches_stop, 2 );
+
+is_simultaneous_start = find( mult_starts > 1 );
+is_simultaneous_stop = find( mult_stops > 1 );
+
+is_single_start = find( mult_starts == 1 );
+is_single_stop = find( mult_stops == 1 );
+
+for i = 1:numel(is_simultaneous_start)
+  progenitor_ids{is_simultaneous_start(i)} = 'simultaneous_start';
+end
+
+for i = 1:numel(is_simultaneous_stop)
+  broke_ids{is_simultaneous_stop(i)} = 'simultaneous_stop';
+end
+
+% assumption is that for each single start, non-started id is the
+% initiator.
+assert( numel(monk_ids) == 2, 'Expected 2 monk ids; got %d.', numel(monk_ids) );
+
+% check which subject initiated.
+for i = 1:numel(is_single_start)
+  ind = is_single_start(i);
+  
+  for j = 1:numel(monk_ids)
+    if ( matches_start(ind, j) )
+      assert( isempty(progenitor_ids{ind}) );
+      
+      m_id = setdiff( monk_ids, monk_ids(j) );
+      
+      progenitor_ids{ind} = get_initiated_label( char(m_id) );
+    end
+  end
+end
+
+% check which subject terminated.
+for i = 1:numel(is_single_stop)
+  ind = is_single_stop(i);
+  
+  for j = 1:numel(monk_ids)
+    if ( matches_stop(ind, j) )
+      assert( isempty(broke_ids{ind}) );
+      
+      broke_ids{ind} = get_terminated_label( monk_ids{j} );
+    end
+  end
+end
+
+assigned_progenitors = all( ~cellfun(@isempty, progenitor_ids) );
+assigned_broke = all( ~cellfun(@isempty, broke_ids) );
+
+assert( all(assigned_progenitors), 'Not all progenitor ids were assigned.' );
+assert( all(assigned_broke), 'Not all terminator ids were assigned.' );
+
+labels = struct();
+labels.progenitor_ids = progenitor_ids;
+labels.broke_ids = broke_ids;
 
 end
 
