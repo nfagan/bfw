@@ -1,4 +1,4 @@
-function outs = debug_raw_look_back(varargin)
+function outs = bfw_stim_amp_vs_vel(varargin)
 
 import shared_utils.io.fload;
 
@@ -23,7 +23,6 @@ stim_p =    bfw.gid( 'stim', conf );
 meta_p =    bfw.gid( 'meta', conf );
 events_p =  bfw.gid( event_subdir, conf );
 samples_p = bfw.gid( samples_subdir, conf );
-roi_p =     bfw.gid( 'rois', conf );
 
 stim_mats = bfw.require_intermediate_mats( params.files, stim_p, params.files_containing );
 
@@ -34,7 +33,6 @@ all_to_keep = cell( s );
 all_offsets = cell( s );
 all_ts = cell( s );
 all_samples = cell( s );
-all_distances = cell( s );
 
 is_valid = true( s );
 
@@ -43,7 +41,7 @@ look_ahead = params.look_ahead;
 
 keep_thresh = params.keep_within_threshold;
 
-parfor idx = 1:numel(stim_mats)
+for idx = 1:numel(stim_mats)
   shared_utils.general.progress( idx, numel(stim_mats) );
   
   stim_file = shared_utils.io.fload( stim_mats{idx} );
@@ -57,7 +55,6 @@ parfor idx = 1:numel(stim_mats)
     events_file = fload( fullfile(events_p, un_filename) );
     time_file =   fload( fullfile(samples_p, 'time', un_filename) );
     meta_file =   fload( fullfile(meta_p, un_filename) );
-    roi_file =    fload( fullfile(roi_p, un_filename) );
     
     if ( params.include_samples )
       position_file = fload( fullfile(samples_p, 'position', un_filename) );
@@ -91,7 +88,6 @@ parfor idx = 1:numel(stim_mats)
   tmp_offsets = [];
   tmp_labs = fcat();
   tmp_samples = {};
-  tmp_distances = [];
   
   sr = 1 / (1e3/events_file.params.step_size);
 
@@ -117,7 +113,6 @@ parfor idx = 1:numel(stim_mats)
     all_ib = zeros( numel(all_stim_times), numel(plot_t) );
     to_keep = rowones( numel(all_stim_times), 'logical' );
     offsets = rowzeros( numel(all_stim_times) );
-    stim_distances = nan( size(offsets) );
     
     positions = cell( size(to_keep) );
     timestamps = cell( size(positions) );
@@ -129,6 +124,9 @@ parfor idx = 1:numel(stim_mats)
     if ( params.include_samples )
       pos = position_file.(monk_id);
     end
+    
+    amps = rownan( numel(all_stim_times) );
+    vels = rownan( numel(all_stim_times) );
 
     for i = 1:numel(all_stim_times)
       evts = subset_event_info(:, start_time_col);
@@ -137,10 +135,16 @@ parfor idx = 1:numel(stim_mats)
 
       nearest_stim_time_idx = shared_utils.sync.nearest( t, current_stim_time );
       nearest_stim_time = t(nearest_stim_time_idx); 
-
-      range_times = plot_t + nearest_stim_time;
-      evt_idx = find( evts >= range_times(1) & evts <= range_times(end) );
-
+      
+      stim_idx = find( evts < nearest_stim_time, 1, 'last' );
+      
+      evt_idx = find( evts >= nearest_stim_time & evts <= nearest_stim_time + look_ahead, 2 );
+      
+      if ( numel(evt_idx) < 2 ), continue; end
+      
+      evt_start_indices_in_range = subset_event_info(evt_idx, start_index_col);
+      evt_stop_indices_in_range = subset_event_info(evt_idx, stop_index_col);
+      
       evts_in_range = evts(evt_idx);
       evt_lengths_in_range = subset_event_info(evt_idx, length_col);
       evt_stops_in_range = subset_event_info(evt_idx, stop_time_col);
@@ -156,10 +160,8 @@ parfor idx = 1:numel(stim_mats)
         to_keep(i) = false;
         continue;
       end
-      
-      stimulated_event_idx = evt_idx(nearest_stim_idx_after_evt);
-      stimulated_event_time = evts(stimulated_event_idx);
-      event_offset = current_stim_time - stimulated_event_time;
+
+      event_offset = current_stim_time - evts(evt_idx(nearest_stim_idx_after_evt)); 
 
       to_keep(i) = event_offset < keep_thresh;
       offsets(i) = event_offset;
@@ -167,11 +169,6 @@ parfor idx = 1:numel(stim_mats)
       if ( params.include_samples )
         timestamps{i} = cell( numel(nearest_evt_idx), 1 );
         positions{i} = cell( size(timestamps{i}) );
-        
-        stim_event_start = subset_event_info(stimulated_event_idx, start_index_col);
-        
-        stim_distances(i) = ...
-          get_stimulated_event_distance_from_eyes( roi_file, position_file, stim_event_start );
       end
 
       for j = 1:numel(nearest_evt_idx)
@@ -219,7 +216,6 @@ parfor idx = 1:numel(stim_mats)
     tmp_keep = [ tmp_keep; to_keep ];
     tmp_offsets = [ tmp_offsets; offsets ];
     tmp_samples = [ tmp_samples; [timestamps, positions] ];
-    tmp_distances = [ tmp_distances; stim_distances ];
     
     append( tmp_labs, stim_labs );
   end
@@ -230,7 +226,6 @@ parfor idx = 1:numel(stim_mats)
   all_labs{idx} = tmp_labs;
   all_ts{idx} = plot_t;
   all_samples{idx} = tmp_samples;
-  all_distances{idx} = tmp_distances;
 end
 
 outs = struct();
@@ -247,24 +242,6 @@ outs.is_within_threshold = vertcat( all_to_keep{is_valid} );
 outs.event_offsets = vertcat( all_offsets{is_valid} );
 outs.samples = vertcat( all_samples{is_valid} );
 outs.samples_key = get_samples_key();
-outs.stim_distances = vertcat( all_distances{:} );
-
-end
-
-function d = get_stimulated_event_distance_from_eyes(roi_file, pos_file, stim_event_start)
-
-eyes_roi = roi_file.m1.rects('eyes_nf');
-pos = pos_file.m1;
-
-eye_x = mean( eyes_roi([1, 3]) );
-eye_y = mean( eyes_roi([2, 4]) );
-
-eye_w = eyes_roi(3) - eyes_roi(1);
-
-stim_x = pos(1, stim_event_start);
-stim_y = pos(2, stim_event_start);
-
-d = bfw.distance( eye_x, eye_y, stim_x, stim_y );
 
 end
 

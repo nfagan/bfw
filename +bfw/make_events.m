@@ -10,6 +10,7 @@ defaults.mutual_method = 'duration';  % 'duration' or 'plus-minus'
 defaults.plus_minus_duration = 500;
 defaults.fill_gaps = false;
 defaults.fill_gaps_duration = 50;
+defaults.remove_overlapping_exclusive_events = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -104,30 +105,42 @@ for i = 1:numel(bound_mats)
       assert( strcmp(mut_method, 'duration'), 'Unrecognized mutual method "%s".', mut_method );
     end
     
-    mutual = find_starts( mutual_bounds, adjusted_duration );
+    mutual_indices = find_starts( mutual_bounds, adjusted_duration );
     
     if ( params.fill_gaps )
-      [mutual_bounds, mutual] = fill_gaps( mutual_bounds, mutual, adjusted_fill_gaps_duration );
+      [mutual_bounds, mutual_indices] = fill_gaps( mutual_bounds, mutual_indices, adjusted_fill_gaps_duration );
     end 
     
 %     [looked_first_index, looked_first_distance] = who_looked_first( mutual, m1_bounds, m2_bounds );
-    looked_first_index = who_looked_first( mutual, m1_evts, m2_evts );
+    looked_first_index = who_looked_first( mutual_indices, m1_evts, m2_evts );
     looked_first_distance = nan( size(looked_first_index) );
     
     %   NEW -- ensure exclusive events are truly exclusive of mutual
-    m1_evts = setdiff( m1_evts, mutual );
-    m2_evts = setdiff( m2_evts, mutual );
-    %
+    m1_evts = setdiff( m1_evts, mutual_indices );
+    m2_evts = setdiff( m2_evts, mutual_indices );
     
     m1_evt_length = arrayfun( @(x) get_event_length(x, m1_bounds), m1_evts );
     m2_evt_length = arrayfun( @(x) get_event_length(x, m2_bounds), m2_evts );
-    mutual_evt_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual );
+    mutual_evt_length = arrayfun( @(x) get_event_length(x, mutual_bounds), mutual_indices );
     
-    m1_evts = arrayfun( @(x) m1t(x), m1_evts );
-    m2_evts = arrayfun( @(x) m2t(x), m2_evts );
-    mutual = arrayfun( @(x) m1t(x), mutual );
+    if ( params.remove_overlapping_exclusive_events )
+      m1_keep_inds = ...
+        remove_overlapping_exclusive_events( mutual_indices, mutual_evt_length, m1_evts, m1_evt_length );
+      m2_keep_inds = ...
+        remove_overlapping_exclusive_events( mutual_indices, mutual_evt_length, m2_evts, m2_evt_length );
+      
+      m1_evts = m1_evts(m1_keep_inds);
+      m2_evts = m2_evts(m2_keep_inds);
+      
+      m1_evt_length = m1_evt_length(m1_keep_inds);
+      m2_evt_length = m2_evt_length(m2_keep_inds);
+    end    
     
-    all_events(j, :) = { m1_evts, m2_evts, mutual };
+    m1_evt_times = arrayfun( @(x) m1t(x), m1_evts );
+    m2_evt_times = arrayfun( @(x) m2t(x), m2_evts );
+    mutual_times = arrayfun( @(x) m1t(x), mutual_indices );
+    
+    all_events(j, :) = { m1_evt_times, m2_evt_times, mutual_times };
     all_event_lengths(j, :) = { m1_evt_length, m2_evt_length, mutual_evt_length };
     all_event_durations(j, :) = all_event_lengths(j, :);
     
@@ -162,6 +175,38 @@ for i = 1:numel(bound_mats)
   else
     fprintf( '\n Not saving "%s"', unified_filename );
   end
+end
+
+end
+
+function keep_ind = remove_overlapping_exclusive_events(mutual, mutual_length, exclusive, exclusive_length)
+
+keep_ind = true( size(exclusive) );
+
+for i = 1:numel(exclusive)
+  excl = exclusive(i);
+  
+  nearest_before_idx = shared_utils.sync.nearest_before( mutual, excl );
+  
+  dist_between = mutual(nearest_before_idx) - excl;
+  
+  keep_ind(i) = dist_between > exclusive_length(i);
+  
+%   mut_start = mutual( nearest_before_idx );
+%   mut_stop = mut_start +  mutual_length( nearest_before_idx ) - 1;
+% 
+%   excl_stop = excl + exclusive_length(i) - 1;
+% 
+%   figure(1); clf();
+% 
+%   plot( mut_start:mut_stop, ones(1, numel(mut_start:mut_stop)), 'r', 'linewidth', 5 );
+%   hold on;
+%   
+%   if ( numel(excl:excl_stop) == 1 )
+%     plot( excl:excl_stop, zeros(1, numel(excl:excl_stop)), 'b*', 'markersize', 5);
+%   else
+%     plot( excl:excl_stop, zeros(1, numel(excl:excl_stop)), 'b', 'linewidth', 5);
+%   end
 end
 
 end

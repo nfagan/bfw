@@ -2,14 +2,14 @@ conf = bfw.config.load();
 
 conf.PATHS.data_root = get_nf_local_dataroot();
 
-mats = bfw.rim( bfw.gid('summarized_raw_mtpower', conf) );
+mats = bfw.rim( bfw.gid('summarized_raw_coherence', conf) );
 
 datedir = datestr( now, 'mmddyy' );
 plot_p = fullfile( bfw.dataroot(conf), 'plots', 'spectra', datedir );
 
 %%
 
-select = @(x) only(x, {'eyes_nf', 'face'});
+select = @(x) only(x, {'eyes_nf', 'face', 'left_nonsocial_object', 'right_nonsocial_object'});
 
 use_mats = mats;
 
@@ -61,18 +61,24 @@ setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
 
 %%  subtractions, mult
 
-as = { 'face', 'mutual' };
-bs = { 'eyes_nf', 'm1' };
+as = { 'face', 'eyes_nf', 'eyes_nf', 'mutual' };
+bs = { 'eyes_nf', 'face', 'face_non_eyes_nf', 'm1' };
 
-sub_cats = { 'roi', {'looks_by', 'initiator', 'event_type', 'id_m2'} };
-lab_cats = { 'roi', 'looks_by' };
+sub_cats = { 'roi', 'roi', 'roi', {'looks_by', 'initiator', 'event_type', 'id_m2'} };
+lab_cats = { 'roi', 'roi', 'roi', 'looks_by' };
 
 subdat = [];
 sublabs = fcat();
 
 for i = 1:numel(as)
+  shared_utils.general.progress( i, numel(as) );
+  
   uselabs = labs';
   usedat = zdat;
+  
+  mask = fcat.mask( uselabs ...
+    , @(x, varargin) bfw.catfindnot_substr(x, 'region', varargin{:}), 'ref' ...
+  );
   
   a = as{i};
   b = bs{i};
@@ -84,7 +90,7 @@ for i = 1:numel(as)
   subspec = cssetdiff( getcats(uselabs), sub_cats{i} );
 
   [tmp_subdat, tmp_sublabs, I] = dsp3.summary_binary_op( usedat, uselabs' ...
-    , subspec, a, b, opfunc, sfunc );
+    , subspec, a, b, opfunc, sfunc, mask );
 
   setcat( tmp_sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
   addsetcat( tmp_sublabs, 'subtraction_type', sprintf('subtraction__%d', i) );
@@ -98,12 +104,13 @@ end
 do_save = true;
 
 mult_is_zscored = [true];
-mult_is_subtracted = [true, false];
-mult_is_matched = [true, false];
+mult_is_subtracted = [false];
+mult_is_matched = [false];
 mult_is_per_m2 = [true, false];
+mult_is_per_initiator = [false, true];
 
 inds = dsp3.numel_combvec( mult_is_zscored, mult_is_subtracted ...
-  , mult_is_matched, mult_is_per_m2 );
+  , mult_is_matched, mult_is_per_m2, mult_is_per_initiator );
 
 base_subdir = 'without_0927';
 
@@ -116,10 +123,12 @@ for idx = 1:size(inds, 2)
   is_subtracted = mult_is_subtracted(subset_inds(2));
   is_matched =    mult_is_matched(subset_inds(3));
   is_per_m2 =     mult_is_per_m2(subset_inds(4));  
+  is_per_initiator = mult_is_per_initiator(subset_inds(5));
 
   subdir = base_subdir;
   subdir = ternary( is_per_m2, sprintf('%s_per_monkey', subdir), subdir );
   subdir = ternary( is_matched, sprintf('%s_matched', subdir), subdir );
+  subdir = ternary( is_per_initiator, sprintf('%s_per_initiator', subdir), subdir );
 
   if ( is_subtracted )
     pltlabs = sublabs';
@@ -153,37 +162,43 @@ for idx = 1:size(inds, 2)
   fcats = { 'measure', 'roi', 'region' };
   pcats = { 'region', 'roi', 'looks_by', 'measure' };
 
-  if ( is_per_m2 )
-    fcats = csunion( fcats, 'id_m2' );
-  end
-  
-  if ( is_subtracted )
-    fcats = csunion( fcats, 'subtraction_type' );
-  end
+  if ( is_per_m2 ), fcats = csunion( fcats, 'id_m2' ); end
+  if ( is_subtracted ), fcats = csunion( fcats, 'subtraction_type' ); end
+  if ( is_per_initiator ), fcats = csunion( fcats, 'initiator' ); end
 
   mdat = pltdat(mask, f_ind, t_ind);
   mlabs = pltlabs(mask);
+  
+  if ( is_matched )
+    I2 = { mask };
+  else
+    I2 = findall( mlabs, fcats );
+  end
+  
+  for j = 1:numel(I2)
+    [f, axs, I] = pl.figures( @imagesc, mdat(I2{j}, :, :), mlabs(I2{j}), fcats, pcats );
 
-  [f, axs, I] = pl.figures( @imagesc, mdat, mlabs, fcats, pcats );
+    shared_utils.plot.tseries_xticks( axs, subt, 5 );
+    shared_utils.plot.fseries_yticks( axs, round(flip(subf)), 10 );
+    shared_utils.plot.hold( axs, 'on' );
+    shared_utils.plot.add_vertical_lines( axs, find(subt == 0) );
+    shared_utils.plot.fullscreen( f );
 
-  shared_utils.plot.tseries_xticks( axs, subt, 5 );
-  shared_utils.plot.fseries_yticks( axs, round(flip(subf)), 10 );
-  shared_utils.plot.hold( axs, 'on' );
-  shared_utils.plot.add_vertical_lines( axs, find(subt == 0) );
-  shared_utils.plot.fullscreen( f );
+    if ( is_matched ), shared_utils.plot.match_clims( axs ); end
 
-  if ( is_matched ), shared_utils.plot.match_clims( axs ); end
+    if ( do_save )
+      scats = cshorzcat( fcats, pcats );
 
-  if ( do_save )
-    scats = cshorzcat( fcats, pcats );
+      z_component = ternary( is_zscored, 'z', 'nonz' );
+      sub_component = ternary( is_subtracted, 'subtracted', 'nonsubtracted' );
 
-    z_component = ternary( is_zscored, 'z', 'nonz' );
-    sub_component = ternary( is_subtracted, 'subtracted', 'nonsubtracted' );
+      full_plot_p = fullfile( plot_p, subdir, 'spectra', z_component, sub_component );
 
-    full_plot_p = fullfile( plot_p, subdir, 'spectra', z_component, sub_component );
-
-    for i = 1:numel(f)
-      dsp3.req_savefig( f(i), full_plot_p, mlabs(I{i}), scats, 'spectra__' );
+      for i = 1:numel(f)
+        ind = I2{j}(I{i});
+        
+        dsp3.req_savefig( f(i), full_plot_p, mlabs(ind), scats, 'spectra__' );
+      end
     end
   end
 end
