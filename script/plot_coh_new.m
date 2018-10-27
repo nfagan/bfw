@@ -9,6 +9,21 @@ plot_p = fullfile( bfw.dataroot(conf), 'plots', 'spectra', datedir );
 
 %%
 
+lfp_mats = shared_utils.io.find( bfw.gid('raw_aligned_lfp'), '.mat' );
+
+all_lfp_labs = fcat();
+
+for i = 1:numel(lfp_mats)
+  shared_utils.general.progress( i, numel(lfp_mats) );
+  
+  lfp_dat = shared_utils.io.fload( lfp_mats{i} );
+  lfp_labs = fcat.from( lfp_dat.labels, lfp_dat.categories );
+  append( all_lfp_labs, lfp_labs );
+end
+
+
+%%
+
 select = @(x) only(x, {'eyes_nf', 'face', 'left_nonsocial_object', 'right_nonsocial_object'});
 
 use_mats = mats;
@@ -23,6 +38,21 @@ use_mats = mats;
 
 prune( bfw.unify_region_labels(labs) );
 prune( bfw.add_monk_labels(labs) );
+
+%%  sites - per pair
+
+uselabs = labs';
+
+[reglabs, I] = keepeach( uselabs', 'region' );
+ndat = rowzeros( numel(I) );
+
+for i = 1:numel(I)
+  ndat(i) = numel( findall(uselabs, {'channel', 'session'}, I{i}) );  
+end
+
+[t, rc] = tabular( reglabs, 'region', 'id_m1' );
+
+tbl = fcat.table( cellrefs(ndat, t), rc{:} );
 
 %%  zscore
 
@@ -61,8 +91,8 @@ setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
 
 %%  subtractions, mult
 
-as = { 'face', 'eyes_nf', 'eyes_nf', 'mutual' };
-bs = { 'eyes_nf', 'face', 'face_non_eyes_nf', 'm1' };
+as = { 'eyes_nf', 'mutual' };
+bs = { 'face', 'm1' };
 
 sub_cats = { 'roi', 'roi', 'roi', {'looks_by', 'initiator', 'event_type', 'id_m2'} };
 lab_cats = { 'roi', 'roi', 'roi', 'looks_by' };
@@ -104,7 +134,7 @@ end
 do_save = true;
 
 mult_is_zscored = [true];
-mult_is_subtracted = [false];
+mult_is_subtracted = [false, true];
 mult_is_matched = [false];
 mult_is_per_m2 = [true, false];
 mult_is_per_initiator = [false, true];
