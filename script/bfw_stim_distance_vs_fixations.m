@@ -4,7 +4,8 @@ import shared_utils.io.fload;
 
 defaults = bfw.get_common_make_defaults();
 defaults.is_old_events = false;
-defaults.look_ahead = 5;
+defaults.look_ahead = 2;
+defaults.look_back = 0;
 defaults.samples_subdir = 'aligned_binned_raw_samples';
 defaults.selectors = { 'm1', 'eyes_nf' };
 
@@ -101,10 +102,10 @@ parfor idx = 1:numel(stim_mats)
     for i = 1:numel(all_stim_times)
       evts = subset_event_info(:, start_time_col);
       
-      current_stim_time = all_stim_times(i);
+      current_stim_time = all_stim_times(i) + params.look_back;
 
       nearest_stim_time_idx = shared_utils.sync.nearest( t, current_stim_time );
-      nearest_stim_time = t(nearest_stim_time_idx); 
+      nearest_stim_time = t(nearest_stim_time_idx);
       
       max_look_ahead = nearest_stim_time + params.look_ahead;
       
