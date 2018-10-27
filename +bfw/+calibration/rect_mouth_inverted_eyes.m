@@ -10,8 +10,8 @@ eye_h = eye_bounds(4) - eye_bounds(2);
 
 x0 = eye_bounds(1);
 x1 = eye_bounds(3);
-y0 = eye_bounds(2) - eye_h;
-y1 = eye_bounds(2);
+y0 = eye_bounds(2);
+y1 = eye_bounds(2) + eye_h;
 
 bounds = [ x0, y0, x1, y1 ];
 
