@@ -139,18 +139,20 @@ for i = 1:numel(stim_times)
     continue;
   end
   
-  m1_pos_saccade = m1_pos(:, is_saccade_ind);  
-  m1_diff_time = diff(t(is_saccade_ind));  
-  m1_diff_pos = diff( m1_pos_saccade, 1, 2 );
+  start_ind = fix_stop_inds(1);
+  stop_ind = fix_start_inds(2);
   
-  x_vel = mean( abs(m1_diff_pos(1, :) ./ m1_diff_time) );
-  y_vel = mean( abs(m1_diff_pos(2, :) ./ m1_diff_time) );
+  m1_saccade_start = m1_pos(:, start_ind);
+  m1_saccade_stop = m1_pos(:, stop_ind);
+  m1_t = t(stop_ind) - t(start_ind);
   
-  mean_amp_x = mean( abs(m1_diff_pos(1, :)) );
-  mean_amp_y = mean( abs(m1_diff_pos(2, :)) );
+  x0 = m1_saccade_start(1);
+  y0 = m1_saccade_start(2);
+  x1 = m1_saccade_stop(1);
+  y1 = m1_saccade_stop(2);
   
-  amps(i) = mean( [mean_amp_x, mean_amp_y] );
-  vels(i) = mean( [x_vel, y_vel] );  
+  amps(i) = bfw.distance( x0, y0, x1, y1 );
+  vels(i) = amps(i) / m1_t;
 end
 
 outs.amplitudes = amps;

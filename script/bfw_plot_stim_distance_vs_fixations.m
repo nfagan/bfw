@@ -18,8 +18,7 @@ evt_outs = debug_raw_look_back( ...
 );
 
 labs = evt_outs.labels';
-ib = evt_outs.traces;
-is_fix = evt_outs.traces;
+ib = evt_outs.eye_bounds;
 t = evt_outs.t;
 samples = evt_outs.samples;
 sample_key = evt_outs.samples_key;
@@ -40,23 +39,27 @@ fixdat = logical( ib(:, t_ind) );
 
 uselabs = labs';
 
-n_bins = 5;
+edges = [ 0:150:600 ];
+% edges = 4;
 
-mask = fcat.mask( uselabs ...
+mask = fcat.mask( uselabs, find(~isnan(stim_distances)) ...
   , @findnone, session_types.m1_exclusive_sessions ...
   , @find, 'm1' ...
   , @findnone, '10112018_position_1.mat' ...
   , @find, 'face_padded_large' ...
 );
 
-[~, edges] = histcounts( stim_distances, n_bins );
-bin_indices = discretize( stim_distances, edges );
+assert_ispair( stim_distances, uselabs );
 
-bin_values = nan( size(bin_indices) );
+[~, edges] = histcounts( stim_distances(mask), edges );
+bin_indices = discretize( stim_distances(mask), edges );
 
-for i = 1:numel(bin_values)
+bin_values = rownan( rows(uselabs) );
+
+for i = 1:numel(bin_indices)
   if ( isnan(bin_indices(i)) ), continue; end
-  bin_values(i) = edges(bin_indices(i));
+  
+  bin_values(mask(i)) = edges(bin_indices(i));
 end
 
 addsetcat( uselabs, 'distance_bin', cellstr(num2str(bin_values)) );
@@ -72,13 +75,15 @@ repset( addcat(meanlabs, 'measure'), 'measure', {'n-fixations', 'look-duration'}
 
 meandat = [ meanfix; meandur ];
 
+
 %%
 
 do_save = false;
+subdir = 't2';
 
 pltlabs = meanlabs';
 
-X = cellfun( @str2double, cellstr(pltlabs, 'distance_bin') );
+X = str2double( cellstr(pltlabs, 'distance_bin') );
 Y = meandat;
 
 bvals = unique( X(~isnan(X)) );
@@ -99,9 +104,9 @@ mask = fcat.mask( pltlabs, find(~isnan(X)) ...
   , @find, 'face_padded_large' ...
 );
 
-fcats = { 'measure' };
+fcats = { 'measure', 'region' };
 gcats = { 'stim_type' };
-pcats = { 'task_type', 'measure' };
+pcats = { 'task_type', 'measure', 'region' };
 
 I = findall( pltlabs, fcats, mask );
 
@@ -121,7 +126,7 @@ for i = 1:numel(I)
 
   h = plotlabeled.scatter_addcorr( ids, plt_x, plt_y );
   
-  set( ax, 'xtick', bvals );
+%   set( ax, 'xtick', bvals );
   shared_utils.plot.xlabel( ax, 'Distance from eye-center (px)' );
   shared_utils.plot.match_xlims( ax );
   
@@ -133,6 +138,7 @@ end
 if ( do_save )
   for i = 1:numel(I)
     shared_utils.plot.fullscreen( figs(i) );
-    dsp3.req_savefig( f, plot_p, pltlabs(I{i}), csunion(fcats, pcats), 'scatter' );
+    full_plot_p = fullfile( plot_p, subdir );
+    dsp3.req_savefig( figs(i), full_plot_p, pltlabs(I{i}), csunion(fcats, pcats), 'scatter' );
   end
 end

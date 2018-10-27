@@ -35,6 +35,7 @@ all_offsets = cell( s );
 all_ts = cell( s );
 all_samples = cell( s );
 all_distances = cell( s );
+all_eye_bounds = cell( s );
 
 is_valid = true( s );
 
@@ -43,7 +44,7 @@ look_ahead = params.look_ahead;
 
 keep_thresh = params.keep_within_threshold;
 
-parfor idx = 1:numel(stim_mats)
+for idx = 1:numel(stim_mats)
   shared_utils.general.progress( idx, numel(stim_mats) );
   
   stim_file = shared_utils.io.fload( stim_mats{idx} );
@@ -56,6 +57,7 @@ parfor idx = 1:numel(stim_mats)
   try
     events_file = fload( fullfile(events_p, un_filename) );
     time_file =   fload( fullfile(samples_p, 'time', un_filename) );
+    bounds_file = fload( fullfile(samples_p, 'bounds', un_filename) );
     meta_file =   fload( fullfile(meta_p, un_filename) );
     roi_file =    fload( fullfile(roi_p, un_filename) );
     
@@ -87,6 +89,7 @@ parfor idx = 1:numel(stim_mats)
   [look_labs, I, C] = keepeach( event_labs', {'roi', 'looks_by'}, look_mask );
   
   tmp_traces = [];
+  tmp_ib_eyes = [];
   tmp_keep = [];
   tmp_offsets = [];
   tmp_labs = fcat();
@@ -115,6 +118,7 @@ parfor idx = 1:numel(stim_mats)
     subset_event_info = event_info(evt_ind, :);
 
     all_ib = zeros( numel(all_stim_times), numel(plot_t) );
+    all_ib_eyes = zeros( size(all_ib) );
     to_keep = rowones( numel(all_stim_times), 'logical' );
     offsets = rowzeros( numel(all_stim_times) );
     stim_distances = nan( size(offsets) );
@@ -128,6 +132,9 @@ parfor idx = 1:numel(stim_mats)
     
     if ( params.include_samples )
       pos = position_file.(monk_id);
+      
+      bounds = bounds_file.(monk_id);
+      eye_bounds = bounds('eyes_nf');
     end
 
     for i = 1:numel(all_stim_times)
@@ -188,6 +195,10 @@ parfor idx = 1:numel(stim_mats)
 
         all_ib(i, evt_start:evt_end) = 1;
         
+        if ( isnan(evt_start) || isnan(evt_stops_in_range(j)) )
+          continue;
+        end
+        
         if ( params.include_samples )
           evt_start_idx = evt_start_indices_in_range(j);
           evt_stop_time = evt_stops_in_range(j);
@@ -197,7 +208,7 @@ parfor idx = 1:numel(stim_mats)
           if ( use_evt_stop == evt_stop_time )
             evt_stop_idx = evt_stop_indices_in_range(j);
           else
-            evt_stop_idx = shared_utils.sync.nearest( t, evt_stop_time );
+            evt_stop_idx = shared_utils.sync.nearest( t, use_evt_stop );
           end
           
           first_t = range_times(min(nearest_evt_idx));
@@ -206,6 +217,8 @@ parfor idx = 1:numel(stim_mats)
           
           positions{i}{j} = pos(:, [evt_start_idx, evt_stop_idx]);
           timestamps{i}{j} = [ start_t, stop_t ];
+          
+          all_ib_eyes(i, evt_start:evt_end) = eye_bounds(evt_start_idx:evt_stop_idx);
         end
       end
     end
@@ -216,6 +229,7 @@ parfor idx = 1:numel(stim_mats)
     addsetcat( stim_labs, 'uuid', stim_uuids );
     
     tmp_traces = [ tmp_traces; all_ib ];
+    tmp_ib_eyes = [ tmp_ib_eyes; all_ib_eyes ];
     tmp_keep = [ tmp_keep; to_keep ];
     tmp_offsets = [ tmp_offsets; offsets ];
     tmp_samples = [ tmp_samples; [timestamps, positions] ];
@@ -231,6 +245,7 @@ parfor idx = 1:numel(stim_mats)
   all_ts{idx} = plot_t;
   all_samples{idx} = tmp_samples;
   all_distances{idx} = tmp_distances;
+  all_eye_bounds{idx} = tmp_ib_eyes;
 end
 
 outs = struct();
@@ -243,11 +258,18 @@ end
 
 outs.labels = vertcat( fcat(), all_labs{is_valid} );
 outs.traces = vertcat( all_traces{is_valid} );
+outs.eye_bounds = vertcat( all_eye_bounds{is_valid} );
 outs.is_within_threshold = vertcat( all_to_keep{is_valid} );
 outs.event_offsets = vertcat( all_offsets{is_valid} );
 outs.samples = vertcat( all_samples{is_valid} );
 outs.samples_key = get_samples_key();
 outs.stim_distances = vertcat( all_distances{:} );
+
+end
+
+function ib = get_bounds(t, range_times, start_times, stop_times, eye_bounds)
+
+d = 10;
 
 end
 
