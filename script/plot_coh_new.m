@@ -1,6 +1,6 @@
 conf = bfw.config.load();
 
-conf.PATHS.data_root = get_nf_local_dataroot();
+% conf.PATHS.data_root = get_nf_local_dataroot();
 
 mats = bfw.rim( bfw.gid('summarized_raw_coherence', conf) );
 
