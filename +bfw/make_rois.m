@@ -70,30 +70,30 @@ parfor i = 1:numel(mats)
       func = roi_funcs(key);
       rect = func( calibration, roi_map, roi_pad, roi_const, screen_rect ); 
       rect_map(key) = rect;
-      if k == 6 % outside1
-         [a,dayidx,runidx] = check_mats(x,mats{i});
-         if a ~= 1 %  
-            rect_map(key) = rect;
-         else   
-            ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr;
-            L_H = [rect(3) - rect(1)]/2;
-            L_V = [rect(4) - rect(2)]/2;
-            rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
-            rect_map(key) = rect; % directly assign roi based on clustering     
-         end   
-      end
-      if k == 7 % outside2
-         %[a,dayidx,runidx] = check_mats(x,mats{i});
-         if a ~= 1 %  
-            rect_map(key) = rect;
-         else   
-            ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr2;
-            L_H = [rect(3) - rect(1)]/2;
-            L_V = [rect(4) - rect(2)]/2;
-            rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
-            rect_map(key) = rect; % directly assign roi based on clustering     
-         end   
-      end          
+%       if k == 6 % outside1
+%          [a,dayidx,runidx] = check_mats(x,mats{i});
+%          if a ~= 1 %  
+%             rect_map(key) = rect;
+%          else   
+%             ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr;
+%             L_H = [rect(3) - rect(1)]/2;
+%             L_V = [rect(4) - rect(2)]/2;
+%             rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
+%             rect_map(key) = rect; % directly assign roi based on clustering     
+%          end   
+%       end
+%       if k == 7 % outside2
+%          %[a,dayidx,runidx] = check_mats(x,mats{i});
+%          if a ~= 1 %  
+%             rect_map(key) = rect;
+%          else   
+%             ct = x.days_ctrs{dayidx}.ctr{runidx}.ctr2;
+%             L_H = [rect(3) - rect(1)]/2;
+%             L_V = [rect(4) - rect(2)]/2;
+%             rect = [ct(1)-L_H ct(2)-L_V ct(1)+L_H ct(2)+L_V];
+%             rect_map(key) = rect; % directly assign roi based on clustering     
+%          end   
+%       end          
     end
     for k = 1:numel(copy_fields)
       rois.(m_id).(copy_fields{k}) = c_meta.(copy_fields{k});
