@@ -140,7 +140,7 @@ event_funcs = containers.Map();
 event_funcs('face') =     @bfw.calibration.rect_face;
 event_funcs('eyes_nf') =  @bfw.calibration.rect_eyes;
 event_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
-event_funcs('mouth') =    @bfw.calibration.rect_mouth_from_eyes;
+event_funcs('mouth') =    @bfw.calibration.rect_mouth_inverted_eyes;
 event_funcs('outside1') = @bfw.calibration.rect_outside1;
 event_funcs('outside2') = @bfw.calibration.rect_outside2;
 % //
