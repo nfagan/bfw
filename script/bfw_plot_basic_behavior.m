@@ -31,7 +31,7 @@ measlabs = repset( addcat(meanlabs', 'measure'), 'measure' ...
 
 %%
 
-do_save = false;
+do_save = true;
 
 pltlabs = measlabs';
 pltdat = measdat;
@@ -46,6 +46,8 @@ pcats = { 'measure' };
 fcats = { 'measure' };
 
 pl = plotlabeled.make_common();
+pl.group_order = { 'mutual', 'm1', 'm2' };
+pl.x_order = { 'eyes_nf', 'mouth' };
 
 pltlabs = pltlabs(mask);
 pltdat = pltdat(mask);
@@ -123,17 +125,19 @@ pltlabs = plabs';
 pltdat = pdat;
 
 mask = fcat.mask( pltlabs ...
-  , @find, {'eyes_nf', 'face'} ...
-  , @find, 'p-terminated' ...
+  , @find, {'eyes_nf', 'face', 'mouth'} ...
+  , @find, 'p-initiated' ...
 );
 
 xcats = { 'roi' };
-gcats = { 'looks_by', 'terminator' };
+gcats = { 'looks_by', 'initiator' };
 pcats = { 'measure' };
 fcats = {};
 
 pl = plotlabeled.make_common();
 pl.fig = figure(1);
+pl.group_order = { 'mutual', 'm1', 'm2' };
+pl.x_order = { 'eyes_nf', 'mouth' };
 
 pl.bar( pltdat(mask), pltlabs(mask), xcats, gcats, pcats );
 
