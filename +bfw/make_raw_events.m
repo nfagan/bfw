@@ -87,7 +87,7 @@ parfor i = 1:numel(mats)
         mutual_evts = find_mutual_events( t, step_size, exclusive_evts, params ); 
       end
       
-      joined = join_events( exclusive_evts, mutual_evts );
+      joined = join_events( exclusive_evts, mutual_evts, params );
       repeated_roi = repmat( {roi}, rows(joined.events), 1 );
       
       events_file.events = [ events_file.events; joined.events ];
@@ -117,7 +117,7 @@ end
 
 end
 
-function outs = join_events(exclusive, mutual)
+function outs = join_events(exclusive, mutual, params)
 
 monk_ids = intersect( {'m1', 'm2'}, fieldnames(exclusive) );
 
@@ -127,7 +127,7 @@ labels = {};
 if ( ~isempty(mutual) )
   %   Ensure that exclusive events are not also contained in mutual events
   %   (i.e., that exclusive events are truly exclusive)
-  [mutual_labels, exclusive] = reconcile_mutual_exclusive( mutual, exclusive, monk_ids );
+  [mutual_labels, exclusive] = reconcile_mutual_exclusive( mutual, exclusive, monk_ids, params );
   
   all_event_info = mutual.events;
   looks_by = repmat( {'mutual'}, rows(all_event_info), 1 );
@@ -169,7 +169,7 @@ function l = get_terminated_label(m_id)
 l = sprintf( '%s_terminated', m_id );
 end
 
-function [labels, exclusive] = reconcile_mutual_exclusive(mutual, exclusive, monk_ids)
+function [labels, exclusive] = reconcile_mutual_exclusive(mutual, exclusive, monk_ids, params)
 
 mut_evt_starts = mutual.events(:, mutual.event_key('start_index'));
 mut_evt_stops = mutual.events(:, mutual.event_key('stop_index'));
@@ -203,7 +203,7 @@ for i = 1:numel(monk_ids)
     for k = 1:numel(mut_evt_starts)
       mut_evt_range = mut_evt_starts(k):mut_evt_stops(k);
       
-      if ( params.is_truy_exclusive )
+      if ( params.is_truly_exclusive )
         needs_removal(j) = ~isempty( intersect(mut_evt_range, excl_evt_range) );
       else
         needs_removal(j) = mut_evt_starts(k) == start_indices(j); 
