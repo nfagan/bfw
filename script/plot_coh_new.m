@@ -9,22 +9,7 @@ plot_p = fullfile( bfw.dataroot(conf), 'plots', 'spectra', datedir );
 
 %%
 
-lfp_mats = shared_utils.io.find( bfw.gid('raw_aligned_lfp'), '.mat' );
-
-all_lfp_labs = fcat();
-
-for i = 1:numel(lfp_mats)
-  shared_utils.general.progress( i, numel(lfp_mats) );
-  
-  lfp_dat = shared_utils.io.fload( lfp_mats{i} );
-  lfp_labs = fcat.from( lfp_dat.labels, lfp_dat.categories );
-  append( all_lfp_labs, lfp_labs );
-end
-
-
-%%
-
-select = @(x) only(x, {'eyes_nf', 'face', 'left_nonsocial_object', 'right_nonsocial_object'});
+select = @(x) only(x, {'eyes_nf', 'face', 'left_nonsocial_object', 'right_nonsocial_object', 'mouth'});
 
 use_mats = mats;
 
@@ -39,6 +24,20 @@ use_mats = mats;
 prune( bfw.unify_region_labels(labs) );
 prune( bfw.add_monk_labels(labs) );
 
+%%  sites - all regions
+
+lfp_mats = shared_utils.io.find( bfw.gid('raw_aligned_lfp'), '.mat' );
+
+all_lfp_labs = fcat();
+
+for i = 1:numel(lfp_mats)
+  shared_utils.general.progress( i, numel(lfp_mats) );
+  
+  lfp_dat = shared_utils.io.fload( lfp_mats{i} );
+  lfp_labs = fcat.from( lfp_dat.labels, lfp_dat.categories );
+  append( all_lfp_labs, lfp_labs );
+end
+
 %%  sites - per pair
 
 uselabs = labs';
@@ -50,13 +49,12 @@ for i = 1:numel(I)
   ndat(i) = numel( findall(uselabs, {'channel', 'session'}, I{i}) );  
 end
 
-[t, rc] = tabular( reglabs, 'region', 'id_m1' );
+[t_ind, rc] = tabular( reglabs, 'region', 'id_m1' );
 
-tbl = fcat.table( cellrefs(ndat, t), rc{:} );
+tbl = fcat.table( cellrefs(ndat, t_ind), rc{:} );
 
 %%  zscore
 
-% zspec = { 'measure', 'region', 'channel', 'roi', 'looks_by' };
 zspec = { 'measure', 'region', 'roi', 'channel', 'id_m2' };
 zdat = bfw.zscore_each( data, labs, zspec );
 
@@ -91,11 +89,26 @@ setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
 
 %%  subtractions, mult
 
-as = { 'eyes_nf', 'mutual' };
-bs = { 'face', 'm1' };
+% as = { 'eyes_nf', 'mutual', 'm1_initiated' };
+% bs = { 'face', 'm1', 'm2_initiated' };
+% 
+% sub_cats = { 'roi', {'looks_by', 'initiator', 'event_type', 'id_m2'} ...
+%   , {'looks_by', 'event_type', 'id_m2'} };
+% lab_cats = { 'roi', 'looks_by', 'initiator' };
 
-sub_cats = { 'roi', 'roi', 'roi', {'looks_by', 'initiator', 'event_type', 'id_m2'} };
-lab_cats = { 'roi', 'roi', 'roi', 'looks_by' };
+% as = { 'm1_initiated' };
+% bs = { 'm2_initiated' };
+% sub_cats = { {'event_type', 'id_m2', 'initiator', 'terminator'} };
+% lab_cats = { 'initiator' };
+
+as = { 'eyes_nf' };
+bs = { 'mouth' };
+
+sub_cats = { 'roi' };
+lab_cats = { 'roi' };
+
+assert( isequal(numel(as), numel(bs), numel(sub_cats), numel(lab_cats)) ...
+  , 'Subtraction specifiers do not match.' );
 
 subdat = [];
 sublabs = fcat();
@@ -108,6 +121,7 @@ for i = 1:numel(as)
   
   mask = fcat.mask( uselabs ...
     , @(x, varargin) bfw.catfindnot_substr(x, 'region', varargin{:}), 'ref' ...
+    , @find, 'mutual' ...
   );
   
   a = as{i};
@@ -134,15 +148,17 @@ end
 do_save = true;
 
 mult_is_zscored = [true];
-mult_is_subtracted = [false, true];
+mult_is_subtracted = [true];
 mult_is_matched = [false];
-mult_is_per_m2 = [true, false];
-mult_is_per_initiator = [false, true];
+mult_is_per_m2 = [false];
+mult_is_per_initiator = [true, false];
 
 inds = dsp3.numel_combvec( mult_is_zscored, mult_is_subtracted ...
   , mult_is_matched, mult_is_per_m2, mult_is_per_initiator );
 
 base_subdir = 'without_0927';
+
+scats = { 'measure', 'roi' };
 
 for idx = 1:size(inds, 2)
   shared_utils.general.progress( idx, size(inds, 2) );
@@ -217,7 +233,7 @@ for idx = 1:size(inds, 2)
     if ( is_matched ), shared_utils.plot.match_clims( axs ); end
 
     if ( do_save )
-      scats = cshorzcat( fcats, pcats );
+      filename_cats = cshorzcat( fcats, pcats );
 
       z_component = ternary( is_zscored, 'z', 'nonz' );
       sub_component = ternary( is_subtracted, 'subtracted', 'nonsubtracted' );
@@ -227,7 +243,7 @@ for idx = 1:size(inds, 2)
       for i = 1:numel(f)
         ind = I2{j}(I{i});
         
-        dsp3.req_savefig( f(i), full_plot_p, mlabs(ind), scats, 'spectra__' );
+        bfw.req_savefig_subdirs( scats, f(i), full_plot_p, prune(mlabs(ind)), filename_cats, 'spectra__' );
       end
     end
   end

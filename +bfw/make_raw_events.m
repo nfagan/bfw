@@ -11,6 +11,7 @@ defaults.fixations_subdir = 'eye_mmv_fixations';
 defaults.samples_subdir = 'aligned_binned_raw_samples';
 defaults.fill_gaps = false;
 defaults.fill_gaps_duration = nan;
+defaults.is_truly_exclusive = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -202,8 +203,13 @@ for i = 1:numel(monk_ids)
     for k = 1:numel(mut_evt_starts)
       mut_evt_range = mut_evt_starts(k):mut_evt_stops(k);
       
-      if ( ~isempty(intersect(mut_evt_range, excl_evt_range)) )
-        needs_removal(j) = true;
+      if ( params.is_truy_exclusive )
+        needs_removal(j) = ~isempty( intersect(mut_evt_range, excl_evt_range) );
+      else
+        needs_removal(j) = mut_evt_starts(k) == start_indices(j); 
+      end
+      
+      if ( needs_removal(j) )
         break;
       end
     end
