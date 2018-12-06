@@ -44,7 +44,7 @@ look_ahead = params.look_ahead;
 
 keep_thresh = params.keep_within_threshold;
 
-for idx = 1:numel(stim_mats)
+parfor idx = 1:numel(stim_mats)
   shared_utils.general.progress( idx, numel(stim_mats) );
   
   stim_file = shared_utils.io.fload( stim_mats{idx} );

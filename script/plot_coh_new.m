@@ -24,21 +24,7 @@ use_mats = mats;
 prune( bfw.unify_region_labels(labs) );
 prune( bfw.add_monk_labels(labs) );
 
-%%  sites - all regions
-
-lfp_mats = shared_utils.io.find( bfw.gid('raw_aligned_lfp'), '.mat' );
-
-all_lfp_labs = fcat();
-
-for i = 1:numel(lfp_mats)
-  shared_utils.general.progress( i, numel(lfp_mats) );
-  
-  lfp_dat = shared_utils.io.fload( lfp_mats{i} );
-  lfp_labs = fcat.from( lfp_dat.labels, lfp_dat.categories );
-  append( all_lfp_labs, lfp_labs );
-end
-
-%%  sites - per pair
+%%  n-sites - per pair
 
 uselabs = labs';
 
@@ -58,35 +44,6 @@ tbl = fcat.table( cellrefs(ndat, t_ind), rc{:} );
 zspec = { 'measure', 'region', 'roi', 'channel', 'id_m2' };
 zdat = bfw.zscore_each( data, labs, zspec );
 
-%%  subtraction (eyes - face)
-
-a = 'face';
-b = 'eyes_nf';
-sub_cats = 'roi';
-lab_cat = 'roi';
-
-%%  subtraction (mut - excl)
-
-a = 'mutual';
-b = 'm1';
-sub_cats = { 'looks_by', 'initiator', 'event_type', 'id_m2' };
-lab_cat = 'looks_by';
-
-%% subtraction implementation
-
-uselabs = labs';
-usedat = zdat;
-
-opfunc = @minus;
-sfunc = @(x) nanmean(x, 1);
-
-subspec = cssetdiff( getcats(uselabs), sub_cats );
-
-[subdat, sublabs, I] = dsp3.summary_binary_op( usedat, uselabs' ...
-  , subspec, a, b, opfunc, sfunc );
-
-setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
-
 %%  subtractions, mult
 
 % as = { 'eyes_nf', 'mutual', 'm1_initiated' };
@@ -96,16 +53,16 @@ setcat( sublabs, lab_cat, sprintf('%s %s %s', a, func2str(opfunc), b) );
 %   , {'looks_by', 'event_type', 'id_m2'} };
 % lab_cats = { 'roi', 'looks_by', 'initiator' };
 
-% as = { 'm1_initiated' };
-% bs = { 'm2_initiated' };
-% sub_cats = { {'event_type', 'id_m2', 'initiator', 'terminator'} };
-% lab_cats = { 'initiator' };
+as = { 'm1_initiated' };
+bs = { 'm2_initiated' };
+sub_cats = { {'event_type', 'id_m2', 'initiator', 'terminator'} };
+lab_cats = { 'initiator' };
 
-as = { 'eyes_nf' };
-bs = { 'mouth' };
-
-sub_cats = { 'roi' };
-lab_cats = { 'roi' };
+% as = { 'eyes_nf' };
+% bs = { 'mouth' };
+% 
+% sub_cats = { 'roi' };
+% lab_cats = { 'roi' };
 
 assert( isequal(numel(as), numel(bs), numel(sub_cats), numel(lab_cats)) ...
   , 'Subtraction specifiers do not match.' );
@@ -143,15 +100,32 @@ for i = 1:numel(as)
   subdat = [ subdat; tmp_subdat ];
 end
 
+
+%%
+
+axs = findobj( figure(1), 'type', 'axes' );
+shared_utils.plot.set_clims( axs, [-0.2, 0.42] );
+
+figure(2);
+clf();
+
+acc_ind = find( sublabs, {'accg_bla', 'eyes_nf', 'mutual'} );
+acc_ind = findnone( sublabs, '09272018', acc_ind );
+ta_ind = freqs >= 4 & freqs <= 13;
+meaned = squeeze( nanmean(subdat(:, ta_ind, :), 2) );
+full_meaned = nanmean( meaned(acc_ind, :), 1 );
+
+plot( t, full_meaned );
+
 %%  spectra
 
-do_save = true;
+do_save = false;
 
 mult_is_zscored = [true];
 mult_is_subtracted = [true];
 mult_is_matched = [false];
 mult_is_per_m2 = [false];
-mult_is_per_initiator = [true, false];
+mult_is_per_initiator = [false];
 
 inds = dsp3.numel_combvec( mult_is_zscored, mult_is_subtracted ...
   , mult_is_matched, mult_is_per_m2, mult_is_per_initiator );
@@ -185,7 +159,8 @@ for idx = 1:size(inds, 2)
   end
 
   t_ind = true( size(t) );
-  f_ind = freqs <= 100;
+%   f_ind = freqs <= 100;
+  f_ind = freqs >= 4 & freqs <= 13;
 
   subt = t(t_ind);
   subf = freqs(f_ind);
@@ -193,15 +168,14 @@ for idx = 1:size(inds, 2)
   pl = plotlabeled.make_spectrogram( subf, subt );
   pl.sort_combinations = true;
 
-  % pl.shape = [3, 1];
-  % pl.c_lims = [ -0.06, 0.06 ];
-
   mask = fcat.mask( pltlabs ...
     , @(x, varargin) bfw.catfindnot_substr(x, 'region', varargin{:}), 'ref' ...
     , @findnone, 'face' ...
     , @findnone, 'm2' ...
     , @findnone, '09272018' ...
   );
+
+  mask = fcat.mask( pltlabs, mask, @find, {'eyes_nf', 'accg_bla'} );
 
 % , @(x, varargin) bfw.catfind_substr(x, 'region', varargin{:}), 'bla' ...
 
@@ -249,6 +223,139 @@ for idx = 1:size(inds, 2)
   end
 end
 
+%%  lines -- band-means
+
+is_zscored = true;
+is_per_initiator = true;
+is_per_site = false;
+match_initiators = true;
+do_save = false;
+is_smoothed = false;
+
+prefix = 'compare_lines__';
+
+uselabs = labs';
+usedat = ternary( is_zscored, zdat, data );
+
+bands = { [4, 13], [14, 25], [26, 55], [56, 80] };
+bandnames = { 'theta-alpha', 'beta', 'gamma', 'high-gamma' };
+
+[banddat, bandlabs] = dsp3.get_band_means( usedat, uselabs', freqs, bands, bandnames );
+
+mask = fcat.mask( bandlabs ...
+  , @(x, varargin) bfw.catfindnot_substr(x, 'region', varargin{:}), 'ref' ...
+  , @(x, varargin) bfw.catfind_substr(x, 'region', varargin{:}), 'bla' ...
+  , @findnone, {'m2', '09272018'} ...
+  , @find, {'mutual', 'eyes_nf', 'm1'} ...
+);
+
+site_spec = { 'unified_filename', 'channel', 'region', 'bands', 'measure' };
+mean_spec = csunion( site_spec, {'roi', 'id_m2', 'looks_by'} );
+
+if ( is_per_initiator ), mean_spec{end+1} = 'initiator'; end
+
+if ( is_per_site )
+  [mlabs, I] = keepeach( bandlabs', mean_spec, mask );
+  mdat = rownanmean( banddat, I );
+else
+  mlabs = prune( bandlabs(mask) );
+  mdat = banddat(mask, :);
+end
+
+if ( match_initiators )
+  I = findall( mlabs, subspec );
+  to_keep = [];
+  require = { 'm1_initiated', 'm2_initiated' };
+  for i = 1:numel(I)
+    if ( all(count(mlabs, require, I{i}) > 0) )
+      to_keep = union( to_keep, I{i} );
+    end
+  end
+  keep( mlabs, to_keep );
+  mdat = rowref( mdat, to_keep );
+end
+
+%
+%
+%
+
+fcats = { 'region' };
+pcats = { 'region', 'roi', 'measure', 'bands' };
+
+if ( is_per_initiator )
+  gcats = { 'initiator' };
+  pcats{end+1} = 'looks_by';
+  prefix = sprintf( 'initiator_%s', prefix );  
+  mask = fcat.mask( mlabs, @find, 'mutual', @findnone, 'simultaneous_start' );
+else
+  gcats = { 'looks_by' };
+  mask = rowmask( mlabs );
+end
+
+smooth_func = ternary( is_smoothed, @(x) smooth(x, 3), @(x) x );
+prefix = ternary( is_smoothed, sprintf('%s_smoothed__', prefix), prefix );
+
+fig_I = findall( mlabs, fcats, mask );
+
+f = gobjects( numel(fig_I), 1 );
+all_axs = [];
+
+for i = 1:numel(fig_I)
+  f(i) = clf( figure(i) );
+  
+  axs = dsp3.plot_compare_lines( mdat, mlabs, gcats, pcats ...
+    , 'mask', fig_I{i} ...
+    , 'smooth_func', smooth_func ...
+    , 'x', t ...
+  );
+
+  all_axs = [ all_axs; axs(:) ];
+end
+
+shared_utils.plot.match_ylims( all_axs );
+
+if ( do_save )  
+  plt_spec = unique( cshorzcat(fcats, pcats) );
+  
+  for i = 1:numel(f)
+    shared_utils.plot.fullscreen( f(i) );
+    dsp3.req_savefig( f(i), plot_p, mlabs(fig_I{i}), plt_spec, prefix );
+  end
+end
+
+%%
+
+I = findall( bandlabs, subspec, intersect(mask, find(bandlabs, 'mutual')) );
+to_keep = [];
+
+for i = 1:numel(I)
+  if ( all(count(bandlabs, {'m1_initiated', 'm2_initiated'}, I{i}) > 0) )
+    to_keep = union( to_keep, I{i} );
+  end
+end
+
+%%
+
+pl = plotlabeled.make_common();
+pl.x = t;
+pl.panel_order = bandnames;
+
+fcats = { 'region' };
+gcats = { 'bands' };
+pcats = { 'region', 'roi', 'measure', 'looks_by' };
+
+[f, axs, I] = pl.figures( @lines, mdat, mlabs, fcats, gcats, pcats );
+
+shared_utils.plot.match_ylims( axs );
+
+if ( do_save )  
+  plt_spec = unique( cshorzcat(fcats, pcats) );
+  
+  for i = 1:numel(f)
+    shared_utils.plot.fullscreen( f(i) );
+    dsp3.req_savefig( f(i), plot_p, mlabs(I{i}), plt_spec, 'lines__' );
+  end
+end
 %%  band-means histogram
 
 is_zscored = true;
@@ -331,7 +438,7 @@ end
 pltlabs = labs';
 pltdat = zdat;
 
-is_over_t = false;
+is_over_t = true;
 
 t_ind = t >= -100 & t <= 0;
 f_ind = freqs <= 100;

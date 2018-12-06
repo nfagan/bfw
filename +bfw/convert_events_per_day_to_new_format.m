@@ -1,6 +1,12 @@
-function out_file = convert_events_per_day_to_new_format(events_file, unified_filename)
+function out_file = convert_events_per_day_to_new_format(events_file, unified_filename, only_unified_filename)
 
-event_info = only( events_file.event_info, unified_filename );
+if ( nargin < 3 ), only_unified_filename = true; end
+
+event_info = events_file.event_info;
+
+if ( only_unified_filename )
+  event_info = only( event_info, unified_filename );
+end
 
 event_info_data = event_info.data;
 event_info_labs = fcat.from( event_info.labels );

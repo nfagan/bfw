@@ -8,12 +8,15 @@ end
 
 defaults.files = [];
 defaults.files_containing = [];
+defaults.loop_runner = [];
+defaults.log_level = 'info';
 defaults.cs_monk_id = 'm1';
 defaults.input_subdir = '';
 defaults.output_subdir = '';
 defaults.overwrite = false;
 defaults.append = true;
 defaults.save = true;
+defaults.is_parallel = true;
 defaults.config = bfw.config.load();
 
 end

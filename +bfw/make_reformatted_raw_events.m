@@ -1,40 +1,20 @@
-function make_reformatted_raw_events(varargin)
+function results = make_reformatted_raw_events(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-params = bfw.parsestruct( defaults, varargin );
+inputs = 'raw_events';
+output = 'raw_events_reformatted';
 
-isd = params.input_subdir;
-osd = params.output_subdir;
+[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
+loop_runner.func_name = mfilename;
 
-events_p = bfw.gid( fullfile('raw_events', isd) );
-output_p = bfw.gid( fullfile('raw_events_reformatted', osd) );
-
-mats = bfw.require_intermediate_mats( params.files, events_p, params.files_containing );
-
-parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats), mfilename );
-  
-  events_file = shared_utils.io.fload( mats{i} );
-  
-  unified_filename = events_file.unified_filename;
-  output_filename = fullfile( output_p, unified_filename );
-  
-  if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
-    continue;
-  end
-  
-  try
-    make_main( output_p, output_filename, unified_filename, events_file, params );
-  catch err
-    bfw.print_fail_warn( unified_filename, err.message );
-    continue;
-  end
-end
+results = loop_runner.run( @make_reformatted_main, params );
 
 end
 
-function make_main(output_p, output_filename, unified_filename, events_file, params)
+function reformatted_events_file = make_reformatted_main(files, unified_filename, params)
+
+events_file = shared_utils.general.get( files, 'raw_events' );
 
 events = events_file.events;
 event_key = events_file.event_key;
@@ -101,11 +81,6 @@ reformatted_events_file.initiated = reformatted_initiated;
 reformatted_events_file.roi_key = roi_map;
 reformatted_events_file.monk_key = monk_map;
 reformatted_events_file.initiated_key = init_map;
-
-if ( params.save )
-  shared_utils.io.require_dir( output_p );
-  shared_utils.io.psave( output_filename, reformatted_events_file, 'reformatted_events_file' );
-end
 
 end
 

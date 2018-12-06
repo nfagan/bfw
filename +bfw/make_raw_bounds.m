@@ -1,82 +1,52 @@
-function make_raw_bounds(varargin)
-
-ff = @fullfile;
-
-import shared_utils.io.fload;
+function results = make_raw_bounds(varargin)
 
 defaults = bfw.get_common_make_defaults();
 defaults.padding = 0;
 
-params = bfw.parsestruct( defaults, varargin );
+inputs = { 'edf_raw_samples', 'rois' };
+output = 'raw_bounds';
 
-conf = params.config;
-isd = params.input_subdir;
-osd = params.output_subdir;
+[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
+loop_runner.func_name = mfilename;
 
-samples_p = bfw.gid( ff('edf_raw_samples', isd), conf );
-roi_p = bfw.gid( ff('rois', isd), conf );
-bounds_p = bfw.gid( ff('raw_bounds', osd), conf );
+results = loop_runner.run( @make_raw_bounds_main, params );
 
-mats = bfw.require_intermediate_mats( params.files, samples_p, params.files_containing );
+end
 
-parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats), mfilename );
-  
-  samples_file = fload( mats{i} );
-  
-  unified_filename = samples_file.unified_filename;
-  
-  output_filename = fullfile( bounds_p, unified_filename );
-  
-  if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
-    continue;
+function bounds_file = make_raw_bounds_main(files, unified_filename, params)
+
+samples_file = shared_utils.general.get( files, 'edf_raw_samples' );
+roi_file = shared_utils.general.get( files, 'rois' );
+
+fs = intersect( {'m1', 'm2'}, fieldnames(samples_file) );
+
+bounds_file = struct();
+bounds_file.unified_filename = unified_filename;
+bounds_file.params = params;
+
+for j = 1:numel(fs)
+  m_id = fs{j};
+
+  x = samples_file.(m_id).x;
+  y = samples_file.(m_id).y;
+
+  rects = roi_file.(m_id).rects;
+  roi_names = keys( rects );
+
+  bounds = containers.Map();
+
+  for k = 1:numel(roi_names)
+    roi_name = roi_names{k};
+
+    roi = rects(roi_name);
+    pad = get_padding( params.padding, roi_name );
+
+    padded_roi = bfw.bounds.rect_pad_frac( roi, pad, pad );
+
+    bounds(roi_names{k}) = bfw.bounds.rect( x, y, padded_roi );
   end
-  
-  try
-    roi_file = fload( fullfile(roi_p, unified_filename) );
-  catch err
-    print_fail_warn( unified_filename, err.message );
-    continue;
-  end
-  
-  fs = intersect( {'m1', 'm2'}, fieldnames(samples_file) );
-  
-  bounds_file = struct();
-  bounds_file.unified_filename = unified_filename;
-  bounds_file.params = params;
-  
-  try 
-    for j = 1:numel(fs)
-      m_id = fs{j};
 
-      x = samples_file.(m_id).x;
-      y = samples_file.(m_id).y;
-
-      rects = roi_file.(m_id).rects;
-      roi_names = keys( rects );
-      
-      bounds = containers.Map();
-      
-      for k = 1:numel(roi_names)
-        roi_name = roi_names{k};
-        
-        roi = rects(roi_name);
-        pad = get_padding( params.padding, roi_name );
-        
-        padded_roi = bfw.bounds.rect_pad_frac( roi, pad, pad );
-        
-        bounds(roi_names{k}) = bfw.bounds.rect( x, y, padded_roi );
-      end
-      
-      bounds_file.(m_id).bounds = bounds;
-    end
-  catch err
-    bfw.print_fail_warn( unified_filename, err.message );
-    continue;
-  end
-  
-  shared_utils.io.require_dir( bounds_p );
-  shared_utils.io.psave( output_filename, bounds_file, 'bounds_file' );
+  bounds_file.(m_id).bounds = bounds;
 end
 
 end
@@ -88,24 +58,10 @@ if ( isnumeric(padding) )
   return
 end
 
-if ( isstruct(padding) )
-  if ( ~isfield(padding, roi) )
-    p = 0;
-  else
-    p = padding.(roi);
-  end
-  return
+if ( shared_utils.general.is_key(padding, roi) )
+  p = shared_utils.general.get( padding, roi );
+else
+  p = 0;
 end
-
-if ( isa(padding, 'containers.Map') )
-  if ( ~isKey(padding, roi) )
-    p = 0;
-  else
-    p = padding(roi);
-  end
-  return
-end
-
-error( 'Padding, of type "%s", is not in a recognized format.', class(padding) );
 
 end

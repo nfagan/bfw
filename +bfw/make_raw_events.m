@@ -31,7 +31,7 @@ events_p = bfw.gid( ff('raw_events', osd), conf );
 
 mats = bfw.require_intermediate_mats( params.files, time_p, params.files_containing );
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   time_file = fload( mats{i} );
@@ -209,9 +209,7 @@ for i = 1:numel(monk_ids)
         needs_removal(j) = mut_evt_starts(k) == start_indices(j); 
       end
       
-      if ( needs_removal(j) )
-        break;
-      end
+      if ( needs_removal(j) ), break; end
     end
   end
   

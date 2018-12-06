@@ -1,40 +1,27 @@
-function make_meta(varargin)
+function results = make_meta(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-params = bfw.parsestruct( defaults, varargin );
+inputs = 'unified';
+output = 'meta';
 
-conf = params.config;
-isd = params.input_subdir;
-osd = params.output_subdir;
+[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
 
-unified_p = bfw.gid( fullfile('unified', isd), conf );
-meta_p = bfw.gid( fullfile('meta', osd), conf );
+loop_runner.func_name = mfilename;
 
-mats = bfw.require_intermediate_mats( params.files, unified_p, params.files_containing );
+results = loop_runner.run( @make_meta_main, params );
 
-parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats), mfilename );
-  
-  un_file = shared_utils.io.fload( mats{i} );
-  
-  unified_filename = un_file.m1.unified_filename;
-  
-  output_filename = fullfile( meta_p, unified_filename );
-  
-  if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
-    continue;
-  end
-  
-  meta_file = struct();
-  meta_file.unified_filename = unified_filename;
-  meta_file.date = un_file.m1.date;
-  meta_file.session = datestr( un_file.m1.date, 'mmddyyyy' );
-  meta_file.mat_filename = un_file.m1.mat_filename;
-  meta_file.task_type = bfw.field_or( un_file.m1, 'task_type', 'free_viewing' );
-  
-  shared_utils.io.require_dir( meta_p );
-  shared_utils.io.psave( output_filename, meta_file, 'meta_file' );
 end
+
+function meta_file = make_meta_main(files, unified_filename, params)
+
+un_file = shared_utils.general.get( files, 'unified' );
+
+meta_file = struct();
+meta_file.unified_filename = unified_filename;
+meta_file.date = un_file.m1.date;
+meta_file.session = datestr( un_file.m1.date, 'mmddyyyy' );
+meta_file.mat_filename = un_file.m1.mat_filename;
+meta_file.task_type = bfw.field_or( un_file.m1, 'task_type', 'free_viewing' );
 
 end

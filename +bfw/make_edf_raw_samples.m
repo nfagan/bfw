@@ -1,60 +1,40 @@
-function make_edf_raw_samples(varargin)
-
-ff = @fullfile;
+function results = make_edf_raw_samples(varargin)
 
 defaults = bfw.get_common_make_defaults();
-params = bfw.parsestruct( defaults, varargin );
 
-conf = params.config;
+inputs = 'edf';
+output = 'edf_raw_samples';
 
-isd = params.input_subdir;
-osd = params.output_subdir;
+[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
+loop_runner.func_name = mfilename;
 
-edf_p = bfw.gid( ff('edf', isd), conf );
-save_p = bfw.gid( ff('edf_raw_samples', osd), conf );
+results = loop_runner.run( @make_edf_raw_samples_main, params );
 
-mats = bfw.require_intermediate_mats( params.files, edf_p, params.files_containing );
+end
 
-parfor i = 1:numel(mats)
-  shared_utils.general.progress( i, numel(mats), mfilename );
+function samples_file = make_edf_raw_samples_main(files, unified_filename, params)
+
+edf_file = shared_utils.general.get( files, 'edf' );
+
+m_fields = fieldnames( edf_file );
   
-  edf_file = shared_utils.io.fload( mats{i} );
+samples_file = struct();
+samples_file.unified_filename = unified_filename;
   
-  unified_filename = edf_file.m1.unified_filename;
-  output_filename = fullfile( save_p, unified_filename );
-  
-  if ( bfw.conditional_skip_file(output_filename, params.overwrite) )
-    continue;
-  end
-  
-  m_fields = fieldnames( edf_file );
-  
-  position_file = struct();
-  position_file.unified_filename = unified_filename;
-  
-  try 
-    for j = 1:numel(m_fields)
-      m_str = m_fields{j};
+for i = 1:numel(m_fields)
+  m_str = m_fields{i};
 
-      edf = edf_file.(m_str).edf;
+  edf = edf_file.(m_str).edf;
 
-      x = edf.Samples.posX;
-      y = edf.Samples.posY;
-      t = edf.Samples.time;
-      ps = edf.Samples.pupilSize;
+  x = edf.Samples.posX;
+  y = edf.Samples.posY;
+  t = edf.Samples.time;
+  ps = edf.Samples.pupilSize;
 
-      position_file.(m_str).x = x;
-      position_file.(m_str).y = y;
-      position_file.(m_str).t = t;
-      position_file.(m_str).pupil = ps;
-    end
-  catch err
-    warning( 'Processing "%s" failed with message: %s', unified_filename, err.message );
-    continue;
-  end
-
-  shared_utils.io.require_dir( save_p );
-  shared_utils.io.psave( output_filename, position_file, 'position' );
+  samples_file.(m_str).x = x;
+  samples_file.(m_str).y = y;
+  samples_file.(m_str).t = t;
+  samples_file.(m_str).pupil = ps;
 end
 
 end

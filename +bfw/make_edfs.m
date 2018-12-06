@@ -1,74 +1,54 @@
-function make_edfs(varargin)
-
-ff = @fullfile;
+function results = make_edfs(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-params = bfw.parsestruct( defaults, varargin );
+inputs = 'unified';
+output = 'edf';
 
-conf = params.config;
+[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
+loop_runner.func_name = mfilename;
 
-isd = params.input_subdir;
-osd = params.output_subdir;
+results = loop_runner.run( @make_edfs_main, loop_runner.output_directory, params );
 
-data_p = bfw.gid( ff('unified', isd), conf );
-save_p = bfw.gid( ff('edf', osd), conf );
+end
 
-data_root = conf.PATHS.data_root;
+function edf_file = make_edfs_main(files, unified_filename, output_directory, params)
 
-mats = bfw.require_intermediate_mats( params.files, data_p, params.files_containing );
+unified_file = shared_utils.general.get( files, 'unified' );
+fields = fieldnames( unified_file );
+first = unified_file.(fields{1});
+
+if ( isempty(first.edf_filename) )
+  error( 'No edf filename given for: "%s".', unified_filename );
+end
+
+data_root = bfw.dataroot( params.config );
 
 copy_fields = { 'unified_filename', 'unified_directory' };
 
-parfor i = 1:numel(mats)
-  fprintf( '\n Processing %d of %d', i, numel(mats) );
-  
-  current = shared_utils.io.fload( mats{i} );
-  fields = fieldnames( current );
-  first = current.(fields{1});
-  
-  if ( isempty(first.edf_filename) )
-    fprintf( '\nNo edf filename given for: "%s".', first.unified_filename );
-    continue;
-  end
-  
-  edf = struct();
-  
-  mat_dir = first.mat_directory_name;
-  m_filename = first.mat_filename;
-  e_filename = bfw.make_intermediate_filename( mat_dir, m_filename );
-  
-  full_filename = fullfile( save_p, e_filename );
-  
-  if ( bfw.conditional_skip_file(full_filename, params.overwrite) ), continue; end
-  
-  is_valid_edf = true;
-  
-  for j = 1:numel(fields)
-    m_dir = current.(fields{j}).mat_directory;
-    edf_filename = current.(fields{j}).edf_filename;
-    try
-      edf_obj = Edf2Mat( fullfile(data_root, m_dir{:}, edf_filename) );
-    catch err
-      fprintf( '\n Error parsing edf file "%s": \n%s', edf_filename, err.message );
-      is_valid_edf = false;
-      continue;
-    end
-    edf.(fields{j}).edf = edf_obj;
-    edf.(fields{j}).medf_filename = e_filename;
-    edf.(fields{j}).medf_directory = save_p;
-  end
-  
-  if ( ~is_valid_edf ), continue; end
-  
-  for j = 1:numel(copy_fields)
-    for k = 1:numel(fields)
-      edf.(fields{k}).(copy_fields{j}) = current.(fields{k}).(copy_fields{j});
-    end
-  end
+edf_file = struct();
 
-  shared_utils.io.require_dir( save_p );
-  shared_utils.io.psave( full_filename, edf, 'edf' );
+for j = 1:numel(fields)
+  monk = fields{j};
+  
+  m_dir = unified_file.(monk).mat_directory;
+  edf_filename = unified_file.(monk).edf_filename;
+  
+  edf_obj = Edf2Mat( fullfile(data_root, m_dir{:}, edf_filename) );
+  
+  edf_file.(monk).edf = edf_obj;
+  edf_file.(monk).medf_filename = unified_filename;
+  edf_file.(monk).medf_directory = output_directory;
+end
+
+for j = 1:numel(copy_fields)
+  cf = copy_fields{j};
+  
+  for k = 1:numel(fields)
+    monk = fields{k};
+    
+    edf_file.(monk).(cf) = unified_file.(monk).(cf);
+  end
 end
 
 end

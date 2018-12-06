@@ -7,6 +7,7 @@ evt_outs = debug_raw_look_back( ...
   , 'look_back', -1 ...
   , 'look_ahead', 5 ...
   , 'keep_within_threshold', 0.3 ...
+  , 'files_containing', sessions.m1_exclusive_sessions ...
 );
 
 toc;
@@ -24,7 +25,7 @@ t = evt_outs.t;
 pltlabs = labs';
 pltdat = traces;
 
-use_within_thresh = true;
+use_within_thresh = false;
 
 prune( bfw.get_region_labels(pltlabs) );
 

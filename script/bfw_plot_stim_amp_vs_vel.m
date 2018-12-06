@@ -39,6 +39,8 @@ subdir = 'amp_vs_vel';
 
 pl = plotlabeled();
 pl.marker_size = 10;
+pl.shape = [2, 1];
+pl.panel_order = { 'free_viewing', 'nonsocial_control' };
 
 pltlabs = labs';
 
@@ -75,6 +77,8 @@ for i = 1:numel(I)
   pl.fig = figure(i);
 
   [axs, ids] = pl.scatter( pltx, plty, plt_labs, gcats, pcats );
+  
+  xlim( axs, [0, 1200] );
   
   plotlabeled.scatter_addcorr( ids, pltx, plty );
   
