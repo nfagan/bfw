@@ -1,7 +1,20 @@
 function f = struct2fcat(x)
 
-validateattributes( x, {'struct'}, {'scalar'}, mfilename );
+validateattributes( x, {'struct'}, {'nonempty'}, mfilename );
 
-f = fcat.from( struct2cell(x)', fieldnames(x) );
+if ( numel(x) == 1 )
+  f = fcat.from( struct2cell(x)', fieldnames(x) );
+else
+  c = struct2cell( x );
+  cats = fieldnames( x );
+  
+  f = fcat.with( cats, numel(x) );
+  
+  for i = 1:numel(x)
+    setcat( f, cats, c(:, :, i), i );
+  end
+  
+  prune( f );
+end
 
 end

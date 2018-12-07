@@ -35,9 +35,10 @@ results = loop_runner.run( @make_raw_fixations_main, is_fix_func, params );
 
 end
 
-function fix_file = make_raw_fixations_main(files, unified_filename, is_fix_func, params)
+function fix_file = make_raw_fixations_main(files, is_fix_func, params)
 
 samples_file = shared_utils.general.get( files, 'edf_raw_samples' );
+unified_filename = bfw.try_get_unified_filename( samples_file );
 
 monks = { 'm1', 'm2' };
 
