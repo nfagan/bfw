@@ -1,7 +1,6 @@
 function results = make_raw_bounds(varargin)
 
-defaults = bfw.get_common_make_defaults();
-defaults.padding = 0;
+defaults = bfw.make.defaults.raw_bounds();
 
 inputs = { 'edf_raw_samples', 'rois' };
 output = 'raw_bounds';

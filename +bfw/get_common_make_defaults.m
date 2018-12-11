@@ -11,6 +11,7 @@ function defaults = get_common_make_defaults( assign_to )
 if ( nargin == 0 )
   defaults = struct();
 else
+  validateattributes( assign_to, {'struct'}, {'scalar'}, mfilename, 'assign_to' );
   defaults = assign_to;
 end
 

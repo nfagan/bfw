@@ -1,8 +1,8 @@
-function aligned_file = raw_aligned_indices(files, params)
+function aligned_file = raw_aligned_indices(files, varargin)
 
 %   RAW_ALIGNED_INDICES -- Create raw_aligned_indices file.
 %
-%     See also bfw.make.help
+%     See also bfw.make.help, bfw.make.defaults.raw_aligned_indices
 %
 %     IN:
 %       - `files` (containers.Map, struct)
@@ -11,6 +11,9 @@ function aligned_file = raw_aligned_indices(files, params)
 %       - 'plex_raw_time'
 %     OUT:
 %       - `aligned_file` (struct)
+
+defaults = bfw.make.defaults.raw_aligned_indices();
+params = bfw.parsestruct( defaults, varargin );
 
 time_file = shared_utils.general.get( files, 'plex_raw_time' );
 

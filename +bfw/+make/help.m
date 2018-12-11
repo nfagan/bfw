@@ -19,6 +19,13 @@
 %   bfw.make.edf_sync_times requires 'unified' and 'edf' intermediate
 %   files.
 %
+%   Some functions accept parameter values as a struct or series of 'name',
+%   value paired inputs. For these functions, default values are always
+%   provided and will be used for parameters that are not manually
+%   specified. If a make.* function is formatted in this way, it will have 
+%   a corresponding bfw.make.defaults.<function_name>, which returns the 
+%   default values for that function.
+%
 %   EXAMPLE:
 %
 %     % Create the meta_file from a random unified_file.

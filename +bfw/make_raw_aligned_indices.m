@@ -1,8 +1,6 @@
 function results = make_raw_aligned_indices(varargin)
 
-defaults = bfw.get_common_make_defaults();
-defaults.fill_gaps = true;
-defaults.max_fill = 3;
+defaults = bfw.make.defaults.raw_aligned_indices();
 
 inputs = 'plex_raw_time';
 output = 'aligned_raw_indices';

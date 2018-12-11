@@ -1,18 +1,20 @@
-function bounds_file = bounds(files, params)
+function bounds_file = bounds(files, varargin)
 
 %   BOUNDS -- Create bounds file.
 %
-%     See also bfw.make.help
+%     See also bfw.make.help, bfw.make.defaults.raw_bounds
 %
 %     IN:
 %       - `files` (containers.Map, struct)
-%       - `unified_filename` (char) |OPTIONAL|
-%       - `params` (struct)
+%       - `varargin` ('name', value)
 %     FILES:
 %       - 'edf_raw_samples'
 %       - 'rois'
 %     OUT:
 %       - `aligned_file` (struct)
+
+defaults = bfw.make.defaults.raw_bounds();
+params = bfw.parsestruct( defaults, varargin );
 
 samples_file = shared_utils.general.get( files, 'edf_raw_samples' );
 roi_file = shared_utils.general.get( files, 'rois' );

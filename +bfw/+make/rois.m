@@ -1,18 +1,20 @@
-function rois = rois(files, output_directory, params)
+function rois = rois(files, output_directory, varargin)
 
 %   ROIS -- Create rois file.
 %
-%     See also bfw.make.help
+%     See also bfw.make.help, bfw.make.defaults.rois
 %
 %     IN:
 %       - `files` (containers.Map, struct)
-%       - `unified_filename` (char) |OPTIONAL|
 %       - `output_directory` (char)
-%       - `params` (struct)
+%       - `varargin` ('name', value)
 %     FILES:
 %       - 'unified'
 %     OUT:
 %       - `aligned_file` (struct)
+
+defaults = bfw.make.defaults.rois();
+params = bfw.parsestruct( defaults, varargin );
 
 unified_file = shared_utils.general.get( files, 'unified' );
 unified_filename = bfw.try_get_unified_filename( unified_file );
@@ -115,18 +117,18 @@ r = shared_utils.io.fload( filename );
 
 end
 
-function event_funcs = get_roi_funcs(un_file)
+function roi_funcs = get_roi_funcs(un_file)
 
-event_funcs = containers.Map();
-event_funcs('face') =     @bfw.calibration.rect_face;
-event_funcs('eyes_nf') =  @bfw.calibration.rect_eyes;
-event_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
-event_funcs('mouth') =    @bfw.calibration.rect_mouth_inverted_eyes;
-event_funcs('outside1') = @bfw.calibration.rect_outside1;
-event_funcs('outside2') = @bfw.calibration.rect_outside2;
+roi_funcs = containers.Map();
+roi_funcs('face') =     @bfw.calibration.rect_face;
+roi_funcs('eyes_nf') =  @bfw.calibration.rect_eyes;
+roi_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
+roi_funcs('mouth') =    @bfw.calibration.rect_mouth_inverted_eyes;
+roi_funcs('outside1') = @bfw.calibration.rect_outside1;
+roi_funcs('outside2') = @bfw.calibration.rect_outside2;
 % //
-event_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
-event_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;
+roi_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
+roi_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;
 
 try
   r = un_file.stimulation_params.radius;
@@ -135,9 +137,9 @@ catch err
   return
 end
 
-event_funcs('face_padded_small') = @(varargin) bfw.calibration.rect_padded_face_small(varargin{:}, r);
-event_funcs('face_padded_medium') = @(varargin) bfw.calibration.rect_padded_face_medium(varargin{:}, r);
-event_funcs('face_padded_large') = @(varargin) bfw.calibration.rect_padded_face_large(varargin{:}, r);
+roi_funcs('face_padded_small') = @(varargin) bfw.calibration.rect_padded_face_small(varargin{:}, r);
+roi_funcs('face_padded_medium') = @(varargin) bfw.calibration.rect_padded_face_medium(varargin{:}, r);
+roi_funcs('face_padded_large') = @(varargin) bfw.calibration.rect_padded_face_large(varargin{:}, r);
 
 end
 

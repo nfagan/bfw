@@ -6,7 +6,6 @@ function meta_file = meta(files)
 %
 %     IN:
 %       - `files` (containers.Map, struct)
-%       - `unified_filename` (char) |OPTIONAL|
 %     FILES:
 %       - 'unified'
 %     OUT:

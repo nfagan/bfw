@@ -1,4 +1,4 @@
-function reformatted_events_file = reformatted_events(files, params)
+function reformatted_events_file = reformatted_events(files, varargin)
 
 %   REFORMATTED_EVENTS -- Create reformatted events file.
 %
@@ -6,16 +6,17 @@ function reformatted_events_file = reformatted_events(files, params)
 %
 %     IN:
 %       - `files` (containers.Map, struct)
-%       - `params` (struct)
+%       - `varargin` ('name', value)
 %     FILES:
 %       - 'raw_events'
 %     OUT:
 %       - `reformatted_events_file` (struct)
 
+defaults = bfw.get_common_make_defaults();
+params = bfw.parsestruct( defaults, varargin );
+
 events_file = shared_utils.general.get( files, 'raw_events' );
 unified_filename = bfw.try_get_unified_filename( events_file );
-
-validateattributes( params, {'struct'}, {'scalar'}, mfilename, 'params' );
 
 events = events_file.events;
 event_key = events_file.event_key;

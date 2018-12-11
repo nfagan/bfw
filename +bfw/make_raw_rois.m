@@ -1,7 +1,6 @@
 function results = make_raw_rois(varargin)
 
-defaults = bfw.get_common_make_defaults();
-defaults.rois = 'all';
+defaults = bfw.make.defaults.rois();
 
 inputs = 'unified';
 output = 'rois';
