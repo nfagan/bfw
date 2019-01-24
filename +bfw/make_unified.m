@@ -48,10 +48,17 @@ for idx = 1:numel(outerdirs)
   
   pl2_dir = fullfile( outerdir, 'plex' );
   plex_directory = fullfile( pl2_dir, 'sorted' );
-  pl2s = shared_utils.io.find( plex_directory, '.pl2' );
   plex_dir_components{end+1} = 'sorted';
   
-  if ( isempty(pl2s) )
+  sorted_dir_exists = shared_utils.io.dexists( plex_directory );
+  should_use_sorted = false;
+  
+  if ( sorted_dir_exists )
+    pl2s = shared_utils.io.find( plex_directory, '.pl2' );
+    should_use_sorted = ~isempty( pl2s );
+  end
+  
+  if ( ~should_use_sorted )
     plex_directory = fullfile( pl2_dir, 'unsorted' );
     pl2s = shared_utils.io.find( plex_directory, '.pl2' );
     plex_dir_components(end) = { 'unsorted' };
