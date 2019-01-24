@@ -1,5 +1,7 @@
 function results = make_single_origin_offsets(varargin)
 
+defaults = bfw.get_common_make_defaults();
+
 inputs = 'unified';
 output = 'single_origin_offsets';
 
