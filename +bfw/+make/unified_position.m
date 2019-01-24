@@ -18,8 +18,9 @@ for i = 1:numel(m_fields)
   m_id = m_fields{i};
   
   position = pos_file.(m_id);
+  unified = unified_file.(m_id);
   
-  screen_rect = bfw.field_or( unified_file.(m_id), 'screen_rect', use_screen_rect );
+  screen_rect = bfw.field_or( unified, 'screen_rect', use_screen_rect );
   zero_offset = screen_rect(3:4) - use_screen_rect(3:4);
   
   position(1, :) = position(1, :) - zero_offset(1);
