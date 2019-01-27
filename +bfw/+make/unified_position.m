@@ -21,7 +21,7 @@ for i = 1:numel(m_fields)
   unified = unified_file.(m_id);
   
   screen_rect = bfw.field_or( unified, 'screen_rect', use_screen_rect );
-  zero_offset = screen_rect(3:4) - use_screen_rect(3:4);
+  zero_offset = columnize(screen_rect(3:4)) - columnize(use_screen_rect(3:4));
   
   position(1, :) = position(1, :) - zero_offset(1);
   position(2, :) = position(2, :) - zero_offset(2);

@@ -17,13 +17,13 @@ for i = 1:numel(m_fields)
   unified = unified_file.(m_id);
   
   screen_rect = bfw.field_or( unified, 'screen_rect', use_screen_rect );
-  zero_offset = screen_rect(3:4) - use_screen_rect(3:4);
+  zero_offset = columnize(screen_rect(3:4)) - columnize(use_screen_rect(3:4));
   
   offset_file.(m_id) = -zero_offset;
 end
 
 if ( any(strcmp(m_fields, 'm2')) )
-  offset_file.m2 = offset_file.m2 - use_screen_rect(3);
+  offset_file.m2(1) = offset_file.m2(1) - use_screen_rect(3);
 end
 
 end
