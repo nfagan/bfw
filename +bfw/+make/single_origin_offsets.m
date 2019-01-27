@@ -22,8 +22,12 @@ for i = 1:numel(m_fields)
   offset_file.(m_id) = -zero_offset;
 end
 
+m2_to_m1 = zeros( 2, 1 );
+
 if ( any(strcmp(m_fields, 'm2')) )
-  offset_file.m2(1) = offset_file.m2(1) - use_screen_rect(3);
+  m2_to_m1(1) = use_screen_rect(3);
 end
+
+offset_file.m2_to_m1 = m2_to_m1;
 
 end
