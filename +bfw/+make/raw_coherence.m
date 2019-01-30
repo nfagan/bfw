@@ -1,5 +1,7 @@
 function coh_file = raw_coherence(files, varargin)
 
+bfw.validatefiles( files, {'raw_aligned_lfp', 'rng'} );
+
 defaults = bfw.make.defaults.raw_coherence();
 
 params = bfw.parsestruct( defaults, varargin );

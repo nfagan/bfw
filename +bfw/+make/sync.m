@@ -12,6 +12,8 @@ function sync_file = sync(files, conf)
 %     OUT:
 %       - `sync_file` (struct)
 
+bfw.validatefiles( files, 'unified' );
+
 unified = shared_utils.general.get( files, 'unified' );
 unified_filename = bfw.try_get_unified_filename( unified );
 

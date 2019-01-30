@@ -13,6 +13,8 @@ function bounds_file = bounds(files, varargin)
 %     OUT:
 %       - `aligned_file` (struct)
 
+bfw.validatefiles( files, {'edf_raw_samples', 'rois'} );
+
 defaults = bfw.make.defaults.raw_bounds();
 params = bfw.parsestruct( defaults, varargin );
 

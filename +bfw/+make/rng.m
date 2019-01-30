@@ -13,6 +13,8 @@ function rng_file = rng(files)
 %     OUT:
 %       - `rng_file` (struct)
 
+bfw.validatefiles( files, 'unified' );
+
 un_file = shared_utils.general.get( files, 'unified' );
 unified_filename = bfw.try_get_unified_filename( un_file );
 

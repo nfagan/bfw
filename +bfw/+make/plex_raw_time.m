@@ -17,6 +17,8 @@ function plex_time_file = plex_raw_time(files)
 
 import shared_utils.sync.cinterp;
 
+bfw.validatefiles( files, {'unified', 'edf_raw_samples', 'edf_sync', 'sync'} );
+
 un_file = shared_utils.general.get( files, 'unified' );
 edf_samples_file = shared_utils.general.get( files, 'edf_raw_samples' );
 edf_sync_file = shared_utils.general.get( files, 'edf_sync' );

@@ -13,6 +13,8 @@ function edf_file = edfs(files, output_directory, conf)
 %     OUT:
 %       - `edf_file` (struct)
 
+bfw.validatefiles( files, 'unified' );
+
 unified_file = shared_utils.general.get( files, 'unified' );
 unified_filename = bfw.try_get_unified_filename( unified_file ); 
 

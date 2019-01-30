@@ -13,6 +13,8 @@ function rois = rois(files, output_directory, varargin)
 %     OUT:
 %       - `aligned_file` (struct)
 
+bfw.validatefiles( files, 'unified' );
+
 defaults = bfw.make.defaults.rois();
 params = bfw.parsestruct( defaults, varargin );
 

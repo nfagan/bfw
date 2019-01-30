@@ -1,5 +1,7 @@
 function pow_file = raw_mtpower(files, varargin)
 
+bfw.validatefiles( files, 'raw_aligned_lfp' );
+
 defaults = bfw.make.defaults.raw_mtpower();
 
 params = bfw.parsestruct( defaults, varargin );

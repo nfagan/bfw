@@ -11,6 +11,8 @@ function samples_file = edf_raw_samples(files)
 %     OUT:
 %       - `samples_file` (struct)
 
+bfw.validatefiles( files, 'edf' );
+
 edf_file = shared_utils.general.get( files, 'edf' );
 unified_filename = bfw.try_get_unified_filename( edf_file );
 

@@ -1,5 +1,7 @@
 function pos_file = unified_position(files)
 
+bfw.validatefiles( files, {'unified', 'position'} );
+
 unified_file = shared_utils.general.get( files, 'unified' );
 pos_file = shared_utils.general.get( files, 'position' );
 

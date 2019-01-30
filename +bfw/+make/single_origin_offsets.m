@@ -1,5 +1,7 @@
 function offset_file = single_origin_offsets(files)
 
+bfw.validatefiles( files, 'unified' );
+
 unified_file = shared_utils.general.get( files, 'unified' );
 
 m_fields = intersect( fieldnames(unified_file), {'m1', 'm2'} );

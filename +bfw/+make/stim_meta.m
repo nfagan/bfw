@@ -11,6 +11,8 @@ function stim_meta_file = stim_meta(files)
 %     OUT:
 %       - `stim_meta_file` (struct)
 
+bfw.validatefiles( files, 'unified' );
+
 un_file = shared_utils.general.get( files, 'unified' );
 unified_filename = bfw.try_get_unified_filename( un_file );
 

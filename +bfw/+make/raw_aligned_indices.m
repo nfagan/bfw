@@ -12,6 +12,8 @@ function aligned_file = raw_aligned_indices(files, varargin)
 %     OUT:
 %       - `aligned_file` (struct)
 
+bfw.validatefiles( files, 'plex_raw_time' );
+
 defaults = bfw.make.defaults.raw_aligned_indices();
 params = bfw.parsestruct( defaults, varargin );
 

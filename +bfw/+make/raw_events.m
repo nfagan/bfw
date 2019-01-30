@@ -4,8 +4,7 @@ function events_file = raw_events(files, varargin)
 %
 %     Note that, in the files list below, <fixation> refers to a string
 %     that is the subfolder giving the kind of fixations used to make
-%     events. Currently, this can be one of 'eye_mmv_fixations' or
-%     'arduino_fixations'.
+%     events, and must be a key of `files`.
 %
 %     See also bfw.make.help, bfw.make_raw_events,
 %       bfw.make.defaults.raw_events
@@ -22,6 +21,8 @@ function events_file = raw_events(files, varargin)
 
 defaults = bfw.make.defaults.raw_events();
 params = bfw.parsestruct( defaults, varargin );
+
+bfw.validatefiles( files, {'time', 'bounds', params.fixations_subdir} );
 
 time_file = shared_utils.general.get( files, 'time' );
 bounds_file = shared_utils.general.get( files, 'bounds' );

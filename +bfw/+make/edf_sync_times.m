@@ -12,6 +12,8 @@ function sync_times_file = edf_sync_times(files)
 %     OUT:
 %       - `sync_times_file` (struct)
 
+bfw.validatefiles( files, {'unified', 'edf'} );
+
 unified_file = shared_utils.general.get( files, 'unified' );
 edf_file = shared_utils.general.get( files, 'edf' );
 

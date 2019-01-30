@@ -13,6 +13,8 @@ function fix_file = raw_fixations(files, is_fix_func, varargin)
 %     OUT:
 %       - `events_file` (struct)
 
+bfw.validatefiles( files, 'edf_raw_samples' );
+
 defaults = bfw.make.defaults.raw_fixations();
 params = bfw.parsestruct( defaults, varargin );
 

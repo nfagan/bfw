@@ -55,17 +55,8 @@ bfw.make_raw_arduino_fixations( inputs );
 
 %%  aligned + binned aligned samples (using aligned indices)
 
-sample_kinds = { 'time', 'position', 'bounds', 'eye_mmv_fixations', 'arduino_fixations' };
-
-bfw.make_raw_aligned_samples( inputs ...
-  , 'kinds', sample_kinds ...
-);
-
-bfw.make_binned_raw_aligned_samples( inputs ...
-  , 'kinds', sample_kinds ...
-);
-
-bfw.make_unified_position( inputs );
+bfw.make_aligned_samples( inputs );
+bfw.make_binned_aligned_samples( inputs );
 
 %%  events
 

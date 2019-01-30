@@ -29,10 +29,7 @@
 %   EXAMPLE:
 %
 %     % Create the meta_file from a random unified_file.
-%     unified_file = bfw.load1( 'unified' );
-%     % Note how the unified_file is passed as a struct with a field
-%     % 'unified'.
-%     meta_file = bfw.make.meta( struct('unified', unified_file) );
+%     meta_file = bfw.make.meta( bfw.load_many('unified') );
 %
 %   See also shared_utils.pipeline.LoopedMakeRunner, containers.Map,
 %     shared_utils.general.is_map_like

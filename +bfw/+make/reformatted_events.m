@@ -12,6 +12,8 @@ function reformatted_events_file = reformatted_events(files, varargin)
 %     OUT:
 %       - `reformatted_events_file` (struct)
 
+bfw.validatefiles( files, 'raw_events' );
+
 defaults = bfw.get_common_make_defaults();
 params = bfw.parsestruct( defaults, varargin );
 
