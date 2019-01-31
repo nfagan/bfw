@@ -373,19 +373,7 @@ for idx = 1:numel(outerdirs)
           error( 'Too many matches.' );
       end
     end
-%     
-%     for j = 1:numel(m_dirs)
-%       
-%       current_mdir = m_dirs{j};
-%       
-%       if ( ~isfield(data_, current_mdir) || i > numel(data_.(current_mdir)) )
-%         continue;
-%       end
-%       
-%       data.(current_mdir) = data_.(current_mdir)(i);
-%       data.(current_mdir).unified_filename = u_filename;
-%       data.(current_mdir).unified_directory = unified_output_dir;
-%     end
+    
     shared_utils.io.require_dir( unified_output_dir );
     file = fullfile( unified_output_dir, u_filename );
     save( file, 'data' );
