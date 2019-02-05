@@ -26,4 +26,8 @@ loop_runner = bfw.get_looped_make_runner( params );
 loop_runner.input_directories = bfw.gid( inputs, conf );
 loop_runner.output_directory = bfw.gid( output, conf );
 
+if ( isfield(params, 'skip_existing') && params.skip_existing )
+  bfw.set_skip_existing_files( loop_runner, loop_runner.output_directory );
+end
+
 end

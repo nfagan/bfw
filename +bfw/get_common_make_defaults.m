@@ -28,6 +28,7 @@ defaults.append = true;
 defaults.save = true;
 defaults.is_parallel = true;
 defaults.keep_output = false;
+defaults.skip_existing = false;
 defaults.config = bfw.config.load();
 
 end
