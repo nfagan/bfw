@@ -6,13 +6,19 @@
 
 namespace {
   //  Find index of element in `t` that's closest to the `search_for`.
-  //  Traverses whole array `t`.
+  //  Traverses whole array `t`, skips NaN.
   uint64_t find_nearest_first(double *t, uint64_t n, double search_for) {
     uint64_t idx = 0;
     double min = std::numeric_limits<double>::max();
     
     for (uint64_t i = 0; i < n; i++) {
-      double diff = abs(t[i] - search_for);
+      double value = t[i];
+      
+      if (std::isnan(value)) {
+        continue;
+      }
+      
+      double diff = abs(value - search_for);
       
       if (diff < min) {
         min = diff;
@@ -23,24 +29,30 @@ namespace {
     return idx;
   }
   
-  //  Find index of element in `t` that's close to `search_for`, stopping
-  //  when
+  //  Find index of element in `t` that's close to `search_for`, starting
+  //  from `offset`
   uint64_t find_nearest_next(double *t, uint64_t n, double search_for, uint64_t offset) {    
-    double target = abs(t[offset] - search_for);
-    uint64_t idx = offset;
+    double target;
+    bool has_target = false;
     
-    while (offset++ < n) {
-      double current = abs(t[offset] - search_for);
+    while (offset < n) {
+      double current_t = t[offset];
       
-      if (current > target) {
-        break;
+      if (!std::isnan(current_t)) {
+        double current = abs(current_t - search_for);
+      
+        if (has_target && current > target) {
+          break;
+        }
+      
+        target = current;
+        has_target = true;
       }
       
-      idx++;
-      target = current;
+      offset++;
     }
     
-    return idx;
+    return offset;
   }
   
   bool is_sorted_ascend(double *values, uint64_t n) {
