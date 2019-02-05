@@ -19,7 +19,7 @@ params = bfw.parsestruct( defaults, varargin );
 
 bfw.validatefiles( files, params.fixations_subdir );
 
-fixations_file = shared_utils.general.get( params.fixations_subdir );
+fixations_file = shared_utils.general.get( files, params.fixations_subdir );
 
 monk_ids = intersect( fieldnames(fixations_file), {'m1', 'm2'} );
 
