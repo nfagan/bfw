@@ -6,6 +6,7 @@ inputs.input_subdir = '';
 inputs.output_subdir = '';
 inputs.overwrite = false;
 inputs.files_containing = '';
+inputs.files_not_containing = '';
 
 folders = {};
 

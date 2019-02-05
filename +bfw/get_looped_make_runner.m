@@ -35,11 +35,14 @@ end
 
 obj = shared_utils.pipeline.LoopedMakeRunner;
 
+fc = params.files_containing;
+nc = params.files_not_containing;
+
 obj.save =                  params.save;
 obj.is_parallel =           params.is_parallel;
 obj.overwrite =             params.overwrite;
 obj.keep_output =           params.keep_output;
-obj.filter_files_func =     @(x) bfw.files_containing( x, params.files_containing );
+obj.filter_files_func =     @(x) bfw.filter_files( x, fc, nc );
 obj.get_identifier_func =   @(x, y) bfw.try_get_unified_filename( x );
 obj.log_level =             params.log_level;
 obj.files_aggregate_type =  'containers.Map';

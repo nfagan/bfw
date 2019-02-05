@@ -17,6 +17,7 @@ end
 
 defaults.files = [];
 defaults.files_containing = [];
+defaults.files_not_containing = [];
 defaults.loop_runner = [];
 defaults.log_level = 'info';
 defaults.cs_monk_id = 'm1';
