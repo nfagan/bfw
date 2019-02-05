@@ -25,6 +25,7 @@ monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
 aligned_bounds_file = struct();
 aligned_bounds_file.unified_filename = unified_filename;
 aligned_bounds_file.params = params;
+aligned_bounds_file.params.is_binned = false;
 
 N = numel( indices_file.t );
 

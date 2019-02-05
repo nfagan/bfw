@@ -24,6 +24,7 @@ monk_ids = intersect( fieldnames(bounds_file), {'m1', 'm2'} );
 
 binned_bounds_file = bounds_file;
 binned_bounds_file.params = params;
+binned_bounds_file.params.is_binned = true;
 
 for i = 1:numel(monk_ids)
   monk_id = monk_ids{i};

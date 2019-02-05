@@ -33,9 +33,9 @@ unified_filename = bfw.try_get_unified_filename( time_file );
 t = time_file.t;
   
 %   Check whether to adjust the duration to match the given bin size.
-if ( bounds_file.params.is_binned )
+if ( isfield(bounds_file.params, 'step_size') )
   step_size = bounds_file.params.step_size;
-else
+else  
   step_size = 1;
 end
 
