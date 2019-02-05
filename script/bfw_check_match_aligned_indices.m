@@ -10,6 +10,9 @@ loop_runner.convert_to_non_saving_with_output();
 
 results = loop_runner.run( @check_match_aligned_indices );
 
+oks = [ results([results.success]).output ];
+disp( pnz(oks) );
+
 end
 
 function is_ok = check_match_aligned_indices(files)
@@ -55,6 +58,7 @@ if ( ~were_equal )
   
   if ( numel(non_eq) ~= 2 || ~isnan(match_time(non_eq(2))) )
     fprintf( '\nIncorrect: %s', align_file.unified_filename );
+    is_ok = false;
   end
 %   disp( match_time(non_eq) );
 end
