@@ -29,4 +29,6 @@ defaults.n_samples = 4;
 % interval.
 defaults.update_interval = 1;
 
+defaults.kind = 'raw_eye_mmv_fixations';
+
 end
