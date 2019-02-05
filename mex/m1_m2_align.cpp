@@ -1,5 +1,6 @@
 #include "mex.h"
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <cmath>
 
