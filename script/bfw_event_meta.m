@@ -26,3 +26,9 @@ for i = 1:numel(outputs)
 end
 
 assert_ispair( events, labels );
+
+%%
+
+event_times = events(:, event_file.event_key('start_time'));
+
+combs( labels, 'unified_filename', find(isnan(event_times)) )

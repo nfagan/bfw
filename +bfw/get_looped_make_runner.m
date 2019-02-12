@@ -47,4 +47,8 @@ obj.get_identifier_func =   @(x, y) bfw.try_get_unified_filename( x );
 obj.log_level =             params.log_level;
 obj.files_aggregate_type =  'containers.Map';
 
+if ( params.skip_existing )
+  obj.set_skip_existing_files();
+end
+
 end

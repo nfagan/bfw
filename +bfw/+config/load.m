@@ -11,7 +11,7 @@ function out = load(cmd)
 %     OUT:
 %       - `out` (struct)
 
-% cache `conf`, unless it is updated via a call to `jjtom.config.save`
+% cache `conf`, unless it is updated via a call to `bfw.config.save`
 persistent conf;
 
 if ( nargin > 0 )
