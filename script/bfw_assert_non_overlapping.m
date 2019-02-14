@@ -17,10 +17,12 @@ for i = 1:numel(I)
       if ( j == k ), continue; end
       
       range2 = starts(k):stops(k);
+      
+      assert( isempty(intersect(range1, range2)) )
 
-      if ( ~isempty(intersect(range1, range2)) )
-        pairs{end+1} = [ current_I(j), current_I(k) ];
-      end
+%       if ( ~isempty(intersect(range1, range2)) )
+%         pairs{end+1} = [ current_I(j), current_I(k) ];
+%       end
     end
   end
 end

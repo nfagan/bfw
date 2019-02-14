@@ -71,13 +71,25 @@ for i = 1:numel(I)
     stop_indices1 = stop_indices(roi1_I);
 
     start_indices2 = start_indices(roi2_I);
-    stop_indices2 = stop_indices(roi2_I);
 
-    for h = 1:numel(start_indices2)
-      start = start_indices2(h);
-%         stop = stop_indices2(h);
+    for k = 1:numel(start_indices2)
+      start = start_indices2(k);
 
-      condition1 = start >= start_indices1 & start <= stop_indices1;
+      events_overlap = start >= start_indices1 & start <= stop_indices1;
+      
+      keep(roi1_I(events_overlap)) = false;
+      
+      if ( check_remove(roi1, roi2) )
+        keep(roi2_I(k)) = false;
+      end
+    end
+  end
+end
+
+keep = find( keep );
+
+end
+
 
 %         % start B == start A | stop B == stop A
 %         condition1 = start == start_indices1 | stop == stop_indices1;
@@ -89,15 +101,3 @@ for i = 1:numel(I)
 %         condition3 = start_indices1 >= start & stop >= start_indices1;
 %         
 %         events_overlap = condition1 | condition2 | condition3;
-      events_overlap = condition1;
-
-      if ( any(events_overlap) && check_remove(roi1, roi2) )
-        keep(roi2_I(h)) = false;
-      end
-    end
-  end
-end
-
-keep = find( keep );
-
-end

@@ -14,21 +14,11 @@ start_indices = events(:, event_key('start_index'));
 stop_indices = events(:, event_key('stop_index'));
 start_times = events(:, event_key('start_time'));
 
-rois = { 'eyes_nf', 'mouth', 'face' };
-
 I = findall( event_labels, 'unified_filename' );
 
-check_func = @bfw_prioritize_eyes_mouth;
-% check_func = @(varargin) true;
+pairs = { {'eyes_nf', 'face'}, {'mouth', 'face'}, {'eyes_nf', 'mouth'} };
 
-non_overlapping = ...
-  bfw_exclusiveize_events( start_indices, stop_indices, event_labels, rois, I, check_func );
-
-%%
-
-to_check = find( event_labels, rois, non_overlapping );
-to_check = find( event_labels, {'m1'}, to_check );
-overlapping_pairs = bfw_assert_non_overlapping( start_indices, stop_indices, I(1), to_check );
+non_overlapping = bfw_exclusive_events( start_indices, stop_indices, event_labels, pairs, I );
 
 %%  label previous event
 
@@ -41,7 +31,7 @@ I = findall( event_labels, 'unified_filename', non_overlapping );
 
 prune( prev_labs );
 
-%%
+%% Cound proportions of each event type
 
 labs = prev_labs';
 
@@ -56,7 +46,7 @@ else
 end
 
 mask = fcat.mask( labs, mask ...
-  , @find, {'mouth', 'eyes_nf'} ...
+  , @find, rois ...
   , @findnone, '<previous_roi>' ...
   , @findnone, {'mutual', 'previous_mutual'} ...
   , @find, {'free_viewing', 'no-stimulation'} ...
@@ -68,7 +58,7 @@ props_of = { 'previous_roi', 'previous_looks_by' };
 
 [counts, pltlabs] = proportions_of( labs, props_each, props_of, mask );
 
-%%
+%%  plot
 
 pl = plotlabeled.make_common();
 % pl.y_lims = [0, 0.5];
@@ -81,20 +71,8 @@ pcats = { 'looks_by' };
 
 pl.bar( counts, pltlabs, xcats, gcats, pcats );
 
-%%
+%%  Check -- make sure events are non-overlapping
 
-use_starts = start_indices;
-
-non_nan_starts = find( ~isnan(use_starts) );
-
-mask = find( event_labels, rois );
-
-for i = 1:numel(I)
-  ind = intersect( I{i}, non_overlapping );
-  ind = intersect( ind, non_nan_starts );
-  ind = intersect( ind, mask );
-  
-  s = unique( use_starts(ind) );
-  
-  assert( numel(s) == numel(ind) );
-end
+% to_check = find( event_labels, {'eyes_nf', 'face', 'mouth'}, non_overlapping );
+% to_check = find( event_labels, {'m1'}, to_check );
+% overlapping_pairs = bfw_assert_non_overlapping( start_indices, stop_indices, I, to_check );
