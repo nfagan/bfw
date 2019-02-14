@@ -30,7 +30,7 @@ for i = 1:numel(m_fields)
   screen_rect = calibration_file.(m_id);
   zero_offset = [1024; 0] - columnize( screen_rect(1:2) );
   
-  offset_file.(m_id) = -zero_offset;
+  offset_file.(m_id) = zero_offset;
 end
 
 m2_to_m1 = zeros( 2, 1 );
