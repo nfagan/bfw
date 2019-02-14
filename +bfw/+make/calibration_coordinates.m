@@ -1,5 +1,16 @@
 function coord_file = calibration_coordinates(files)
 
+%   CALIBRATION_COORDINATES -- Create calibration coordinates file.
+%
+%     See also bfw.make.help
+%
+%     IN:
+%       - `files` (containers.Map, struct)
+%     FILES:
+%       - 'edf'
+%     OUT:
+%       - `coord_file` (struct)
+
 bfw.validatefiles( files, {'edf'} );
 
 edf_file = shared_utils.general.get( files, 'edf' );

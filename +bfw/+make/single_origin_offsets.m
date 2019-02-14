@@ -1,25 +1,34 @@
 function offset_file = single_origin_offsets(files)
 
-bfw.validatefiles( files, 'unified' );
+%   SINGLE_ORIGIN_OFFSETS -- Create single origin offsets file.
+%
+%     See also bfw.make.help
+%
+%     IN:
+%       - `files` (containers.Map, struct)
+%     FILES:
+%       - 'calibration_coordinates'
+%     OUT:
+%       - `offset_file` (struct)
 
-unified_file = shared_utils.general.get( files, 'unified' );
+bfw.validatefiles( files, 'calibration_coordinates' );
 
-m_fields = intersect( fieldnames(unified_file), {'m1', 'm2'} );
+calibration_file = shared_utils.general.get( files, 'calibration_coordinates' );
+
+m_fields = intersect( fieldnames(calibration_file), {'m1', 'm2'} );
 
 offset_file = struct();
-offset_file.unified_filename = bfw.try_get_unified_filename( unified_file );
+offset_file.unified_filename = bfw.try_get_unified_filename( calibration_file );
 
-use_screen_rect = [ 0, 0, 1024*3, 768 ];
+use_screen_rect = [0, 0, 1024*3, 768];
 
 % Adjust position so that, for each monk, origin is the top-left of
 % *respective* screen, with coordinate (0, 0)
 for i = 1:numel(m_fields)
   m_id = m_fields{i};
   
-  unified = unified_file.(m_id);
-  
-  screen_rect = bfw.field_or( unified, 'screen_rect', use_screen_rect );
-  zero_offset = columnize(screen_rect(3:4)) - columnize(use_screen_rect(3:4));
+  screen_rect = calibration_file.(m_id);
+  zero_offset = columnize( screen_rect(1:2) );
   
   offset_file.(m_id) = -zero_offset;
 end
