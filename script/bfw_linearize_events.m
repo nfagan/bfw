@@ -2,7 +2,7 @@ function out = bfw_linearize_events(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-inputs = { 'raw_events', 'meta' };
+inputs = { 'raw_events', 'meta', 'stim_meta' };
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
@@ -18,6 +18,7 @@ function out = linearize(files, params)
 
 events_file = shared_utils.general.get( files, 'raw_events' );
 meta_file = shared_utils.general.get( files, 'meta' );
+stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
 
 event_key = events_file.event_key;
 
@@ -28,7 +29,7 @@ sorted_events = events_file.events(I, :);
 sorted_labels = events_file.labels(I, :);
 
 sorted_labels = fcat.from( sorted_labels, events_file.categories );
-join( sorted_labels, bfw.struct2fcat(meta_file) );
+join( sorted_labels, bfw.struct2fcat(meta_file), bfw.stim_meta_to_fcat(stim_meta_file) );
 
 out = struct();
 out.key_order = cellfun( @(x) event_key(x), get_expected_keys() );
