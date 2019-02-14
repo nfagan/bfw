@@ -28,7 +28,7 @@ for i = 1:numel(m_fields)
   m_id = m_fields{i};
   
   screen_rect = calibration_file.(m_id);
-  zero_offset = columnize( screen_rect(1:2) );
+  zero_offset = [1024; 0] - columnize( screen_rect(1:2) );
   
   offset_file.(m_id) = -zero_offset;
 end

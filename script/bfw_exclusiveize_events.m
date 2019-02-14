@@ -49,48 +49,50 @@ validateattributes( check_remove, {'function_handle'}, {'scalar'} ...
 
 keep = true( numel(start_indices), 1 );
 
-roi_vec = [ 1:numel(rois), fliplr(1:numel(rois)) ];
+roi_combs = combvec( 1:numel(rois), 1:numel(rois) );
+roi_combs = roi_combs(:, roi_combs(1, :) ~= roi_combs(2, :));
 
-for i = 1:numel(I)
+n_combs = size( roi_combs, 2 );
+
+for i = 1:numel(I)  
   current_I = I{i};
   
-  for j = 1:numel(roi_vec)
-    for k = j:numel(roi_vec)
-      roi1_ind = roi_vec(j);
-      roi2_ind = roi_vec(k);
-      
-      if ( roi1_ind == roi2_ind ), continue; end
-      
-      roi1 = rois{roi1_ind};
-      roi2 = rois{roi2_ind};
-      
-      roi1_I = find( labels, roi1, current_I );
-      roi2_I = find( labels, roi2, current_I );
+  for j = 1:n_combs
+    roi1_ind = roi_combs(1, j);
+    roi2_ind = roi_combs(2, j);
 
-      start_indices1 = start_indices(roi1_I);
-      stop_indices1 = stop_indices(roi1_I);
+    roi1 = rois{roi1_ind};
+    roi2 = rois{roi2_ind};
 
-      start_indices2 = start_indices(roi2_I);
-      stop_indices2 = stop_indices(roi2_I);
+    roi1_I = find( labels, roi1, current_I );
+    roi2_I = find( labels, roi2, current_I );
 
-      for h = 1:numel(start_indices2)
-        start = start_indices2(h);
-        stop = stop_indices2(h);
-        
-        % start B == start A | stop B == stop A
-        condition1 = start == start_indices1 | stop == stop_indices1;
-        
-        % (start B >= start A) & (stop A >= start B)
-        condition2 = start >= start_indices1 & stop_indices1 >= stop;
-        
-        % (start A >= start B) & (stop B >= start A)
-        condition3 = start_indices1 >= start & stop >= start_indices1;
-        
-        events_overlap = condition1 | condition2 | condition3;
-        
-        if ( any(events_overlap) && check_remove(roi1, roi2) )
-          keep(roi2_I(h)) = false;
-        end
+    start_indices1 = start_indices(roi1_I);
+    stop_indices1 = stop_indices(roi1_I);
+
+    start_indices2 = start_indices(roi2_I);
+    stop_indices2 = stop_indices(roi2_I);
+
+    for h = 1:numel(start_indices2)
+      start = start_indices2(h);
+%         stop = stop_indices2(h);
+
+      condition1 = start >= start_indices1 & start <= stop_indices1;
+
+%         % start B == start A | stop B == stop A
+%         condition1 = start == start_indices1 | stop == stop_indices1;
+%         
+%         % (start B >= start A) & (stop A >= start B)
+%         condition2 = start >= start_indices1 & stop_indices1 >= stop;
+%         
+%         % (start A >= start B) & (stop B >= start A)
+%         condition3 = start_indices1 >= start & stop >= start_indices1;
+%         
+%         events_overlap = condition1 | condition2 | condition3;
+      events_overlap = condition1;
+
+      if ( any(events_overlap) && check_remove(roi1, roi2) )
+        keep(roi2_I(h)) = false;
       end
     end
   end

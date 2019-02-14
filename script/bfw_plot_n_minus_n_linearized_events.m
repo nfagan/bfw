@@ -19,6 +19,7 @@ rois = { 'eyes_nf', 'mouth', 'face' };
 I = findall( event_labels, 'unified_filename' );
 
 check_func = @bfw_prioritize_eyes_mouth;
+% check_func = @(varargin) true;
 
 non_overlapping = ...
   bfw_exclusiveize_events( start_indices, stop_indices, event_labels, rois, I, check_func );
@@ -26,7 +27,8 @@ non_overlapping = ...
 %%
 
 to_check = find( event_labels, rois, non_overlapping );
-overlapping_pairs = bfw_assert_non_overlapping( start_indices, stop_indices, I, to_check );
+to_check = find( event_labels, {'m1'}, to_check );
+overlapping_pairs = bfw_assert_non_overlapping( start_indices, stop_indices, I(1), to_check );
 
 %%  label previous event
 
