@@ -16,7 +16,7 @@ start_times = events(:, event_key('start_time'));
 
 I = findall( event_labels, 'unified_filename' );
 
-pairs = { {'eyes_nf', 'face'}, {'mouth', 'face'}, {'eyes_nf', 'mouth'} };
+pairs = { {'eyes_nf', 'face'}, {'mouth', 'face'}, {'eyes_nf', 'mouth'}, {'left_nonsocial_object', 'outside1'}, {'right_nonsocial_object', 'outside1'}};
 
 non_overlapping = bfw_exclusive_events( start_indices, stop_indices, event_labels, pairs, I );
 
