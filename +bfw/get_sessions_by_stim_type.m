@@ -12,7 +12,7 @@ else
 end
 
 if ( params.cache && ~isempty(use_sessions) )
-  fprintf( '\n Using cached data ...' );
+  fprintf( '\n Using cached data ...\n' );
   sessions = use_sessions;
   return
 end

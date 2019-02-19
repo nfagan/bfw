@@ -4,6 +4,8 @@ linearized_events = bfw_linearize_events();
 
 %%  Ensure events are non-overlapping
 
+rois = { 'eyes_nf', 'mouth', 'face' };
+
 event_labels = linearized_events.labels';
 events = linearized_events.events;
 event_key = linearized_events.event_key;

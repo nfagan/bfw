@@ -22,6 +22,10 @@ else
   bfw.util.assertions.assert__is_config( conf );
 end
 
+if ( nargin < 1 )
+  kind = '';
+end
+
 data_p = conf.PATHS.data_root;
 
 p = shared_utils.io.fullfiles( data_p, 'intermediates', kind );
