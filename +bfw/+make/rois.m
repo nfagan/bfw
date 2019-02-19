@@ -122,12 +122,13 @@ end
 function roi_funcs = get_roi_funcs(un_file)
 
 roi_funcs = containers.Map();
-roi_funcs('face') =     @bfw.calibration.rect_face;
-roi_funcs('eyes_nf') =  @bfw.calibration.rect_eyes;
-roi_funcs('eyes') =     @bfw.calibration.rect_eyes_cc;
-roi_funcs('mouth') =    @bfw.calibration.rect_mouth_inverted_eyes;
-roi_funcs('outside1') = @bfw.calibration.rect_outside1;
-roi_funcs('outside2') = @bfw.calibration.rect_outside2;
+roi_funcs('face') =         @bfw.calibration.rect_face;
+roi_funcs('eyes_nf') =      @bfw.calibration.rect_eyes;
+roi_funcs('eyes') =         @bfw.calibration.rect_eyes_cc;
+roi_funcs('mouth') =        @bfw.calibration.rect_mouth_inverted_eyes;
+roi_funcs('everywhere') =   @bfw.calibration.rect_everywhere;
+roi_funcs('outside1') =     @bfw.calibration.rect_outside1;
+roi_funcs('outside2') =     @bfw.calibration.rect_outside2;
 % //
 roi_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
 roi_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;

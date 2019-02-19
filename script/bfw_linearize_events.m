@@ -46,7 +46,7 @@ out = struct();
 if ( isempty(outputs) )
   out.events = [];
   out.labels = fcat();
-  out.event_key = containers.Map();
+  out.event_key = get_empty_map();
 else
   key_order = vertcat( outputs.key_order );
   assert( size(unique(key_order, 'rows'), 1) == 1, 'Event columns are inconsistent.' );
@@ -69,6 +69,17 @@ assert( numel(unique(I)) == rows(outputs.labels) );
 
 keep( outputs.labels, I );
 outputs.events = outputs.events(I, :);
+
+end
+
+function map = get_empty_map()
+
+keys = get_expected_keys();
+map = containers.Map();
+
+for i = 1:numel(keys)
+  map(keys{i}) = [];  
+end
 
 end
 
