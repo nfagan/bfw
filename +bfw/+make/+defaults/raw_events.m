@@ -38,4 +38,8 @@ defaults.fill_gaps_duration = nan;
 % event that initiated the mutual event will be removed.
 defaults.is_truly_exclusive = true;
 
+defaults.rois = 'all';
+defaults.intermediate_directory_name = 'raw_events';
+defaults.get_current_events_file_func = @bfw.make.util.get_saved_file_or_struct;
+
 end

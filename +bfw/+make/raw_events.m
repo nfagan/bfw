@@ -39,32 +39,32 @@ else
   step_size = 1;
 end
 
+% Save the step size used.
+params.step_size = step_size;
+
 monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
-first_id = monk_ids{1};
-roi_names = keys( bounds_file.(first_id) );
+% Set of roi names that can be manually selected.
+possible_roi_names = keys( bounds_file.(monk_ids{1}) );
+% Set of roi names that *will* be used to make events.
+[active_roi_names, is_all_rois] = get_active_roi_names( possible_roi_names, params.rois );
+
+% Get the events_file struct in which data will be stored
+events_file = get_base_events_file( unified_filename, active_roi_names, is_all_rois, params );
 
 has_mutual_events = numel( monk_ids ) > 1;
 mutual_evts = [];
 
-events_file = struct();
-events_file.unified_filename = unified_filename;
-events_file.params = params;
-events_file.params.step_size = step_size;
+for i = 1:numel(active_roi_names)
+  roi_name = active_roi_names{i};
 
-events_file.events = [];
-events_file.labels = {};
-
-for i = 1:numel(roi_names)
-  roi = roi_names{i};
-
-  exclusive_evts = find_exclusive_events( roi, t, step_size, bounds_file, fix_file, params );
+  exclusive_evts = find_exclusive_events( roi_name, t, step_size, bounds_file, fix_file, params );
 
   if ( has_mutual_events )
     mutual_evts = find_mutual_events( t, step_size, exclusive_evts, params ); 
   end
 
   joined = join_events( exclusive_evts, mutual_evts, params );
-  repeated_roi = repmat( {roi}, rows(joined.events), 1 );
+  repeated_roi = repmat( {roi_name}, rows(joined.events), 1 );
 
   events_file.events = [ events_file.events; joined.events ];
   events_file.labels = [ events_file.labels; [joined.labels, repeated_roi] ];
@@ -373,4 +373,77 @@ end
 function l = get_event_length(index, bounds)
 l = 0;
 while ( index+l <= numel(bounds) && bounds(index+l) ), l = l + 1; end
+end
+
+function events_file = get_base_events_file(unified_filename, active_roi_names, is_all_rois, params)
+
+% If we request to append output to an existing file, and we're not
+% updating *all* rois, then load the currently existing events file.
+
+events_file = struct();
+make_empty_arrays = true;
+
+if ( params.append && ~is_all_rois )
+  events_subdir = params.intermediate_directory_name;
+  get_events_file_func = params.get_current_events_file_func;
+  conf = params.config;
+  
+  % Get the current events file using `get_events_file_func`. This function
+  % should also return a logical scalar indicating whether an existing file
+  % was loaded; if not, `events_file` is just a struct with no fields.
+  [events_file, did_load] = get_events_file_func( unified_filename, events_subdir, conf );
+  
+  if ( did_load )
+    % If this *is* an existing events file, remove the events associated
+    % with `active_roi_names`; only these events will be overwritten.
+    events_file = remove_active_rois_from_existing_events_file( events_file, active_roi_names );
+    make_empty_arrays = false;
+  end
+end
+
+if ( make_empty_arrays )
+  events_file.events = [];
+  events_file.labels = {};
+end
+
+events_file.unified_filename = unified_filename;
+events_file.params = params;
+
+end
+
+function events_file = remove_active_rois_from_existing_events_file(events_file, active_roi_names)
+
+labels = events_file.labels;
+categories = events_file.categories;
+
+roi_cat = strcmp( categories, 'roi' );
+assert( nnz(roi_cat) == 1, 'No roi specifier found.' );
+
+roi_labels = labels(:, roi_cat);
+
+is_active_roi = false( size(labels, 1), 1 );
+
+for i = 1:numel(active_roi_names)
+  is_active_roi = is_active_roi | strcmp( roi_labels, active_roi_names{i} );
+end
+
+events_file.labels(is_active_roi, :) = [];
+events_file.events(is_active_roi, :) = [];
+
+end
+
+function [roi_names, is_all_rois] = get_active_roi_names(possible_roi_names, requested_roi_names)
+
+requested_roi_names = cellstr( requested_roi_names );
+is_all_rois = numel( requested_roi_names ) == 1 && strcmp( requested_roi_names, 'all' );
+
+if ( is_all_rois )
+  roi_names = possible_roi_names;
+else
+  assert( all(ismember(requested_roi_names, possible_roi_names)) ...
+    , 'Some manually requested rois do not have an entry in the roi file.' );
+
+  roi_names = unique( requested_roi_names );
+end
+
 end
