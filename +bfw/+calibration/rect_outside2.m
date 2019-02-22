@@ -10,15 +10,16 @@ x2 = screen_rect(3);
 
 % before 0209 [0 0 3072 768] after [-1024 0 2048 768], should fix this
 % later
-if x2 == 3072
-   x_center = (x2 - x1)/2;
-else
-   x_center = 0;
-end  
+% if x2 == 3072
+%    x_center = (x2 - x1)/2;
+   x_center = (x2 - x1)/2 + x1; 
+% else
+%    x_center = 0;
+% end  
 ctr1 = [ x_center, 0 ];
 
 % moving down to match nonsoc obj
-ctr1 = [ x_center-face_h 0+face_v ];
+% ctr1 = [ x_center-face_h 0+face_v ];
 
 bounds = [ctr1(1)-face_h ctr1(2)-face_v ctr1(1)+face_h ctr1(2)+face_v];
 

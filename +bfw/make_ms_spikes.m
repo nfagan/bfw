@@ -44,7 +44,7 @@ for i = 1:numel(un_mats)
   ms_file_map_dir_components = un0.ms_firings_file_map_directory;
   
   ms_firings_fullfile = fullfile( data_root, ms_file_map_dir_components{:}, ms_file_map );
-   
+
   if ( ~shared_utils.io.fexists(ms_firings_fullfile) )
     fprintf( '\n Warning: ms file map "%s" does not exist. Skipping "%s"' ...
       , ms_firings_fullfile, un_filename );

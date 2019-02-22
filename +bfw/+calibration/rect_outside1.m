@@ -15,7 +15,7 @@ x_center = (x2 - x1)/2 + x1 + (x2 - x1)/3/2; % the center of 3 moniter,
 
 ctr1 = [ x_center, 0 ];
 % moving down to match nonsoc obj
-ctr1 = [ x_center+face_h 0+face_v ];
+% ctr1 = [ x_center+face_h 0+face_v ];
 
 bounds = [ctr1(1)-face_h ctr1(2)-face_v ctr1(1)+face_h ctr1(2)+face_v];
 

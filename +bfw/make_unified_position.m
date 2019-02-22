@@ -1,4 +1,4 @@
-function results = make_unified_position(varargin)
+dresults = make_unified_position(varargin)
 
 defaults = bfw.get_common_make_defaults();
 defaults.samples_subdir = 'aligned_raw_samples';
