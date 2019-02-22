@@ -1,6 +1,6 @@
 %% Sort all events in ascending order by event time.
 
-linearized_events = bfw_linearize_events();
+linearized_events = bfw_linearize_events( 'files_containing', 'xlskdfj' );
 
 %%  Ensure events are non-overlapping
 

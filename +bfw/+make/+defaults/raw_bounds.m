@@ -16,4 +16,8 @@ defaults = bfw.get_common_make_defaults();
 % amount is specific to each given roi.
 defaults.padding = 0;
 
+defaults.rois = 'all';
+defaults.intermediate_directory_name = 'raw_bounds';
+defaults.get_current_bounds_file_func = @bfw.make.util.get_saved_file_or_struct;
+
 end
