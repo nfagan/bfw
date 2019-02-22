@@ -65,8 +65,6 @@ for j = 1:numel(monk_ids)
   bounds_file.(m_id).bounds = bounds;
 end
 
-d = 10;
-
 end
 
 function p = get_padding(padding, roi)
