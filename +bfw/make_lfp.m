@@ -3,6 +3,7 @@ function make_lfp(varargin)
 ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
+defaults.save_flags = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -10,6 +11,8 @@ conf = params.config;
 data_root = conf.PATHS.data_root;
 isd = params.input_subdir;
 osd = params.output_subdir;
+
+save_flags = cellstr( params.save_flags );
 
 unified_p = bfw.gid( ff('unified', isd), conf );
 save_p = bfw.gid( ff('lfp', osd), conf );
@@ -134,14 +137,14 @@ for i = 1:numel(un_mats)
   lfp.sample_rate = sample_rate;
   lfp.id_times = (0:size(lfp_mat, 2)-1) * (1/sample_rate);
   
-  do_save( lfp, full_filename );
+  do_save( lfp, full_filename, save_flags{:} );
 end
 
 end
 
-function do_save( var, filename )
+function do_save(var, filename, varargin)
 
-save( filename, 'var' );
+save( filename, 'var', varargin{:} );
 
 end
 
