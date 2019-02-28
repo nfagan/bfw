@@ -11,13 +11,15 @@ events_file = shared_utils.general.get( files, 'raw_events' );
 
 if ( spike_file.is_link )
   spike_file = load_linked_file( spike_file, 'spike_subdir', 'spikes', params );
+  files('spikes') = spike_file;
 end
 
 if ( lfp_file.is_link )
   lfp_file = load_linked_file( lfp_file, 'lfp_subdir', 'lfp', params );
+  files('lfp') = lfp_file;
 end
 
-d = 10;
+aligned_lfp = bfw.make.raw_aligned_lfp( files );
 
 end
 

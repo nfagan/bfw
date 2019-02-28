@@ -8,7 +8,7 @@ events_subdir = params.events_subdir;
 bfw.validatefiles( files, {events_subdir, 'lfp'} );
 
 lfp_file = shared_utils.general.get( files, 'lfp' );
-events_file = shared_utils.general.get( files, event_subdir );
+events_file = shared_utils.general.get( files, events_subdir );
 
 unified_filename = bfw.try_get_unified_filename( events_file );
 
