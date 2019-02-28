@@ -87,11 +87,11 @@ namespace {
           continue;
         }
         
-        double current_difference = abs(event_time - t);
+        double current_difference = std::abs(event_time - t);
         
         if (j - last_time_index > 0) {
           double last_t = time.data[last_time_index];
-          double last_difference = abs(event_time - last_t);
+          double last_difference = std::abs(event_time - last_t);
           
           if (last_difference < current_difference) {
             assign_index = last_time_index + 1;
