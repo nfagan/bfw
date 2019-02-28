@@ -77,7 +77,7 @@ for i = 1:iters
     mismatching_inds = find( is_mismatching );
     
     if ( ~isequal(mismatching_inds, find(isnan(event_vec))) )      
-      error( 'Found arrays mismatch: %d mismatches', n_mismatches );
+      error( 'Found arrays mismatch: %d mismatches', sum(is_mismatching) );
     else
       assert( all(mex_v(mismatching_inds) == 0) && all(matlab_v(mismatching_inds) == 1) ...
         , 'NaN event times were associated with inconsistent indices.' );
