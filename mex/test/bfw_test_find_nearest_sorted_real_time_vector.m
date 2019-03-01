@@ -23,23 +23,15 @@ toc;
 check_mat = mat_id_time_inds(:);
 check_mex = double( mex_id_time_inds(:) );
 
-check_mat(isnan(check_mat)) = 0;
-
 differences = check_mat - check_mex;
 
 if ( ~all(differences == 0) )
   assert( max(abs(differences)) == 1, 'More than 1 index of difference.' );
   
-  plus_1 = differences == 1;
-  minus_1 = differences == -1;
-  nan_events = isnan( event_times(:) );
+  num_diffs = find( differences ~= 0 );
   
-  assert( isequal(nan_events, plus_1), 'NaN events did not match the +1 differences' );  
-  
-  minus_1_inds = find( minus_1 );
-  
-  for i = 1:numel(minus_1_inds)
-    m_ind = minus_1_inds(i);
+  for i = 1:numel(num_diffs)
+    m_ind = num_diffs(i);
     
     mat_ind = check_mat(m_ind);
     mex_ind = check_mex(m_ind);

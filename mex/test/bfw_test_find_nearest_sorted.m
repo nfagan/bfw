@@ -68,20 +68,8 @@ for i = 1:iters
   matlab_v(isnan(matlab_v)) = 0;
   
   if ( ~isequaln(mex_v, matlab_v) )
-    % Some indices don't match between matlab and the mex file. But that
-    % could be because matlab says that the index of a nearest NaN event
-    % time is 1, whereas the mex file says this index is 0. Only fail if
-    % the mismatching indices are *not* nan elements in `event_vec`.
     is_mismatching = mex_v ~= matlab_v;
-    
-    mismatching_inds = find( is_mismatching );
-    
-    if ( ~isequal(mismatching_inds, find(isnan(event_vec))) )      
-      error( 'Found arrays mismatch: %d mismatches', sum(is_mismatching) );
-    else
-      assert( all(mex_v(mismatching_inds) == 0) && all(matlab_v(mismatching_inds) == 1) ...
-        , 'NaN event times were associated with inconsistent indices.' );
-    end
+    error( 'Found arrays mismatch: %d mismatches', sum(is_mismatching) );
   end
 end
 

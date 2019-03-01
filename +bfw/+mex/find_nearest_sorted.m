@@ -10,12 +10,17 @@ function varargout = find_nearest_sorted(varargin)
 %     given A. A and B must be sorted in ascending order. I is of class
 %     int64.
 %
+%     I = ... find_nearest_sorted( ..., CONFIRM_IS_SORTED ) for the logical
+%     scalar flag CONFIRM_IS_SORTED indicates whether to check that arrays
+%     A and B are sorted in ascending order, and issue an error message if
+%     they are not. Default is true.
+%
 %     If A contains duplicate elements for which there could be multiple 
 %     absolute minima for a given element of B, the associated index is the 
 %     index of the last such element in A. More concretely,
 %     bfw.mex.find_nearest_sorted( [1, 1, 1, 1], 1 ) returns 4.
 %
-%     NaN elements in B are assigned the index 0 in I. NaN elements in A
+%     NaN elements in B are assigned the index 1 in I. NaN elements in A
 %     are skipped. If all elements of A are NaN, all indices in I are 1.
 %
 %     EX //

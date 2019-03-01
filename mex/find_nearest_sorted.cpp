@@ -31,7 +31,15 @@ namespace {
     }
   }
   
-  void check_inputs(const mxArray *time_array, const mxArray *events_array) {
+  bool determine_to_check_is_sorted(const mxArray *logical_flag) {
+    if (!mxIsLogicalScalar(logical_flag)) {
+      mexErrMsgTxt("Check sorting flag must be a logical scalar.");
+    }
+    
+    return mxIsLogicalScalarTrue(logical_flag);
+  }
+  
+  void check_inputs(const mxArray *time_array, const mxArray *events_array, bool check_is_sorted) {
     if (!mxIsDouble(time_array) || !mxIsDouble(events_array)) {
       mexErrMsgTxt("Time and event arrays must be double arrays.");
     }
@@ -40,8 +48,10 @@ namespace {
       mexErrMsgTxt("Time and event arrays must be real double arrays.");
     }
     
-    check_sorted(time_array, "time");
-    check_sorted(events_array, "events");
+    if (check_is_sorted) {
+      check_sorted(time_array, "time");
+      check_sorted(events_array, "events");
+    }
   }
   
   DecomposedArray<double> decompose_double_array(const mxArray *array) {
@@ -74,6 +84,7 @@ namespace {
       double event_time = events.data[i];
       
       if (std::isnan(event_time)) {
+        out_indices.data[i] = 1;
         continue;
       }
       
@@ -118,8 +129,8 @@ namespace {
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   
-  if (nrhs != 2) {
-    mexErrMsgTxt("2 inputs required.");
+  if (nrhs < 2 || nrhs > 3) {
+    mexErrMsgTxt("2 or 3 inputs required.");
     return;
   }
   
@@ -128,10 +139,16 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     return;
   }
   
+  bool check_is_sorted = true;
+  
   const mxArray *time_array = prhs[0];
   const mxArray *events_array = prhs[1];
   
-  check_inputs(time_array, events_array);
+  if (nrhs == 3) {
+    check_is_sorted = determine_to_check_is_sorted(prhs[2]);
+  }
+  
+  check_inputs(time_array, events_array, check_is_sorted);
   
   auto c_time = decompose_double_array(time_array);
   auto c_events = decompose_double_array(events_array);
@@ -145,7 +162,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   plhs[0] = time_indices;
   
   auto c_indices = decompose_numeric_array<int64_t>(time_indices);
-  std::memset(c_indices.data, 0, c_indices.size * sizeof(int64_t));
+  
+  if (c_indices.size > 0) {
+    std::memset(c_indices.data, 0, c_indices.size * sizeof(int64_t));
+  }
   
   find_indices(c_time, c_events, c_indices);  
 }
