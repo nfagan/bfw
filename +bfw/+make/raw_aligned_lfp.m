@@ -85,6 +85,7 @@ aligned_file.labels = categorical( all_labs );
 aligned_file.categories = getcats( all_labs );
 aligned_file.lfp_indices = lfp_indices;
 aligned_file.event_indices = event_indices;
+aligned_file.n_events_per_channel = n_events;
 
 end
 

@@ -14,5 +14,20 @@ defaults.spike_subdir = 'spikes';
 defaults.events_subdir = 'raw_events';
 
 defaults.rois = 'all';
+defaults.remove_nan_trials = true;
+defaults.trial_average = false;
+defaults.trial_average_specificity = {};
+
+defaults.chronux_params = struct( 'Fs', 1e3, 'tapers', [1.5, 2] );
+
+defaults.keep_func = @identity_keep_func;
+
+end
+
+function [lfp_ind, spike_ind] = identity_keep_func(lfp_data, lfp_labels ...
+  , spike_data, spike_labels)
+
+lfp_ind = rowmask( lfp_data );
+spike_ind = rowmask( spike_data );
 
 end
