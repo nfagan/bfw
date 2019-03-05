@@ -59,6 +59,8 @@ all_labels = cell( n_combs, 1 );
 freqs = [];
 
 for i = 1:n_combs
+  shared_utils.general.progress( i, n_combs );
+  
   lfp_index = lfp_I{index_combinations(1, i)};
   spike_index = spike_I{index_combinations(2, i)};
   
