@@ -12,7 +12,7 @@ bfw.util.assertions.assert__is_config( conf );
 if ( ~conf.CLUSTER.use_cluster ), return; end
 
 %   ensure the saved config file has all the required fields.
-bfw.util.assertions.assert__config_up_to_date( conf );
+% bfw.util.assertions.assert__config_up_to_date( conf );
 
 %   start the parpool if not already started
 bfw.cluster.require_parpool();
