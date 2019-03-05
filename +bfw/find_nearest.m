@@ -10,7 +10,7 @@ function nearest_indices = find_nearest(t, b)
 %
 %     See also bfw.mex.find_nearest_sorted
 
-assert( issorted(t, 'ascend'), 'A must be sorted in ascending order.' );
+assert( issorted(t, 'ascend'), 'First input must be sorted in ascending order.' );
 
 % first sorted index gives: sorted_b = b(sorted_index_a2b)
 [sorted_b, sorted_index_a2b] = sort( b, 'ascend' );

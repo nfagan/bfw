@@ -65,7 +65,6 @@ for i = 1:iters
   
   mex_v = double( mex_v(:) );
   matlab_v = matlab_v(:);
-  matlab_v(isnan(matlab_v)) = 0;
   
   if ( ~isequaln(mex_v, matlab_v) )
     is_mismatching = mex_v ~= matlab_v;

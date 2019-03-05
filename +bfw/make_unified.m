@@ -103,6 +103,8 @@ for idx = 1:numel(outerdirs)
     end
     
     m_nscontrol_p = fullfile( m_dir, 'nonsocial_control' );
+    m_image_control_p = fullfile( m_dir, 'image_control' );
+    
     m_cal_dir = fullfile( m_dir, 'calibration' );
     m_mats = shared_utils.io.find( m_dir, '.mat' );
     m_edfs = shared_utils.io.find( m_dir, '.edf' );
@@ -110,7 +112,7 @@ for idx = 1:numel(outerdirs)
     m_edf_map = shared_utils.io.find( m_dir, '.json' );
     
     %
-    %   incorporate nonsocial-control mat files
+    %   incorporate nonsocial-control and image-control mat files
     %
     task_types = repmat( {'free_viewing'}, size(m_mats) );
     
@@ -124,6 +126,18 @@ for idx = 1:numel(outerdirs)
       task_types = [ task_types, nsc_task_types ];
       m_edfs = [ m_edfs, nsc_edfs ];      
       m_edf_subdirs = [ m_edf_subdirs, nsc_edf_subdirs ];
+    end
+    
+    if ( exist(m_image_control_p, 'dir') == 7 )
+      img_mats = shared_utils.io.find( m_image_control_p, '.mat' );
+      img_edfs = shared_utils.io.find( m_image_control_p, '.edf' );
+      img_task_types = repmat( {'image_control'}, size(img_mats) );
+      img_edf_subdirs = img_task_types;
+      
+      m_mats = [ m_mats, img_mats ];
+      task_types = [ task_types, img_task_types ];
+      m_edfs = [ m_edfs, img_edfs ];      
+      m_edf_subdirs = [ m_edf_subdirs, img_edf_subdirs ];
     end
     
     m_dir_components = all_dir_components;
@@ -305,8 +319,16 @@ for idx = 1:numel(outerdirs)
     %
     assert( got_plex_sync_index, 'Missing plex sync index map for "%s".', m_dir );
     
-    for j = 1:numel(m_data)      
-      mat_index = str2double( m_filenames{j}(numel('position_')+1:end) );
+    for j = 1:numel(m_data)
+      current_task_type = task_types{j};
+      
+      if ( ~strcmp(current_task_type, 'image_control') )
+        file_str = 'position_';
+      else
+        file_str = 'image_control_';
+      end
+      
+      mat_index = str2double( m_filenames{j}(numel(file_str)+1:end) );
       edf_filename = edf_map(m_filenames{j});
       
       current_plex_sync_index = m_plex_sync_map( m_filenames{j} );

@@ -73,6 +73,73 @@ namespace {
     return result;
   }
   
+  int64_t binary_search(DecomposedArray<double> &time, double search_for) {
+    if (time.size == 0) {
+      return 1;
+    }
+    
+    int64_t i = 0;
+    int64_t j = time.size - 1;
+    int64_t mid = 0;
+    
+    while (i <= j) {
+      mid = i + (j - i) / 2;
+      
+      double t = time.data[mid];
+      
+      if (search_for == t) {
+        return mid + 1;
+        
+      } else if (search_for < t) {
+        j = mid - 1;
+        
+      } else {
+        i = mid + 1;
+      }
+    }
+    
+    int64_t candidate_ind = mid;
+    int64_t left_adjacent = candidate_ind - 1;
+    int64_t right_adjacent = candidate_ind + 1;
+    
+    double candidate_difference = std::abs(search_for - time.data[candidate_ind]);
+    
+    if (left_adjacent >= 0) {
+      double left_difference = std::abs(search_for - time.data[left_adjacent]);
+      
+      if (left_difference < candidate_difference) {
+        candidate_difference = left_difference;
+        candidate_ind = left_adjacent;
+      }
+    }
+    
+    if (right_adjacent < time.size) {
+      double right_difference = std::abs(search_for - time.data[right_adjacent]);
+      
+      if (right_difference < candidate_difference) {
+        candidate_difference = right_difference;
+        candidate_ind = right_adjacent;
+      }
+    }
+    
+    return (candidate_ind + 1);
+  }
+  
+  void find_indices_binary(DecomposedArray<double> time,
+                           DecomposedArray<double> events,
+                           DecomposedArray<int64_t> out_indices) {
+    
+    for (int64_t i = 0; i < events.size; i++) {
+      double event = events.data[i];
+      
+      if (std::isnan(event)) {
+        out_indices.data[i] = 1;
+      } else {
+        out_indices.data[i] = binary_search(time, event);
+      }
+    }
+  }
+  
   void find_indices(DecomposedArray<double> time, 
                     DecomposedArray<double> events, 
                     DecomposedArray<int64_t> out_indices) {
@@ -104,7 +171,7 @@ namespace {
           double last_t = time.data[last_time_index];
           double last_difference = std::abs(event_time - last_t);
           
-          if (last_difference < current_difference) {
+          if (last_difference <= current_difference) {
             assign_index = last_time_index + 1;
             time_index = last_time_index;
             found_match = true;
@@ -167,5 +234,6 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     std::memset(c_indices.data, 0, c_indices.size * sizeof(int64_t));
   }
   
-  find_indices(c_time, c_events, c_indices);  
+//   find_indices_binary(c_time, c_events, c_indices);
+  find_indices(c_time, c_events, c_indices);
 }

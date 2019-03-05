@@ -17,8 +17,8 @@ function varargout = find_nearest_sorted(varargin)
 %
 %     If A contains duplicate elements for which there could be multiple 
 %     absolute minima for a given element of B, the associated index is the 
-%     index of the last such element in A. More concretely,
-%     bfw.mex.find_nearest_sorted( [1, 1, 1, 1], 1 ) returns 4.
+%     index of the first such element in A. More concretely,
+%     bfw.mex.find_nearest_sorted( [1, 1, 1, 1], 1 ) returns 1.
 %
 %     NaN elements in B are assigned the index 1 in I. NaN elements in A
 %     are skipped. If all elements of A are NaN, all indices in I are 1.

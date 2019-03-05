@@ -2,6 +2,14 @@ function new_dat = unify_raw_data(dat)
 
 import shared_utils.assertions.*;
 
+if ( isstruct(dat) && isscalar(dat) && ...
+    isfield(dat, 'task_type') && strcmp(dat.task_type, 'image_control') )
+  new_dat = dat;
+  new_dat.plex_sync_times(isnan(new_dat.plex_sync_times)) = [];
+  new_dat.reward_sync_times = [];
+  return;
+end
+
 required_fields = { 'plex_sync_times', 'sync_times', 'reward_sync_times' };
 all_fields = fieldnames( dat );
 remaining_fields = setdiff( all_fields, union(required_fields, {'position', 'time', 'gaze'}) );

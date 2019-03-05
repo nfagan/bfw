@@ -6,5 +6,6 @@ defaults.window_size = 150;
 defaults.look_back = -500;
 defaults.look_ahead = 500;
 defaults.sample_rate = 1000;
+defaults.rois = 'all';
 
 end
