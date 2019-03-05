@@ -84,12 +84,29 @@ end
 
 if ( n_combs == 0 )
   t_series = [];
+  freqs = [];
 end
+
+data = vertcat( all_coherence{:} );
+labels = vertcat( fcat(), all_labels{:} );
+
+assert_ispair( data, labels );
+
+if ( ~isempty(data) )
+  assert( numel(t_series) == size(data, 3) );
+  assert( numel(freqs) == size(data, 2) );
+else
+  assert( numel(t_series) == 0 );
+  assert( numel(freqs) == 0 );
+end
+
+[labels, categories] = categorical( labels );
 
 coh_file = struct();
 coh_file.params = params;
-coh_file.data = vertcat( all_coherence{:} );
-coh_file.labels = vertcat( fcat(), all_labels{:} );
+coh_file.data = data;
+coh_file.labels = labels;
+coh_file.categories = categories;
 coh_file.t = t_series;
 coh_file.f = freqs;
 
