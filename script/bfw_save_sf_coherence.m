@@ -2,7 +2,7 @@ function results = bfw_save_sf_coherence(output_directory, varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-inputs = { 'lfp', 'spikes', 'raw_events' };
+inputs = { 'raw_events', 'lfp', 'spikes' };
 output = output_directory;
 
 [~, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
