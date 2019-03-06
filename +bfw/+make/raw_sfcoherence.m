@@ -46,8 +46,11 @@ end
 lfp_data = indexpair( lfp_data, lfp_labels, keep_lfp_ind );
 spike_data = indexpair( spike_data, spike_labels, keep_spike_ind );
 
-lfp_I = findall( lfp_labels, {'region', 'channel'} );
-spike_I = findall( spike_labels, {'unit_index'} );
+lfp_data = handle_referencing( lfp_data, lfp_labels, params );
+lfp_data = handle_filtering( lfp_data, params );
+
+[lfp_I, lfp_C] = findall( lfp_labels, {'region', 'channel'} );
+[spike_I, spike_C] = findall( spike_labels, {'unit_index', 'region'} );
 
 validate_lfp_spike_indices( lfp_I, spike_I, n_events );
 
@@ -58,11 +61,16 @@ all_coherence = cell( n_combs, 1 );
 all_labels = cell( n_combs, 1 );
 freqs = [];
 
-for i = 1:n_combs
-  shared_utils.general.progress( i, n_combs );
-  
+for i = 1:n_combs  
   lfp_index = lfp_I{index_combinations(1, i)};
   spike_index = spike_I{index_combinations(2, i)};
+  
+  lfp_region = lfp_C{1, index_combinations(1, i)};
+  spike_region = spike_C{2, index_combinations(2, i)};
+  
+  if ( params.skip_matching_spike_lfp_regions && regions_match(lfp_region, spike_region) )
+    continue;
+  end
   
   subset_lfp = lfp_data(lfp_index, :);
   subset_spikes = spike_data(spike_index, :);
@@ -111,6 +119,12 @@ coh_file.labels = labels;
 coh_file.categories = categories;
 coh_file.t = t_series;
 coh_file.f = freqs;
+
+end
+
+function tf = regions_match(reg_a, reg_b)
+
+tf = ~isempty( strfind(reg_a, reg_b) ) || ~isempty( strfind(reg_b, reg_a) );
 
 end
 
@@ -194,5 +208,38 @@ if ( ~shared_utils.io.fexists(data_filepath) )
 end
 
 data_file = shared_utils.io.fload( data_filepath );
+
+end
+
+function lfp_data = handle_referencing(lfp_data, lfp_labels, params)
+
+if ( ~params.reference_subtract )
+  return
+end
+
+[lfp_data, was_subtracted, ref_ind] = bfw.ref_subtract_fcat( lfp_data, lfp_labels );
+assert( was_subtracted, 'Failed to reference subtract.' );
+
+not_ref_ind = find( ~trueat(lfp_labels, ref_ind) );
+
+lfp_data = lfp_data(not_ref_ind, :);
+keep( lfp_labels, not_ref_ind );
+
+assert_ispair( lfp_data, lfp_labels );
+
+end
+
+function data = handle_filtering(data, params)
+
+if ( ~params.filter )
+  return
+end
+
+f1 = params.f1;
+f2 = params.f2;
+filt_order = params.filter_order;
+fs = params.sample_rate;
+
+data = bfw.zpfilter( data, f1, f2, fs, filt_order );
 
 end

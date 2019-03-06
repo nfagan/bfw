@@ -21,10 +21,12 @@ use_window_start_as_0 = params.use_window_start_as_0;
 binned_spikes = {};
 binned_labels = fcat();
 
-for i = 1:numel(units) 
-  fprintf( '\n Unit %d of %d', i, numel(units) );
-  
+for i = 1:numel(units)
   unit = units(i);
+  
+  if ( check_skip_unit(unit, params) )
+    continue;
+  end
   
   [aligned, unit_labels] = align_unit( unit, event_times, starts, stops, use_window_start_as_0 );
   
@@ -62,16 +64,6 @@ stops = starts + ws;
 
 end
 
-function binned = bin_spikes(spike_times, start, stop)
-
-binned = cell( 1, numel(start) );
-
-for i = 1:numel(start)
-  binned{i} = spike_times(spike_times >= start(i) & spike_times < stop(i));
-end
-
-end
-
 function [mat_spikes, labels] = align_unit(unit, events, starts, stops, window_start_as_0)
 
 spike_times = unit.times;
@@ -88,13 +80,15 @@ for i = 1:numel(events)
   start = starts + evt;
   stop = stops + evt;
   
-  binned = bin_spikes( spike_times, start, stop );
-  
-  if ( window_start_as_0 )
-    binned = arrayfun( @(x, y) x{1} - y, binned, start, 'un', 0 );
+  for j = 1:numel(start)
+    subset_spikes = spike_times(spike_times >= start(j) & spike_times < stop(j));
+    
+    if ( window_start_as_0 )
+      subset_spikes = subset_spikes - start(j);
+    end
+    
+    mat_spikes{i, j} = subset_spikes(:);   
   end
-  
-  mat_spikes(i, :) = binned;
 end
 
 labels = fcat.from( bfw.get_unit_labels(unit) );
@@ -116,5 +110,11 @@ matches_roi = cellfun( @(x) any(strcmp(rois, x)), events_file.labels(:, roi_ind)
 
 events_file.labels(~matches_roi, :) = [];
 events_file.events(~matches_roi, :) = [];
+
+end
+
+function tf = check_skip_unit(unit, params)
+
+tf = params.remove_rating_0_units && isfield( unit, 'rating' ) && unit.rating == 0;
 
 end

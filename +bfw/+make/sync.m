@@ -28,8 +28,10 @@ copy_fields = { 'unified_filename', 'plex_filename', 'plex_directory' };
 
 data_root = bfw.dataroot( conf );
   
-sync_id = bfw.field_or( unified.m1, 'plex_sync_id', 'm2' );
 first = 'm1';
+
+sync_id = bfw.field_or( unified.(first), 'plex_sync_id', 'm2' );
+task_type = unified.(first).task_type;
 
 pl2_file = unified.(first).plex_filename;
 pl2_dir = fullfile( unified.(first).plex_directory{:} );
@@ -74,9 +76,11 @@ end
 mat_sync = unified.(sync_id).plex_sync_times;
 mat_reward_sync = unified.(sync_id).reward_sync_times;
 
-assert( numel(mat_reward_sync) == numel(current_plex_reward) ...
-  , 'Mismatch between number of plex reward sync and mat reward sync pulses for "%s".' ...
-  , unified_filename );
+if ( ~bfw.is_image_task(task_type) )
+  assert( numel(mat_reward_sync) == numel(current_plex_reward) ...
+    , 'Mismatch between number of plex reward sync and mat reward sync pulses for "%s".' ...
+    , unified_filename );
+end
 
 %   current_sync should have one fewer element than mat_sync. This is
 %   because the first mat_sync time corresponds to the start_sync pulse

@@ -8,5 +8,6 @@ defaults.look_back = -500;
 defaults.look_ahead = 500;
 defaults.rois = 'all';
 defaults.use_window_start_as_0 = false;
+defaults.remove_rating_0_units = true;
 
 end
