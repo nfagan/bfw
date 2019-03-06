@@ -60,6 +60,7 @@ n_combs = size( index_combinations, 2 );
 all_coherence = cell( n_combs, 1 );
 all_labels = cell( n_combs, 1 );
 freqs = [];
+keep_comb = true( n_combs, 1 );
 
 for i = 1:n_combs  
   lfp_index = lfp_I{index_combinations(1, i)};
@@ -69,6 +70,7 @@ for i = 1:n_combs
   spike_region = spike_C{2, index_combinations(2, i)};
   
   if ( params.skip_matching_spike_lfp_regions && regions_match(lfp_region, spike_region) )
+    keep_comb(i) = false;
     continue;
   end
   
@@ -97,8 +99,8 @@ if ( n_combs == 0 )
   freqs = [];
 end
 
-data = vertcat( all_coherence{:} );
-labels = vertcat( fcat(), all_labels{:} );
+data = vertcat( all_coherence{keep_comb} );
+labels = vertcat( fcat(), all_labels{keep_comb} );
 
 assert_ispair( data, labels );
 
