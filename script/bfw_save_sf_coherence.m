@@ -8,6 +8,7 @@ inputs = { 'raw_events', 'lfp', 'spikes' };
 output = output_directory;
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
+loop_runner.save_func = @(file, var) save( file, 'var', '-v7.3' );
 
 results = loop_runner.run( @sf_coh_main, params );
   
