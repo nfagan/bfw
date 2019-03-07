@@ -1,6 +1,7 @@
 function [data, was_ref_subtracted, ref_ind] = ref_subtract_fcat(data, labels, event_indices)
 
 was_ref_subtracted = false;
+ref_ind = [];
 
 reflab = 'ref';
 
