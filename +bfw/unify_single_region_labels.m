@@ -9,7 +9,7 @@ else
   check_replace = cellstr( check_replace );
 end
 
-regions = { 'ofc', 'bla', 'ref', 'dmpfc', 'acc' };
+regions = bfw.region_names();
 
 for i = 1:numel(regions)
   reg = regions{i};
