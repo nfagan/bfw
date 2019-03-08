@@ -4,7 +4,7 @@ defaults = bfw.get_common_make_defaults();
 defaults.rois = 'all';
 defaults.keep_func = @bfw_keep_first_channel;
 
-inputs = { 'raw_events', 'lfp', 'spikes' };
+inputs = { 'raw_events', 'meta', 'lfp', 'spikes' };
 output = output_directory;
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );

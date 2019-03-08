@@ -8,6 +8,7 @@ files = shared_utils.general.copy( files );
 
 lfp_file = files('lfp');
 spike_file = files('spikes');
+meta_file = files('meta');
 
 if ( spike_file.is_link )
   files('spikes') = load_linked_file( spike_file, 'spike_subdir', 'spikes', params );
@@ -32,6 +33,7 @@ keep_func = params.keep_func;
 n_events = aligned_lfp.n_events_per_channel;
 lfp_labels = fcat.from( aligned_lfp );
 spike_labels = fcat.from( aligned_spikes );
+meta_labels = bfw.struct2fcat( meta_file );
 
 lfp_data = aligned_lfp.data;
 spike_data = aligned_spikes.spikes;
@@ -83,6 +85,7 @@ for i = 1:n_combs
   ok_spike_labs = spike_labels(spike_index(ok_trials));
   
   merged_labels = merge_lfp_spike_labels( ok_lfp_labs, ok_spike_labs );
+  join( merged_labels, meta_labels );
   
   if ( params.trial_average )
     [~, mean_I] = keepeach_or_one( merged_labels, params.trial_average_specificity );
