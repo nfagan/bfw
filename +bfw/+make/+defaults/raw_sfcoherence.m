@@ -17,6 +17,7 @@ defaults.rois = 'all';
 defaults.remove_nan_trials = true;
 defaults.trial_average = false;
 defaults.trial_average_specificity = {};
+defaults.event_window_average = false;
 defaults.skip_matching_spike_lfp_regions = true;
 
 defaults.chronux_params = struct( 'Fs', 1e3, 'tapers', [1.5, 2] );

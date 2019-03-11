@@ -10,7 +10,7 @@ bfw.validatefiles( files, {events_subdir, 'lfp'} );
 lfp_file = shared_utils.general.get( files, 'lfp' );
 events_file = shared_utils.general.get( files, events_subdir );
 
-events_file = handle_roi_selection( events_file, params.rois );
+[events_file, matches_roi] = handle_roi_selection( events_file, params.rois );
 
 unified_filename = bfw.try_get_unified_filename( events_file );
 
@@ -84,16 +84,17 @@ aligned_file.data = all_lfp_data;
 aligned_file.labels = categorical( all_labs );
 aligned_file.categories = getcats( all_labs );
 aligned_file.lfp_indices = lfp_indices;
-aligned_file.event_indices = event_indices;
+aligned_file.event_indices = matches_roi(event_indices);
 aligned_file.n_events_per_channel = n_events;
 
 end
 
-function events_file = handle_roi_selection(events_file, rois)
+function [events_file, matches_roi] = handle_roi_selection(events_file, rois)
 
 rois = cellstr( rois );
 
 if ( numel(rois) == 1 && strcmp(rois, 'all') )
+  matches_roi = find( true(size(events_file.labels, 1), 1) );
   return
 end
 
@@ -104,5 +105,7 @@ matches_roi = cellfun( @(x) any(strcmp(rois, x)), events_file.labels(:, roi_ind)
 
 events_file.labels(~matches_roi, :) = [];
 events_file.events(~matches_roi, :) = [];
+
+matches_roi = find( matches_roi );
 
 end

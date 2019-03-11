@@ -9,6 +9,7 @@ files = shared_utils.general.copy( files );
 lfp_file = files('lfp');
 spike_file = files('spikes');
 meta_file = files('meta');
+events_file = files(params.events_subdir);
 
 if ( spike_file.is_link )
   files('spikes') = load_linked_file( spike_file, 'spike_subdir', 'spikes', params );
@@ -38,6 +39,7 @@ meta_labels = bfw.struct2fcat( meta_file );
 lfp_data = aligned_lfp.data;
 spike_data = aligned_spikes.spikes;
 t_series = aligned_spikes.t;
+lfp_event_indices = aligned_lfp.event_indices;
 
 if ( nargin(keep_func) == 2 )
   [keep_lfp_ind, keep_spike_ind] = keep_func( lfp_labels', spike_labels' );
@@ -47,9 +49,11 @@ end
 
 lfp_data = indexpair( lfp_data, lfp_labels, keep_lfp_ind );
 spike_data = indexpair( spike_data, spike_labels, keep_spike_ind );
+lfp_event_indices = lfp_event_indices(keep_lfp_ind);
 
-lfp_data = handle_referencing( lfp_data, lfp_labels, params );
+[lfp_data, non_ref_inds] = handle_referencing( lfp_data, lfp_labels, params );
 lfp_data = handle_filtering( lfp_data, params );
+lfp_event_indices = lfp_event_indices(non_ref_inds);
 
 [lfp_I, lfp_C] = findall( lfp_labels, {'region', 'channel'} );
 [spike_I, spike_C] = findall( spike_labels, {'unit_index', 'region'} );
@@ -87,6 +91,12 @@ for i = 1:n_combs
   merged_labels = merge_lfp_spike_labels( ok_lfp_labs, ok_spike_labs );
   join( merged_labels, meta_labels );
   
+  if ( params.event_window_average )
+    subset_event_indices = lfp_event_indices(lfp_index(ok_trials));
+    
+    coh = event_window_average( coh, t_series/1e3, subset_event_indices, events_file );
+  end
+  
   if ( params.trial_average )
     [~, mean_I] = keepeach_or_one( merged_labels, params.trial_average_specificity );
     
@@ -107,12 +117,17 @@ labels = vertcat( fcat(), all_labels{keep_comb} );
 
 assert_ispair( data, labels );
 
+if ( params.event_window_average && ~isempty(data) )
+  % Averaged over time dimension.
+  t_series = 0;
+end
+
 if ( ~isempty(data) )
-  assert( numel(t_series) == size(data, 3) );
-  assert( numel(freqs) == size(data, 2) );
+  assert( numel(t_series) == size(data, 3), 'Time does not match data.' );
+  assert( numel(freqs) == size(data, 2), 'Freqs do no match data.' );
 else
-  assert( numel(t_series) == 0 );
-  assert( numel(freqs) == 0 );
+  assert( numel(t_series) == 0, 'Time does not match data for empty data.' );
+  assert( numel(freqs) == 0, 'Freqs do not match data for empty data.' );
 end
 
 [labels, categories] = categorical( labels );
@@ -124,6 +139,34 @@ coh_file.labels = labels;
 coh_file.categories = categories;
 coh_file.t = t_series;
 coh_file.f = freqs;
+
+end
+
+function meaned_coh = event_window_average(coh, t, event_indices, events_file)
+
+assert( size(coh, 1) == numel(event_indices), 'Event indices mismatch.' );
+assert( size(coh, 3) == numel(t), 'T series mismatch.' );
+
+events = events_file.events;
+start_times = events(event_indices, events_file.event_key('start_time'));
+stop_times = events(event_indices, events_file.event_key('stop_time'));
+
+meaned_coh = nan( notsize(coh, 3) );
+
+for i = 1:numel(start_times)
+  start = start_times(i);
+  stop = stop_times(i);
+  
+  adjusted_t = t + start;
+  
+  if ( isnan(start) || isnan(stop) )
+    continue;
+  end
+  
+  in_bounds = adjusted_t >= start & adjusted_t <= stop;
+  
+  meaned_coh(i, :) = squeeze( nanmean(coh(i, :, in_bounds), 3) );
+end
 
 end
 
@@ -216,9 +259,11 @@ data_file = shared_utils.io.fload( data_filepath );
 
 end
 
-function lfp_data = handle_referencing(lfp_data, lfp_labels, params)
+function [lfp_data, not_ref_ind] = handle_referencing(lfp_data, lfp_labels, params)
 
 if ( ~params.reference_subtract )
+  % keep all trials
+  not_ref_ind = reshape( 1:size(lfp_data, 1), [], 1 );
   return
 end
 

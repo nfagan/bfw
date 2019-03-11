@@ -74,7 +74,7 @@ end
 data = vertcat( all_data{is_ok} );
 labels = vertcat( fcat(), all_labels{is_ok} );
 
-first_ok = find( any_ok, 1 );
+first_ok = find( is_ok, 1 );
 
 if ( ~isempty(first_ok) )
   freqs = fs{first_ok};
