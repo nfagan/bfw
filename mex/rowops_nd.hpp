@@ -11,6 +11,8 @@ namespace util {
     int64_t size;
     const mwSize *dimensions;
     
+    ArrayDescriptor() = default;
+    
     ArrayDescriptor(const mxArray *array) {
       class_id = mxGetClassID(array);
       n_dimensions = mxGetNumberOfDimensions(array);
@@ -53,11 +55,26 @@ namespace util {
     T *data;
     ArrayDescriptor descriptor;
     
+    DecomposedArray() = default;
+    
     DecomposedArray(const mxArray *array) : descriptor(array) {
       data = (T*) mxGetData(array);
     }
     
     ~DecomposedArray() = default;
+  };
+  
+  template <typename T>
+  struct SimpleDecomposedArray {
+    T *data;
+    int64_t size;
+    
+    SimpleDecomposedArray() = default;
+    
+    SimpleDecomposedArray(const mxArray *array) {
+      data = (T*) mxGetData(array);
+      size = mxGetNumberOfElements(array);
+    }
   };
   
   mxArray* make_output_array(int64_t n_indices, const ArrayDescriptor &in_array_descriptor) {
@@ -79,7 +96,14 @@ namespace util {
     return out_array;
   }
   
-  void validate_intial_inputs(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+  struct DecomposedInputs {
+    DecomposedArray<double> data;
+    std::vector<SimpleDecomposedArray<uint64_t>> indices;
+  };
+  
+  DecomposedInputs check_inputs(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
+    DecomposedInputs result;
+    
     if (nrhs != 2) {
       mexErrMsgTxt("Expected 2 inputs.");
     }
@@ -87,17 +111,35 @@ namespace util {
     if (nlhs > 1) {
       mexErrMsgTxt("Only 1 output allowed.");
     }
-
+    
     const mxArray *data = prhs[0];
     const mxArray *indices = prhs[1];
 
     if (mxGetClassID(data) != mxDOUBLE_CLASS) {
       mexErrMsgTxt("Data must be double.");
     }
+    
+    result.data = DecomposedArray<double>(data);
 
     if (mxGetClassID(indices) != mxCELL_CLASS) {
-      mexErrMsgTxt("Indices must be a cell array.");
+      mexErrMsgTxt("Indices aggregate must be a cell array.");
     }
+    
+    int64_t n_cells = mxGetNumberOfElements(indices);
+    
+    for (int64_t i = 0; i < n_cells; i++) {
+      const mxArray *index = mxGetCell(indices, i);
+      
+      if (mxGetClassID(index) != mxUINT64_CLASS) {
+        mexErrMsgTxt("Indices must be uint64.");
+      }
+      
+      SimpleDecomposedArray<uint64_t> result_index(index);
+      
+      result.indices.push_back(result_index);
+    }
+    
+    return result;
   }
   
   struct DistributedIndices {

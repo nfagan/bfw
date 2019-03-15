@@ -3,5 +3,6 @@
 *.m~
 *.cpp~
 *.h~
+*.hpp~
 *.DS_Store
 cc/
