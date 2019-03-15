@@ -100,6 +100,36 @@ namespace util {
     }
   }
   
+  struct DistributedIndices {
+    std::vector<int64_t> starts;
+    std::vector<int64_t> stops;
+  };
+  
+  DistributedIndices distribute_indices(const int64_t threads, const int64_t tasks) {
+    DistributedIndices result;
+    
+    if (threads < 1 || tasks < threads) {
+      result.starts.push_back(0);
+      result.stops.push_back(tasks);
+      
+      return result;
+    }
+    
+    int64_t n_divs = tasks / threads;
+    int64_t offset = 0;
+    
+    for (int64_t i = 0; i < threads; i++) {
+      result.starts.push_back(offset);
+      result.stops.push_back(offset + n_divs);
+      
+      offset += n_divs;
+    }
+    
+    result.stops[threads-1] = tasks;
+    
+    return result;
+  }
+  
   struct NDDimensionIndices {
     std::vector<int64_t> input;
     std::vector<int64_t> output;

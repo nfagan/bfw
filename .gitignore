@@ -1,5 +1,7 @@
 +bfw/+config/config.mat
 *.asv
 *.m~
+*.cpp~
+*.h~
 *.DS_Store
 cc/
