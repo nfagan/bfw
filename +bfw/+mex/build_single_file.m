@@ -16,8 +16,11 @@ else
   addtl_cxx_flags = '';
 end
 
-cmd = sprintf( 'mex -v %s%s -outdir "%s" "%s"', compiler_spec ...
-  , addtl_cxx_flags, out_dir, src_file );
+c_optim_flags = 'COPTIMFLAGS="-O3 -fwrapv -DNDEBUG"';
+cpp_optim_flags = 'CXXOPTIMFLAGS="-O3 -fwrapv -DNDEBUG"';
+
+cmd = sprintf( 'mex -v %s %s %s%s -outdir "%s" "%s"', compiler_spec ...
+  , c_optim_flags, cpp_optim_flags, addtl_cxx_flags, out_dir, src_file );
 eval( cmd );
 
 
