@@ -5,12 +5,12 @@
 #include <thread>
 
 namespace util {  
-  inline int run(const DecomposedArray<double> &input_data,
-                 const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
-                 const int64_t index_start,
-                 const int64_t index_stop,
-                 const util::NDDimensionIndices &dimension_index_combinations,
-                 double *out_data_ptr) {
+  int run(const DecomposedArray<double> &input_data,
+          const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
+          const int64_t index_start,
+          const int64_t index_stop,
+          const util::NDDimensionIndices &dimension_index_combinations,
+          double *out_data_ptr) {
     
     uint64_t max_input_rows = input_data.descriptor.rows();
     int64_t n_combinations = dimension_index_combinations.input.size();
@@ -66,10 +66,10 @@ namespace util {
     thread_status[thread_index] = status;
   }
   
-  inline int run(const DecomposedArray<double> &input_data,
-                 const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
-                 const util::NDDimensionIndices &dimension_index_combinations,
-                 double *out_data_ptr) {
+  int run(const DecomposedArray<double> &input_data,
+          const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
+          const util::NDDimensionIndices &dimension_index_combinations,
+          double *out_data_ptr) {
     
     const int64_t n_threads = (int64_t) std::thread::hardware_concurrency();
     const int64_t n_indices = indices.size();

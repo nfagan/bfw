@@ -197,6 +197,14 @@ namespace util {
     return index;
   }
   
+  //  Get all combinations of indices into dimensions beyond the first.
+  //
+  //  Conceptually equivalent to:
+  //    for i = 0:n_rows-1
+  //      for j = 0:n_cols-1
+  //        indices.push(i + j * n_rows)
+  //  
+  //  But for columns, 3d-slices, 4-d slices, ... 
   NDDimensionIndices get_dimension_index_combinations(const ArrayDescriptor &input_descriptor,
                                                       const ArrayDescriptor &output_descriptor) {
     NDDimensionIndices result;
@@ -227,8 +235,8 @@ namespace util {
       int64_t input_ind = subscripts_to_linear_index_sans_rows(input_dim_product, current_indices);
       int64_t output_ind = subscripts_to_linear_index_sans_rows(output_dim_product, current_indices);
       
-      result.input.push_back(input_ind);
-      result.output.push_back(output_ind);
+      result.input[i] = input_ind;
+      result.output[i] = output_ind;
       
       current_indices[n_remaining_dimensions-1]++;
       
