@@ -15,6 +15,12 @@ namespace util {
     NAN_MEAN
   };
   
+  enum class ThreadTypes {
+    AUTO,
+    MULTI_THREADED,
+    SINGLE_THREADED
+  };
+  
   namespace FunctionResult {
     static constexpr int SUCCESS = 0;
     static constexpr int INDICES_OOB = 1;
@@ -110,8 +116,13 @@ namespace util {
     DecomposedArray<double> data;
     std::vector<SimpleDecomposedArray<uint64_t>> indices;
     FunctionTypes function_type;
+    ThreadTypes thread_type;
     
-    DecomposedInputs() : data(), indices(), function_type(FunctionTypes::MEAN) {
+    DecomposedInputs() : 
+      data(), 
+      indices(), 
+      function_type(FunctionTypes::MEAN),
+      thread_type(ThreadTypes::AUTO) {
       //
     }
     
@@ -144,6 +155,33 @@ namespace util {
     return out_array;
   }
   
+  ThreadTypes get_thread_type_with_trap(const mxArray *thread_type_array) {
+    if (mxGetClassID(thread_type_array) != mxUINT32_CLASS) {
+      mexErrMsgTxt("Thread type flag must be uint32.");
+    }
+
+    SimpleDecomposedArray<uint32_t> thread_type(thread_type_array);
+
+    if (thread_type.size != 1) {
+      mexErrMsgTxt("Thread type flag must have one element.");
+    }
+
+    uint32_t thread_type_id = thread_type.data[0];
+
+    switch (thread_type_id) {
+      case 0:
+        return ThreadTypes::AUTO;
+      case 1:
+        return ThreadTypes::SINGLE_THREADED;
+      case 2:
+        return ThreadTypes::MULTI_THREADED;
+      default:
+        mexErrMsgTxt("Unrecognized thread type id.");
+    }
+    
+    return ThreadTypes::AUTO;
+  }
+  
   FunctionTypes get_function_type_with_trap(const mxArray *function_type_array) {
     if (mxGetClassID(function_type_array) != mxUINT32_CLASS) {
       mexErrMsgTxt("Function type flag must be uint32.");
@@ -172,8 +210,8 @@ namespace util {
   DecomposedInputs check_inputs(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     DecomposedInputs result;
     
-    if (nrhs < 2 || nrhs > 3) {
-      mexErrMsgTxt("Expected 2 or 3 inputs.");
+    if (nrhs < 2 || nrhs > 4) {
+      mexErrMsgTxt("Expected 2, 3 or 4, inputs.");
     }
 
     if (nlhs > 1) {
@@ -191,10 +229,12 @@ namespace util {
       mexErrMsgTxt("Data must be real.");
     }
     
-    if (nrhs == 3) {
-      const mxArray *function_type_array = prhs[2];
-      
-      result.function_type = get_function_type_with_trap(function_type_array);
+    if (nrhs > 2) {      
+      result.function_type = get_function_type_with_trap(prhs[2]);
+    }
+    
+    if (nrhs > 3) {
+      result.thread_type = get_thread_type_with_trap(prhs[3]);
     }
     
     result.data = DecomposedArray<double>(data);
@@ -338,6 +378,7 @@ namespace util {
   }
   
   int run(const util::row_function_t &func,
+          util::ThreadTypes thread_type,
           const DecomposedArray<double> &input_data,
           const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
           const util::NDDimensionIndices &dimension_index_combinations,
@@ -346,7 +387,9 @@ namespace util {
     const int64_t n_threads = (int64_t) std::thread::hardware_concurrency();
     const int64_t n_indices = indices.size();
     
-    const bool use_threads = n_threads > 0 && n_indices >= n_threads;
+    const bool thread_condition = n_threads > 0 && n_indices >= n_threads;
+    const bool use_threads = thread_type != ThreadTypes::SINGLE_THREADED &&
+            (thread_type == ThreadTypes::MULTI_THREADED || thread_condition);
     
     if (use_threads) {      
       auto thread_indices = util::distribute_indices(n_threads, n_indices);

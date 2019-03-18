@@ -105,6 +105,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   auto decomposed_inputs = check_inputs(nlhs, plhs, nrhs, prhs);
   
   const auto &indices = decomposed_inputs.indices;
+  const auto thread_type = decomposed_inputs.thread_type;
   const auto &input_data = decomposed_inputs.data;
   const auto &input_descriptor = input_data.descriptor;
   
@@ -128,7 +129,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
       func = &run_mean;
   }
   
-  int status = run(func, input_data, indices, dim_index_combs, out_data_ptr);
+  int status = run(func, thread_type, input_data, indices, dim_index_combs, out_data_ptr);
   
   if (status != FunctionResult::SUCCESS) {
     mxDestroyArray(output_array);
