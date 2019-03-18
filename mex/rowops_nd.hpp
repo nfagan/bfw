@@ -8,16 +8,17 @@
 #include <cstring>
 #include <algorithm>
 #include <cmath>
+#include <map>
 
 namespace util {
   enum class FunctionTypes {
     MEAN,
-    NAN_MEAN
+    NAN_MEAN,
+    SUM
   };
   
   enum class ThreadTypes {
     AUTO,
-    MULTI_THREADED,
     SINGLE_THREADED
   };
   
@@ -136,6 +137,8 @@ namespace util {
           const util::NDDimensionIndices&,
           double*)>;
   
+  using function_map_t = std::map<FunctionTypes, row_function_t>;
+  
   mxArray* make_output_array(int64_t n_indices, const ArrayDescriptor &in_array_descriptor) {
     mwSize n_dims = in_array_descriptor.n_dimensions;
     mwSize *new_dims = new mwSize[n_dims];
@@ -173,8 +176,6 @@ namespace util {
         return ThreadTypes::AUTO;
       case 1:
         return ThreadTypes::SINGLE_THREADED;
-      case 2:
-        return ThreadTypes::MULTI_THREADED;
       default:
         mexErrMsgTxt("Unrecognized thread type id.");
     }
@@ -200,6 +201,8 @@ namespace util {
         return FunctionTypes::MEAN;
       case 1:
         return FunctionTypes::NAN_MEAN;
+      case 2:
+        return FunctionTypes::SUM;
       default:
         mexErrMsgTxt("Unrecognized function type id.");
     }
@@ -388,8 +391,7 @@ namespace util {
     const int64_t n_indices = indices.size();
     
     const bool thread_condition = n_threads > 0 && n_indices >= n_threads;
-    const bool use_threads = thread_type != ThreadTypes::SINGLE_THREADED &&
-            (thread_type == ThreadTypes::MULTI_THREADED || thread_condition);
+    const bool use_threads = thread_type != ThreadTypes::SINGLE_THREADED && thread_condition;
     
     if (use_threads) {      
       auto thread_indices = util::distribute_indices(n_threads, n_indices);
