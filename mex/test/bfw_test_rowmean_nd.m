@@ -16,14 +16,14 @@ end
 function test_empty()
 
 mat_empty = rowop( [], {}, @(x) mean(x, 1) );
-mex_empty = bfw.mex.rowmean_nd( [], {} );
+mex_empty = bfw.mex.rowop_nd( [], {} );
 
 assert( isequal(mat_empty, mex_empty), 'Empty arrays were not equal.' );
 
 a = rand( 5, 5 );
 
 mat_empty2 = rowop( a, {}, @(x) mean(x, 1) );
-mex_empty2 = bfw.mex.rowmean_nd( a, {} );
+mex_empty2 = bfw.mex.rowop_nd( a, {} );
 
 assert( isequal(mat_empty2, mex_empty2), 'Empty arrays with empty indices were not equal.' );
 
@@ -46,7 +46,7 @@ for i = 1:iters
   I = arrayfun( @(x) uint64(randperm(max_rows, randi(max_rows))), 1:n_inds, 'un', 0 );
   
   mat_a = rowop( a, I, @(x) mean(x, 1) );
-  mex_a = bfw.mex.rowmean_nd( a, I );
+  mex_a = bfw.mex.rowop_nd( a, I );
   
   assert( isequal(mat_a, mex_a), 'Randomly created subsets were not equal.' );
 end
@@ -76,7 +76,7 @@ for i = 1:iters
   ts(i, 1) = toc();
   
   tic;
-  mex_data = bfw.mex.rowmean_nd( data, I );
+  mex_data = bfw.mex.rowop_nd( data, I );
   ts(i, 2) = toc();
   
   assert( isequaln(mat_data, mex_data), 'Subsets were not equal.' );  

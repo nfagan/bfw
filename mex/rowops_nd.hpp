@@ -1,10 +1,25 @@
 #pragma once
 
+#include "mex.h"
 #include <cstdint>
 #include <vector>
-#include <iostream>
+#include <functional>
+#include <thread>
+#include <cstring>
+#include <algorithm>
+#include <cmath>
 
-namespace util {  
+namespace util {
+  enum class FunctionTypes {
+    MEAN,
+    NAN_MEAN
+  };
+  
+  namespace FunctionResult {
+    static constexpr int SUCCESS = 0;
+    static constexpr int INDICES_OOB = 1;
+  }
+  
   struct ArrayDescriptor {
     mxClassID class_id;
     mwSize n_dimensions;
@@ -77,6 +92,39 @@ namespace util {
     }
   };
   
+  //  Start and stop indices into array of uint64_t row index subsets, for
+  //  use by threads.
+  struct DistributedIndices {
+    std::vector<int64_t> starts;
+    std::vector<int64_t> stops;
+  };
+  
+  //  Indices of dimensions > 1 for input and output arrays.
+  struct NDDimensionIndices {
+    std::vector<int64_t> input;
+    std::vector<int64_t> output;
+  };
+  
+  //  Input schema for mex routine.
+  struct DecomposedInputs {
+    DecomposedArray<double> data;
+    std::vector<SimpleDecomposedArray<uint64_t>> indices;
+    FunctionTypes function_type;
+    
+    DecomposedInputs() : data(), indices(), function_type(FunctionTypes::MEAN) {
+      //
+    }
+    
+    ~DecomposedInputs() = default;
+  };
+  
+  using row_function_t = std::function<int(const DecomposedArray<double>&,
+          const std::vector<SimpleDecomposedArray<uint64_t>>&,
+          const int64_t,
+          const int64_t,
+          const util::NDDimensionIndices&,
+          double*)>;
+  
   mxArray* make_output_array(int64_t n_indices, const ArrayDescriptor &in_array_descriptor) {
     mwSize n_dims = in_array_descriptor.n_dimensions;
     mwSize *new_dims = new mwSize[n_dims];
@@ -96,16 +144,36 @@ namespace util {
     return out_array;
   }
   
-  struct DecomposedInputs {
-    DecomposedArray<double> data;
-    std::vector<SimpleDecomposedArray<uint64_t>> indices;
-  };
+  FunctionTypes get_function_type_with_trap(const mxArray *function_type_array) {
+    if (mxGetClassID(function_type_array) != mxUINT32_CLASS) {
+      mexErrMsgTxt("Function type flag must be uint32.");
+    }
+
+    SimpleDecomposedArray<uint32_t> function_type(function_type_array);
+
+    if (function_type.size != 1) {
+      mexErrMsgTxt("Function type flag must have one element.");
+    }
+
+    uint32_t function_type_id = function_type.data[0];
+
+    switch (function_type_id) {
+      case 0:
+        return FunctionTypes::MEAN;
+      case 1:
+        return FunctionTypes::NAN_MEAN;
+      default:
+        mexErrMsgTxt("Unrecognized function type id.");
+    }
+    
+    return FunctionTypes::MEAN;
+  }
   
   DecomposedInputs check_inputs(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     DecomposedInputs result;
     
-    if (nrhs != 2) {
-      mexErrMsgTxt("Expected 2 inputs.");
+    if (nrhs < 2 || nrhs > 3) {
+      mexErrMsgTxt("Expected 2 or 3 inputs.");
     }
 
     if (nlhs > 1) {
@@ -117,6 +185,16 @@ namespace util {
 
     if (mxGetClassID(data) != mxDOUBLE_CLASS) {
       mexErrMsgTxt("Data must be double.");
+    }
+    
+    if (mxIsComplex(data)) {
+      mexErrMsgTxt("Data must be real.");
+    }
+    
+    if (nrhs == 3) {
+      const mxArray *function_type_array = prhs[2];
+      
+      result.function_type = get_function_type_with_trap(function_type_array);
     }
     
     result.data = DecomposedArray<double>(data);
@@ -142,11 +220,6 @@ namespace util {
     return result;
   }
   
-  struct DistributedIndices {
-    std::vector<int64_t> starts;
-    std::vector<int64_t> stops;
-  };
-  
   DistributedIndices distribute_indices(const int64_t threads, const int64_t tasks) {
     DistributedIndices result;
     
@@ -171,11 +244,6 @@ namespace util {
     
     return result;
   }
-  
-  struct NDDimensionIndices {
-    std::vector<int64_t> input;
-    std::vector<int64_t> output;
-  };
   
   int64_t subscripts_to_linear_index_sans_rows(const std::vector<int64_t> &dim_prod,
                                                const std::vector<int64_t> &subs) {
@@ -249,6 +317,69 @@ namespace util {
     }
     
     return result;
+  }
+  
+  void run_threaded(const util::row_function_t &func,
+                    const DecomposedArray<double> &input_data,
+                    const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
+                    const util::NDDimensionIndices &dimension_index_combinations,
+                    double *out_data_ptr,
+                    const DistributedIndices &thread_indices,
+                    std::vector<int> &thread_status,
+                    const int64_t thread_index) {
+    
+    const int64_t start = thread_indices.starts[thread_index];
+    const int64_t stop = thread_indices.stops[thread_index];
+    
+    int status = func(input_data, indices, start, stop, 
+                      dimension_index_combinations, out_data_ptr);
+    
+    thread_status[thread_index] = status;
+  }
+  
+  int run(const util::row_function_t &func,
+          const DecomposedArray<double> &input_data,
+          const std::vector<SimpleDecomposedArray<uint64_t>> &indices,
+          const util::NDDimensionIndices &dimension_index_combinations,
+          double *out_data_ptr) {
+    
+    const int64_t n_threads = (int64_t) std::thread::hardware_concurrency();
+    const int64_t n_indices = indices.size();
+    
+    const bool use_threads = n_threads > 0 && n_indices >= n_threads;
+    
+    if (use_threads) {      
+      auto thread_indices = util::distribute_indices(n_threads, n_indices);
+      
+      std::vector<int> thread_status;
+      std::vector<std::thread> threads;
+      
+      thread_status.resize(n_threads);
+      std::fill(thread_status.begin(), thread_status.end(), 0);
+      
+      for (int64_t i = 0; i < n_threads; i++) {
+        threads.emplace_back([&, i]() -> void {
+          run_threaded(func, input_data, indices, dimension_index_combinations, 
+                       out_data_ptr, thread_indices, thread_status, i);
+        });
+      }
+      
+      for (auto &thr : threads) {
+        thr.join();        
+      }
+      
+      for (const auto &status : thread_status) {
+        if (status != 0) {
+          return status;
+        }
+      }
+      
+      return 0;
+      
+    } else {
+      return func(input_data, indices, 0, n_indices,
+                  dimension_index_combinations, out_data_ptr);
+    }
   }
   
 }
