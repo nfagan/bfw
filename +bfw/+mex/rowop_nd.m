@@ -27,6 +27,21 @@ function varargout = rowop_nd(varargin)
 %         supported by your system.
 %       - uint32(1): Use a single thread.
 %
+%     version_identifier = bfw.mex.rowop_nd(), with no input arguments, 
+%     returns a char vector giving a version id for the mex file.
+%
+%     This function will tend to be more efficient than an equivalent
+%     routine in Matlab as the number of indices increases.
+%
+%     EX //
+%
+%     f = fcat.example();
+%     data = fcat.example( 'smalldata' );
+%
+%     % Take an average across each session x dose x monkey
+%     I = findall( f, {'session', 'dose', 'monkey'} );
+%     meaned = bfw.mex.rowop_nd( data, I, uint32(0) );
+%
 %     See also bfw.row_mean
 
 end

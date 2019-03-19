@@ -150,6 +150,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
   
   auto decomposed_inputs = check_inputs(nlhs, plhs, nrhs, prhs);
   
+  if (decomposed_inputs.is_requesting_version) {
+    plhs[0] = decomposed_inputs.version_array;
+    return;
+  }
+  
   const auto &indices = decomposed_inputs.indices;
   const auto thread_type = decomposed_inputs.thread_type;
   const auto &input_data = decomposed_inputs.data;

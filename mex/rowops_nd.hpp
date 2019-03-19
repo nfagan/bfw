@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mex.h"
+#include "rowop_nd_version.hpp"
 #include <cstdint>
 #include <vector>
 #include <functional>
@@ -9,8 +10,9 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <string>
 
-namespace util {
+namespace util {  
   enum class FunctionTypes {
     MEAN,
     NAN_MEAN,
@@ -118,12 +120,16 @@ namespace util {
     std::vector<SimpleDecomposedArray<uint64_t>> indices;
     FunctionTypes function_type;
     ThreadTypes thread_type;
+    mxArray *version_array;
+    bool is_requesting_version;
     
     DecomposedInputs() : 
       data(), 
       indices(), 
       function_type(FunctionTypes::MEAN),
-      thread_type(ThreadTypes::AUTO) {
+      thread_type(ThreadTypes::AUTO),
+      version_array(nullptr),
+      is_requesting_version(false) {
       //
     }
     
@@ -159,6 +165,11 @@ namespace util {
   }
   
   ThreadTypes get_thread_type_with_trap(const mxArray *thread_type_array) {
+    //  Allow [] for default.
+    if (mxIsEmpty(thread_type_array)) {
+      return ThreadTypes::AUTO;
+    }
+    
     if (mxGetClassID(thread_type_array) != mxUINT32_CLASS) {
       mexErrMsgTxt("Thread type flag must be uint32.");
     }
@@ -184,6 +195,11 @@ namespace util {
   }
   
   FunctionTypes get_function_type_with_trap(const mxArray *function_type_array) {
+    //  Allow [] for default.
+    if (mxIsEmpty(function_type_array)) {
+      return FunctionTypes::MEAN;
+    }
+    
     if (mxGetClassID(function_type_array) != mxUINT32_CLASS) {
       mexErrMsgTxt("Function type flag must be uint32.");
     }
@@ -210,15 +226,26 @@ namespace util {
     return FunctionTypes::MEAN;
   }
   
+  mxArray* get_version_char_array() {
+    return mxCreateString(BFW_VERSION_ID);
+  }
+  
   DecomposedInputs check_inputs(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
     DecomposedInputs result;
     
-    if (nrhs < 2 || nrhs > 4) {
-      mexErrMsgTxt("Expected 2, 3 or 4, inputs.");
+    //  Getting version
+    if (nrhs == 0) {
+      result.is_requesting_version = true;
+      result.version_array = get_version_char_array();
+      return result;
     }
-
+    
     if (nlhs > 1) {
       mexErrMsgTxt("Only 1 output allowed.");
+    }
+    
+    if (nrhs < 2 || nrhs > 4) {
+      mexErrMsgTxt("Expected 2, 3 or 4, inputs.");
     }
     
     const mxArray *data = prhs[0];
