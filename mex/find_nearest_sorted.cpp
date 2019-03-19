@@ -1,4 +1,5 @@
 #include "mex.h"
+#include "find_nearest_sorted_version.hpp"
 #include <cstdint>
 #include <string>
 #include <cstring>
@@ -195,14 +196,18 @@ namespace {
 }
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[]) {
-  
-  if (nrhs < 2 || nrhs > 3) {
-    mexErrMsgTxt("2 or 3 inputs required.");
+  if (nlhs > 1) {
+    mexErrMsgTxt("Too many outputs.");
     return;
   }
   
-  if (nlhs > 1) {
-    mexErrMsgTxt("Too many outputs.");
+  if (nrhs == 0) {
+    plhs[0] = mxCreateString(BFW_VERSION_ID);
+    return;
+  }
+  
+  if (nrhs < 2 || nrhs > 3) {
+    mexErrMsgTxt("2 or 3 inputs required.");
     return;
   }
   

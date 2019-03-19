@@ -1,9 +1,18 @@
 function build_single_file(cpp_filename, increment_version)
 
 %   BUILD_SINGLE_FILE -- Build and install mex file from single .cpp source file.
+%
+%     bfw.mex.build_single_file( src_filename ); builds the mex file given
+%     by `src_filename` and makes it accessible via bfw.mex.<src_filename>
+%
+%     bfw.mex.build_single_file( ..., change_version ); gives a logical
+%     scalar `change_version` indicating whether to change the version
+%     information for this mex file. Default is false.
+%
+%     See also mex
 
 if ( nargin < 2 )
-  increment_version = true;
+  increment_version = false;
 end
 
 proj_dir = bfw.util.get_project_folder();
@@ -52,7 +61,9 @@ header_file_path = fullfile( mex_dir, header_filename );
 src_file_path = fullfile( mex_dir, src_filename ); 
 raw_file_path = fullfile( vers_dir, raw_filename );
 
-if ( ~increment_version && shared_utils.io.fexists(raw_file_path) )
+use_old_version = ~increment_version && shared_utils.io.fexists( raw_file_path );
+
+if ( use_old_version )
   id = fileread( raw_file_path );
 else
   id = char( java.util.UUID.randomUUID() );
