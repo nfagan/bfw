@@ -1,2 +1,2 @@
 #include "rowop_nd_version.hpp"
- const char* const BFW_VERSION_ID = "4c066385-3f77-4623-bac4-7e5b9547877f";
+ const char* const BFW_VERSION_ID = "d765f676-bf4b-4f8a-9b4e-b0221508ab1c";
