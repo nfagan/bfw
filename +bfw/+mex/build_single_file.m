@@ -1,6 +1,10 @@
-function build_single_file(cpp_filename)
+function build_single_file(cpp_filename, increment_version)
 
 %   BUILD_SINGLE_FILE -- Build and install mex file from single .cpp source file.
+
+if ( nargin < 2 )
+  increment_version = true;
+end
 
 proj_dir = bfw.util.get_project_folder();
 mex_dir = fullfile( proj_dir, 'mex' );
@@ -20,7 +24,7 @@ else
   addtl_cxx_flags = '';
 end
 
-make_version_file( mex_dir, vers_filename_sans_ext );
+make_version_file( mex_dir, vers_filename_sans_ext, increment_version );
 
 c_optim_flags = 'COPTIMFLAGS="-O3 -fwrapv -DNDEBUG"';
 cpp_optim_flags = 'CXXOPTIMFLAGS="-O3 -fwrapv -DNDEBUG"';
@@ -32,15 +36,13 @@ eval( cmd );
 
 end
 
-function make_version_file(mex_dir, vers_filename_sans_ext)
+function make_version_file(mex_dir, vers_filename_sans_ext, increment_version)
 
 vers_dir = fullfile( mex_dir, 'version' );
 
 if ( exist(vers_dir, 'dir') ~= 7 )
   mkdir( vers_dir );
 end
-
-id = char( java.util.UUID.randomUUID() );
 
 header_filename = sprintf( '%s.hpp', vers_filename_sans_ext );
 src_filename = sprintf( '%s.cpp', vers_filename_sans_ext );
@@ -49,6 +51,12 @@ raw_filename = sprintf( '%s.txt', vers_filename_sans_ext );
 header_file_path = fullfile( mex_dir, header_filename );
 src_file_path = fullfile( mex_dir, src_filename ); 
 raw_file_path = fullfile( vers_dir, raw_filename );
+
+if ( ~increment_version && shared_utils.io.fexists(raw_file_path) )
+  id = fileread( raw_file_path );
+else
+  id = char( java.util.UUID.randomUUID() );
+end
 
 header_file_contents = '#pragma once\n extern const char* const BFW_VERSION_ID;';
 src_file_contents = sprintf( '#include "%s"\n const char* const BFW_VERSION_ID = "%s";' ...
