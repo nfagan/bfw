@@ -36,13 +36,6 @@ validateattributes( stop_indices, {'double'}, {'numel', N}, mfilename, 'stop_ind
 
 keep = fast_method( start_indices, stop_indices, labels, pairs, I );
 
-% keep1 = slow_method( start_indices, stop_indices, labels, pairs, I );
-% keep2 = fast_method( start_indices, stop_indices, labels, pairs, I );
-% 
-% assert( isequal(keep1, keep2), 'Methods were not equal' );
-% 
-% keep = keep2;
-
 end
 
 function keep = fast_method(start_indices, stop_indices, labels, pairs, I)

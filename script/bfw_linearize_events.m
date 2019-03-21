@@ -26,10 +26,12 @@ start_times = events_file.events(:, event_key('start_time'));
 [~, I] = sort( start_times );
 
 sorted_events = events_file.events(I, :);
-sorted_labels = events_file.labels(I, :);
+sorted_labels = fcat.from( events_file.labels(I, :), events_file.categories );
 
-sorted_labels = fcat.from( sorted_labels, events_file.categories );
-join( sorted_labels, bfw.struct2fcat(meta_file), bfw.stim_meta_to_fcat(stim_meta_file) );
+meta_labels = bfw.struct2fcat( meta_file );
+stim_labels = bfw.stim_meta_to_fcat( stim_meta_file );
+join( sorted_labels, meta_labels, stim_labels );
+prune( bfw.add_monk_labels(sorted_labels) );
 
 out = struct();
 out.key_order = cellfun( @(x) event_key(x), get_expected_keys() );

@@ -10,7 +10,11 @@ function out = row_mean(data, indices)
 %     In other words, each row i of B is the mean across rows of data 
 %     given by I{i}.
 %
-%     See also bfw.row_nanmean
+%     See also bfw.row_nanmean, bfw.mex.rowop_nd
+
+if ( numel(indices) > 0 && isa(indices{1}, 'double') )
+  indices = cellfun( @uint64, indices, 'un', 0 );
+end
 
 out = bfw.mex.rowop_nd( data, indices, uint32(0) );
 

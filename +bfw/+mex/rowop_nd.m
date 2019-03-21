@@ -44,4 +44,6 @@ function varargout = rowop_nd(varargin)
 %
 %     See also bfw.row_mean
 
+error( 'No rowop_nd mex function exists for your platform: "%s".', computer );
+
 end

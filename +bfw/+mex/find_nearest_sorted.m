@@ -23,6 +23,9 @@ function varargout = find_nearest_sorted(varargin)
 %     NaN elements in B are assigned the index 1 in I. NaN elements in A
 %     are skipped. If all elements of A are NaN, all indices in I are 1.
 %
+%     version_identifier = bfw.mex.find_nearest_sorted(), with no input 
+%     arguments, returns a char vector giving a version id for the mex file.
+%
 %     EX //
 %
 %     I = bfw.mex.find_nearest_sorted( 1:5, [1.1, 2.2, 2.8, 3.2] )

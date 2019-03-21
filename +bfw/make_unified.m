@@ -79,6 +79,7 @@ for idx = 1:numel(outerdirs)
   
   need_provide_plex_sync_index = false;
   got_plex_sync_index = false;
+  plex_sync_offset = 0;
   
   sync_file = 'plex_sync_map.json';
 
@@ -166,6 +167,16 @@ for idx = 1:numel(outerdirs)
     if ( i > 1 && numel(m_mats) ~= n_last_mats )
       warning( 'Number of .mat files does not match between m1 and m2.' );
     end
+    
+    %
+    %   check for plex sync offset file
+    %
+    plex_sync_offset_file = shared_utils.io.find( pl2_dir, 'plex_sync_offset.json' );
+    
+    if ( numel(plex_sync_offset_file) ~= 0 )
+      plex_sync_offset_struct = bfw.jsondecode( plex_sync_offset_file{1} );
+      plex_sync_offset = plex_sync_offset_struct.plex_sync_offset;
+    end
   
     %
     %   add plex sync id
@@ -182,7 +193,7 @@ for idx = 1:numel(outerdirs)
     
     if ( need_provide_plex_sync_index && ~got_plex_sync_index && strcmpi(m_str, plex_sync_id) )
       
-      m_plex_sync_map = get_plex_sync_map_from_data( m_data, m_filenames );
+      m_plex_sync_map = get_plex_sync_map_from_data( m_data, m_filenames, plex_sync_offset );
       
       got_plex_sync_index = true;
     end
@@ -539,7 +550,7 @@ end
 
 end
 
-function map = get_plex_sync_map_from_data(data, filenames)
+function map = get_plex_sync_map_from_data(data, filenames, offset)
 
 assert( isfield(data, 'plex_sync_index'), 'Missing "plex_sync_index" field.' );
 assert( numel(data) == numel(filenames), 'Filenames do not match data.' );
@@ -547,7 +558,7 @@ assert( numel(data) == numel(filenames), 'Filenames do not match data.' );
 map = containers.Map();
 
 for i = 1:numel(data)
-  map(filenames{i}) = data(i).plex_sync_index + 1;  % indices start from 0.
+  map(filenames{i}) = data(i).plex_sync_index + 1 + offset;  % indices start from 0.
 end
 
 end
