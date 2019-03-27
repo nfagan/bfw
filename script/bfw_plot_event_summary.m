@@ -46,7 +46,7 @@ prune( next_labs );
 
 %%  N events
 
-do_save = true;
+do_save = false;
 prefix = '';
 subdir = '';
 
@@ -54,7 +54,7 @@ uselabs = event_labels';
 
 mask = fcat.mask( uselabs, base_mask ...
   , @find, {'no-stimulation', 'free_viewing'} ...
-  , @find, {'eyes_nf', 'mouth', 'face'} ...
+  , @find, {'eyes_nf', 'mouth', 'face', 'everywhere'} ...
 );
 
 count_each = { 'session', 'roi', 'looks_by' };
@@ -93,7 +93,8 @@ mask = fcat.mask( pltlabs, base_mask ...
 );
 
 pl = plotlabeled.make_common();
-pl.group_order = { 'mutual', 'm1' };
+pl.fig = figure(2);
+pl.group_order = { 'm1', 'm2' };
 pl.x_order = { 'eyes_nf', 'mouth' };
 
 xcats = { 'roi' };
@@ -116,10 +117,10 @@ prefix = '';
 subdir = '';
 
 uselabs = event_labels';
-is_initiator = true;
+is_initiator = false;
 
 mask = fcat.mask( uselabs, base_mask ...
-  , @find, 'mutual' ...
+  , @find, {'mutual'} ...
   , @find, {'eyes_nf', 'mouth', 'face'} ...
   , @find, {'no-stimulation', 'free_viewing'} ...
 );
@@ -160,7 +161,7 @@ end
 %% Cound proportions of each event type
 
 is_previous = true;
-is_stim = true;
+is_stim = false;
 
 if ( is_previous )
   labs = prev_labs';
@@ -187,9 +188,9 @@ end
 
 mask = fcat.mask( labs, mask ...
   , @find, rois ...
+  , @findnone, {'mutual', 'previous_mutual', 'next_mutual'} ...
   , @find, 'free_viewing' ...
   , @findnone, missing_lab ...
-  , @findnone, {'mutual', 'previous_mutual', 'next_mutual'} ...
   , @find, 'm1' ...
 );
 
@@ -202,11 +203,11 @@ end
 props_each = { 'unified_filename', 'looks_by', 'roi' };
 props_of = proportion_cats;
 
-[counts, pltlabs] = proportions_of( labs, props_each, props_of, mask );
+[props, pltlabs] = proportions_of( labs, props_each, props_of, mask );
 
 %%  plot
 
-do_save = true;
+do_save = false;
 prefix = '';
 subdir = '';
 
@@ -219,7 +220,7 @@ xcats = { 'roi' };
 gcats = proportion_cats;
 pcats = { 'looks_by', 'id_m1' };
 
-axs = pl.bar( counts, pltlabs, xcats, gcats, pcats );
+axs = pl.bar( props, pltlabs, xcats, gcats, pcats );
 
 if ( do_save )
   plot_p = fullfile( base_plot_p, base_subdir, 'conditional_events', subdir );
@@ -227,5 +228,36 @@ if ( do_save )
   
   dsp3.req_savefig( gcf, plot_p, pltlabs, plot_cats, prefix );
 end
+
+%%  heat map
+
+[heat_map_I, heat_map_C] = findall( pltlabs, {'looks_by', 'roi'}, findnot(pltlabs, 'face') );
+
+hs = gobjects( numel(heat_map_I), 1 );
+
+for i = 1:numel(heat_map_I)
+  f = figure(i);
+  clf( f );
+  
+  row_spec = { 'looks_by', proportion_cats{1} };
+  col_spec = proportion_cats{2};
+
+  [t, rc] = tabular( pltlabs, row_spec, col_spec, heat_map_I{i} );
+
+  to_plt = cellfun( @(x) nanmean(props(x)), t );
+  x_labs = fcat.strjoin( cellstr(rc{2})', ' | ' );
+  y_labs = fcat.strjoin( cellstr(rc{1})', ' | ' );
+
+  hs(i) = heatmap( x_labs, y_labs, to_plt, 'parent', f );
+  
+  title( strjoin(heat_map_C(:, i), ' | ') );  
+end
+
+lims = { hs.ColorLimits };
+min_lim = min( cellfun(@min, lims) );
+max_lim = max( cellfun(@max, lims) );
+
+arrayfun( @(x) set(x, 'colorlimits', [min_lim, max_lim]), hs );
+
 
 

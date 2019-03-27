@@ -51,7 +51,7 @@ possible_roi_names = keys( bounds_file.(monk_ids{1}) );
 % Get the events_file struct in which data will be stored
 events_file = get_base_events_file( unified_filename, active_roi_names, is_all_rois, params );
 
-has_mutual_events = numel( monk_ids ) > 1;
+has_mutual_events = params.calculate_mutual && numel( monk_ids ) > 1;
 mutual_evts = [];
 
 for i = 1:numel(active_roi_names)
