@@ -1,9 +1,8 @@
 function labels_file = cs_labels(files)
 
-bfw.validatefiles( files, {'cs_unified/m1', 'meta'} );
+bfw.validatefiles( files, 'cs_unified/m1' );
 
 unified_file = shared_utils.general.get( files, 'cs_unified/m1' );
-meta_file = shared_utils.general.get( files, 'meta' );
 
 trial_data = unified_file.data.DATA;
 
@@ -11,7 +10,7 @@ reward_levels = get_reward_levels( trial_data );
 error_types = get_error_types( trial_data );
 
 labels = fcat.from( [reward_levels, error_types], {'reward-level', 'error-type'} );
-meta_labels = get_meta_labels( unified_file, meta_file );
+meta_labels = get_meta_labels( unified_file );
 
 join( labels, meta_labels );
 
@@ -22,19 +21,14 @@ labels_file.labels = labels;
 
 end
 
-function meta_labels = get_meta_labels(unified_file, meta_file)
+function meta_labels = get_meta_labels(unified_file)
 
-meta_labels = bfw.struct2fcat( convert_meta_file_to_cs_meta_file(unified_file, meta_file) );
-
-end
-
-function meta_file = convert_meta_file_to_cs_meta_file(unified_file, meta_file)
-
-% Update task type
+meta_file = struct();
 meta_file.task_type = 'cs';
-
-% Include cs_unified_filename in addition to unified_filename
 meta_file.cs_unified_filename = unified_file.cs_unified_filename;
+meta_file.unified_filename = unified_file.unified_filename;
+
+meta_labels = bfw.struct2fcat( meta_file );
 
 end
 
