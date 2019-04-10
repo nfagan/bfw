@@ -79,6 +79,9 @@ for i = 1:iters
   mex_data = mex_func( data, I );
   ts(i, 2) = toc();
   
+  assert( isequaln(mat_data(isnan(mat_data)), mex_data(isnan(mex_data))) && ...
+    isequal(isnan(mat_data), isnan(mex_data)), 'NaN subsets were not equal.' );
+  
   assert( isequaln(mat_data, mex_data), 'Subsets were not equal.' );  
 end
 

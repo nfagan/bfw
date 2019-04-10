@@ -7,5 +7,7 @@ end
 bfw_test_rowmean_nd( test_data );
 bfw_test_rownanmean_nd( test_data );
 bfw_test_rowsum_nd( test_data );
+bfw_test_rowmedian_nd( test_data );
+bfw_test_rownanmedian_nd( test_data );
 
 end

@@ -16,7 +16,9 @@ namespace util {
   enum class FunctionTypes {
     MEAN,
     NAN_MEAN,
-    SUM
+    SUM,
+    MEDIAN,
+    NAN_MEDIAN
   };
   
   enum class ThreadTypes {
@@ -219,6 +221,10 @@ namespace util {
         return FunctionTypes::NAN_MEAN;
       case 2:
         return FunctionTypes::SUM;
+      case 3:
+        return FunctionTypes::MEDIAN;
+      case 4:
+        return FunctionTypes::NAN_MEDIAN;
       default:
         mexErrMsgTxt("Unrecognized function type id.");
     }
