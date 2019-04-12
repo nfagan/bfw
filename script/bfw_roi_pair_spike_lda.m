@@ -15,44 +15,37 @@ inputs = { 'raw_events', 'spikes', 'meta', 'rng' };
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 loop_runner.convert_to_non_saving_with_output();
 
-results = loop_runner.run( @per_unit_lda, params );
+results = loop_runner.run( @gather_spikes, params );
 
 outputs = [ results([results.success]).output ];
 
-outs = struct();
-outs.params = params;
-
 if ( isempty(outputs) )
-  outs.labels = fcat();
-  outs.percent_correct = [];
+  outs = lda_main( [], fcat(), {}, {}, params );
+  
 else
-  outs.labels = vertcat( fcat(), outputs.labels );
-  outs.percent_correct = vertcat( outputs.percent_correct );
+  spike_labels = vertcat( fcat(), outputs.labels );
+  spike_rate = vertcat( outputs.spike_rate );
+  sessions = vertcat( outputs.session );
+  rng_state = { outputs.rng_state };
+  
+  outs = lda_main( spike_rate, spike_labels, sessions, rng_state, params );
 end
 
 end
 
-function outs = per_unit_lda(files, params)
+function outs = gather_spikes(files, params)
 
-files = require_spike_file( bfw.gid('spikes', params.config), files );
-
-window_size = params.window_size;
-step_size = params.step_size;
-
-null_iters = params.null_iters;
+[files, was_link] = require_spike_file( bfw.gid('spikes', params.config), files );
 
 aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
-  , 'window_size', window_size ...
-  , 'step_size', step_size ...
+  , 'window_size', params.window_size ...
+  , 'step_size', params.step_size ...
   , 'rois', {'eyes_nf', 'mouth', 'face'} ...
 );
 
-events_file = shared_utils.general.get( files, 'raw_events' );
 meta_file = shared_utils.general.get( files, 'meta' );
 rng_file = shared_utils.general.get( files, 'rng' );
-
-% For reproducibility.
-rng( rng_file.state );
+events_file = shared_utils.general.get( files, 'raw_events' );
 
 spike_rate = get_spike_rate( aligned_spike_file.spikes, aligned_spike_file.t, params );
 spike_labels = fcat.from( aligned_spike_file );
@@ -63,12 +56,77 @@ non_overlapping = get_non_overlapping_event_indices( events_file );
 % non-overlapping
 ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping) );
 
+join( spike_labels, bfw.struct2fcat(meta_file) );
+
+prune( keep(spike_labels, ok_event_inds) );
+spike_rate = spike_rate(ok_event_inds);
+
+outs = struct();
+outs.labels = spike_labels;
+outs.spike_rate = spike_rate;
+outs.session = combs( spike_labels, 'session' );
+outs.has_rng_state = ~was_link;
+
+if ( ~was_link )
+  outs.rng_state = rng_file.state;
+else
+  outs.rng_state = [];
+end
+
+end
+
+function outs = lda_main(spike_rate, spike_labels, sessions, rng_state, params)
+
 % Subset of rows of spike_labels that refer to m1-exclusive events.
-mask = fcat.mask( spike_labels, ok_event_inds ... 
+base_mask = fcat.mask( spike_labels ... 
   , @find, 'm1' ...
 );
 
-rois = combs( spike_labels, 'roi' );
+lda_each = { 'session', 'unit_uuid' };
+lda_I = findall( spike_labels, lda_each, base_mask );
+
+is_non_empty_rng_state = ~cellfun( @isempty, rng_state(:) );
+
+all_outs = cell( numel(lda_I), 1 );
+success = true( numel(lda_I), 1 );
+
+parfor i = 1:numel(lda_I)
+  
+  session = combs( spike_labels, 'session', lda_I{i} );
+  is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
+  
+  if ( nnz(is_rng_state) ~= 1 )
+    warning( 'Failed to find rng state for: "%s".', strjoin(session, '_') );
+    success(i) = false;
+    continue;
+  end
+  
+  use_rng_state = rng_state{is_rng_state};
+  rng( use_rng_state );
+  
+  all_outs{i} = masked_lda( spike_rate, spike_labels, lda_I{i}, params );
+end
+
+success_outs = [ all_outs{success} ];
+
+outs = struct();
+outs.params = params;
+
+if ( isempty(success_outs) )
+  outs.percent_correct = [];
+  outs.labels = fcat();
+else
+  outs.percent_correct = vertcat( success_outs.percent_correct );
+  outs.labels = vertcat( fcat, success_outs.labels );
+end
+
+end
+
+function outs = masked_lda(spike_rate, spike_labels, mask, params)
+
+null_iters = params.null_iters;
+
+rois = combs( spike_labels, 'roi', mask );
 roi_pair_indices = nchoosek( 1:numel(rois), 2 );
 
 unit_I = findall( spike_labels, 'unit_uuid', mask );
@@ -96,7 +154,7 @@ for i = 1:size(index_combinations, 2)
   % false -> don't shuffle
   [p, had_missing] = run_lda( spike_rate, spike_labels, full_unit_ind, false, params );
   
-  real_data(real_stp, :) = [p, had_missing];
+  real_data(real_stp, :) = [ p, had_missing ];
   real_stp = real_stp + 1;
 
   for k = 1:null_iters
@@ -126,8 +184,6 @@ all_labels = vertcat( fcat(), real_labels, shuff_labels );
 
 addsetcat( all_labels, 'shuffled-type', 'shuffled' );
 setcat( all_labels, 'shuffled-type', 'non-shuffled', 1:rows(real_data) );
-
-join( all_labels, bfw.struct2fcat(meta_file) );
 prune( all_labels );
 
 outs = struct();
@@ -216,11 +272,12 @@ non_overlapping = intersect( non_overlapping, non_nan );
 
 end
 
-function files = require_spike_file(spike_p, files)
+function [files, was_link] = require_spike_file(spike_p, files)
 
 spike_file = shared_utils.general.get( files, 'spikes' );
+was_link = spike_file.is_link;
 
-if ( spike_file.is_link )
+if ( was_link )
   spike_file = shared_utils.io.fload( fullfile(spike_p, spike_file.data_file) );
   
   files = shared_utils.general.set( files, 'spikes', spike_file );
