@@ -6,11 +6,10 @@ defaults.look_ahead = 0.5;
 defaults.bin_size = 0.05;
 defaults.event_names = { 'cs_presentation' };
 
-inputs = { 'cs_labels/m1', 'cs_task_events/m1', 'cs_unified/m1' };
+inputs = { 'cs_labels/m1', 'cs_task_events/m1', 'cs_trial_data/m1' };
 output = '';
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
-
 configure_loop_runner( loop_runner );
 
 spike_p = bfw.gid( 'spikes', params.config );
@@ -25,14 +24,15 @@ if ( isempty(results) )
   out.psth = [];
   out.labels = fcat();
   out.t = [];
+  out.reward_levels = [];
   
 else
   outputs = [results.output];
   
-  out = struct();
   out.psth = vertcat( outputs.psth );
   out.labels = vertcat( fcat, outputs.labels );
   out.t = outputs(1).t;
+  out.reward_levels = vertcat( outputs.reward_levels );
 end
 
 end
@@ -41,7 +41,7 @@ function out = gather_per_run(files, spike_p, meta_p, params)
 
 cs_labels_file = shared_utils.general.get( files, 'cs_labels/m1' );
 cs_events_file = shared_utils.general.get( files, 'cs_task_events/m1' );
-unified_file = shared_utils.general.get( files, 'cs_unified/m1' );
+cs_trial_data_file = shared_utils.general.get( files, 'cs_trial_data/m1' );
 
 un_filename = bfw.try_get_unified_filename( cs_labels_file );
 
@@ -86,12 +86,15 @@ for i = 1:numel(units)
   
   unit_labels = fcat.from( bfw.get_unit_labels(units(i)) );
   joined_labels = join( cs_labels_file.labels', unit_labels, meta_labels );
+  bfw.unify_single_region_labels( joined_labels );
   
   add_event_name_labels( joined_labels, event_names, event_name_indices );
   
   append( psth_labels, joined_labels );
   
-  reward_levels = [ reward_levels; get_reward_levels(unified_file) ];
+  for j = 1:numel(event_names)
+    reward_levels = [ reward_levels; cs_trial_data_file.reward_levels ];
+  end
 end
 
 out = struct();
@@ -99,18 +102,6 @@ out.psth = psth_mat;
 out.labels = psth_labels;
 out.reward_levels = reward_levels;
 out.t = t;
-
-end
-
-function reward_levels = get_reward_levels(unified_file)
-
-trial_data = unified_file.data.DATA;
-
-if ( ~isfield(trial_data, 'n_rewards') )
-  reward_levels = nan( numel(trial_data, 1) );
-else
-  reward_levels = reshape( [trial_data.n_rewards], [], 1 );
-end
 
 end
 

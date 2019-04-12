@@ -3,6 +3,7 @@ function bfw_plot_cs_reward_response(reward_response, varargin)
 defaults = bfw.get_common_make_defaults();
 defaults.base_subdir = '';
 defaults.do_save = false;
+defaults.base_mask = rowmask( reward_response.labels );
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -24,7 +25,7 @@ bfw.unify_single_region_labels( psth_labs );
 gcats = { 'reward-level' };
 pcats = { 'unit_uuid', 'region', 'event-name' };
 
-unit_I = findall( psth_labs, 'unit_uuid' );
+unit_I = findall( psth_labs, 'unit_uuid', params.base_mask );
 
 for i = 1:numel(unit_I)
   shared_utils.general.progress( i, numel(unit_I) );

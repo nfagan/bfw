@@ -10,7 +10,7 @@ bfw.validatefiles( files, {events_subdir, 'spikes'} );
 spike_file = shared_utils.general.get( files, 'spikes' );
 events_file = shared_utils.general.get( files, events_subdir );
 
-events_file = handle_roi_selection( events_file, params.rois );
+[events_file, event_indices] = handle_roi_selection( events_file, params.rois );
 event_times = events_file.events(:, events_file.event_key('start_time'));
 
 units = spike_file.data;
@@ -20,6 +20,7 @@ use_window_start_as_0 = params.use_window_start_as_0;
 
 binned_spikes = {};
 binned_labels = fcat();
+all_event_indices = [];
 
 for i = 1:numel(units)
   unit = units(i);
@@ -35,6 +36,7 @@ for i = 1:numel(units)
   
   append( binned_labels, joined_labels );
   binned_spikes = [ binned_spikes; aligned ];
+  all_event_indices = [ all_event_indices; event_indices ];
 end
 
 [labels, categories] = categorical( binned_labels );
@@ -47,6 +49,7 @@ aligned_file.labels = labels;
 aligned_file.categories = categories;
 aligned_file.t = t_series;
 aligned_file.n_events_per_unit = numel( event_times );
+aligned_file.event_indices = all_event_indices;
 
 end
 
@@ -95,7 +98,7 @@ labels = fcat.from( bfw.get_unit_labels(unit) );
 
 end
 
-function events_file = handle_roi_selection(events_file, rois)
+function [events_file, event_indices] = handle_roi_selection(events_file, rois)
 
 rois = cellstr( rois );
 
@@ -110,6 +113,8 @@ matches_roi = cellfun( @(x) any(strcmp(rois, x)), events_file.labels(:, roi_ind)
 
 events_file.labels(~matches_roi, :) = [];
 events_file.events(~matches_roi, :) = [];
+
+event_indices = find( matches_roi );
 
 end
 

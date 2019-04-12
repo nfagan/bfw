@@ -4,7 +4,12 @@ if ( nargin < 2 )
   pairs = bfw_get_non_overlapping_pairs();
 end
 
-event_labels = linearized_events.labels';
+if ( isfield(linearized_events, 'labels') && ~isa(linearized_events.labels, 'fcat') )
+  event_labels = fcat.from( linearized_events );
+else
+  event_labels = linearized_events.labels';
+end
+
 events = linearized_events.events;
 event_key = linearized_events.event_key;
 
