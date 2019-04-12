@@ -179,10 +179,17 @@ test_group = roi_group(test_ind);
 
 n_unique_train = numel( unique(train_group) );
 
-cls = classify( test_data, train_data, train_group );
-p = sum( cls == test_group ) / numel( test_group );
+try
+  cls = classify( test_data, train_data, train_group );
+  p = sum( cls == test_group ) / numel( test_group );
 
-had_missing = double( n_unique_train ~= 2 );
+  had_missing = double( n_unique_train ~= 2 );
+catch err
+  warning( err.message );
+  
+  p = nan;
+  had_missing = true;
+end
 
 end
 
