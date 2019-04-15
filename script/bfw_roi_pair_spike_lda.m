@@ -94,7 +94,7 @@ is_non_empty_rng_state = ~cellfun( @isempty, rng_state(:) );
 all_outs = cell( numel(lda_I), 1 );
 success = true( numel(lda_I), 1 );
 
-for i = 1:numel(lda_I)
+parfor i = 1:numel(lda_I)
   
   session = combs( spike_labels, 'session', lda_I{i} );
   is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
