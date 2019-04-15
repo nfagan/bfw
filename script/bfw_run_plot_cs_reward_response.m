@@ -44,6 +44,7 @@ lda_out = shared_utils.io.fload( fullfile(bfw.dataroot, 'analyses/spike_lda/0412
 
 if ( isfield(lda_out, 'percent_correct') )
   lda_out.performance = lda_out.percent_correct;
+  lda_out.performance(:, 3) = 0;
   lda_out = rmfield( lda_out, 'percent_correct' );
 end
 
@@ -53,20 +54,25 @@ end
 any_missing = cellfun( @(x) any(lda_out.performance(x, 2)), I );
 diffs(any_missing, :) = nan;
 
-%%
+%%  Get distributions of reward sensitivity + lda performance
 
-sens_perf = sensitivity_outs.model_stats(:, strcmp(sensitivity_outs.model_stats_key, 'pValue'));
+base_subdir = 'default';
+
+model_stats = sensitivity_outs.model_stats;
+stats_key = sensitivity_outs.model_stats_key;
+
+sens_perf = model_stats(:, strcmp(stats_key, 'Estimate'));
+sens_p = model_stats(:, strcmp(stats_key, 'pValue'));
 sens_labels = sensitivity_outs.labels';
 
 lda_perf = lda_out.performance(:, 1);
+lda_p = lda_out.performance(:, 3);
 lda_labels = lda_out.labels';
 bfw.unify_single_region_labels( lda_labels );
 
-sens_perf = indexpair( sens_perf, sens_labels, findnone(sens_labels, 'unit_uuid__NaN') );
-
-[sens_perf, lda_perf, corr_labels] = bfw_make_reward_sensitivity_lda_distributions( sens_perf, sens_labels', lda_perf, lda_labels' );
-
-%%
-
-bfw_correlate_cs_reward_sensitivity_to_gaze_lda( sens_perf, lda_perf, corr_labels ); 
+bfw_run_cs_lda_correlation( sens_perf, sens_p, sens_labels' ...
+  , lda_perf, lda_p, lda_labels' ...
+  , 'significant_reward', true ...
+  , 'significant
+);
 

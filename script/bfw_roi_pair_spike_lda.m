@@ -28,7 +28,9 @@ else
   sessions = vertcat( outputs.session );
   rng_state = { outputs.rng_state };
   
-  outs = lda_main( spike_rate, spike_labels, sessions, rng_state, params );
+  assert( numel(sessions) == numel(rng_state), 'Sessions must match rng state.' );
+  
+  outs = lda_main( spike_rate, spike_labels, sessions(:), rng_state(:), params );
 end
 
 end
@@ -89,17 +91,23 @@ base_mask = fcat.mask( spike_labels ...
 lda_each = { 'session', 'unit_uuid' };
 lda_I = findall( spike_labels, lda_each, base_mask );
 
-is_non_empty_rng_state = ~cellfun( @isempty, rng_state(:) );
+is_non_empty_rng_state = ~cellfun( @isempty, rng_state );
 
 all_outs = cell( numel(lda_I), 1 );
 success = true( numel(lda_I), 1 );
 
-for i = 1:numel(lda_I)
+parfor i = 1:numel(lda_I)
+  session = char( cellstr(spike_labels, 'session', lda_I{i}(1)) );
   
-  session = combs( spike_labels, 'session', lda_I{i} );
-  is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
+  try
+    is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
+  catch err
+    warning( err.message );
+    success(i) = false;
+  end
   
-  if ( nnz(is_rng_state) ~= 1 )
+  % Do not put `continue` in `catch` block above -- matlab bug.
+  if ( ~success(i) || nnz(is_rng_state) ~= 1 )
     warning( 'Failed to find rng state for: "%s".', strjoin(session, '_') );
     success(i) = false;
     continue;
