@@ -1,7 +1,7 @@
 function outs = bfw_determine_cs_reward_sensitivity_glm(reward_response, varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.each_func = @(labels) findall(labels, 'unit_uuid');
+defaults.each_func = @(labels, varargin) findall(labels, 'unit_uuid', varargin{:});
 defaults.time_window = [0, 0.25];
 defaults.make_levels_binary = false;
 

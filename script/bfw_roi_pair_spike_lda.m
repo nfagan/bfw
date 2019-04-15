@@ -47,13 +47,17 @@ meta_file = shared_utils.general.get( files, 'meta' );
 rng_file = shared_utils.general.get( files, 'rng' );
 events_file = shared_utils.general.get( files, 'raw_events' );
 
-spike_rate = get_spike_rate( aligned_spike_file.spikes, aligned_spike_file.t, params );
-spike_labels = fcat.from( aligned_spike_file );
+if ( isempty(aligned_spike_file.spikes) )
+  spike_rate = [];
+else
+  spike_rate = get_spike_rate( aligned_spike_file.spikes, aligned_spike_file.t, params );
+end
 
-non_overlapping = get_non_overlapping_event_indices( events_file );
+spike_labels = fcat.from( aligned_spike_file );
 
 % Subset of rows of spike_labels that contain events that are
 % non-overlapping
+non_overlapping = get_non_overlapping_event_indices( events_file );
 ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping) );
 
 join( spike_labels, bfw.struct2fcat(meta_file) );
@@ -90,7 +94,7 @@ is_non_empty_rng_state = ~cellfun( @isempty, rng_state(:) );
 all_outs = cell( numel(lda_I), 1 );
 success = true( numel(lda_I), 1 );
 
-parfor i = 1:numel(lda_I)
+for i = 1:numel(lda_I)
   
   session = combs( spike_labels, 'session', lda_I{i} );
   is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
@@ -113,10 +117,10 @@ outs = struct();
 outs.params = params;
 
 if ( isempty(success_outs) )
-  outs.percent_correct = [];
+  outs.performance = [];
   outs.labels = fcat();
 else
-  outs.percent_correct = vertcat( success_outs.percent_correct );
+  outs.performance = vertcat( success_outs.performance );
   outs.labels = vertcat( fcat, success_outs.labels );
 end
 
@@ -134,8 +138,8 @@ unit_I = findall( spike_labels, 'unit_uuid', mask );
 real_labels = fcat();
 shuff_labels = fcat();
 
-real_data = nan( numel(unit_I) * size(roi_pair_indices, 1), 2 );
-shuff_data = nan( numel(unit_I) * size(roi_pair_indices, 1) * null_iters, 2 );
+real_data = nan( numel(unit_I) * size(roi_pair_indices, 1), 3 );
+shuff_data = nan( numel(unit_I) * size(roi_pair_indices, 1) * null_iters, 3 );
 
 real_stp = 1;
 shuff_stp = 1;
@@ -151,18 +155,23 @@ for i = 1:size(index_combinations, 2)
   roi_pair = rois(roi_pair_index);
   full_unit_ind = find( spike_labels, roi_pair, unit_ind );
 
-  % false -> don't shuffle
-  [p, had_missing] = run_lda( spike_rate, spike_labels, full_unit_ind, false, params );
-  
-  real_data(real_stp, :) = [ p, had_missing ];
-  real_stp = real_stp + 1;
-
+  % shuffle first
   for k = 1:null_iters
     [p, had_missing] = run_lda( spike_rate, spike_labels, full_unit_ind, true, params );
     
-    shuff_data(shuff_stp, :) = [ p, had_missing ];
+    shuff_data(shuff_stp, 1:2) = [ p, had_missing ];
     shuff_stp = shuff_stp + 1;
   end
+  
+  % false -> don't shuffle
+  [p, had_missing] = run_lda( spike_rate, spike_labels, full_unit_ind, false, params );
+  
+  % Test p vs. null
+  shuff_p = shuff_data((shuff_stp-null_iters):(shuff_stp-1), 1);
+  p_real_v_null = compare_real_and_null( p, shuff_p );
+  
+  real_data(real_stp, :) = [ p, had_missing, p_real_v_null ];
+  real_stp = real_stp + 1;
 
   roi_lab = strjoin( roi_pair, '_' );
 
@@ -187,27 +196,14 @@ setcat( all_labels, 'shuffled-type', 'non-shuffled', 1:rows(real_data) );
 prune( all_labels );
 
 outs = struct();
-outs.percent_correct = all_data;
+outs.performance = all_data;
 outs.labels = all_labels;
 
 end
 
-function [new_shuff_data, shuff_labels] = default_reduce_shuffled_func(shuff_data, shuff_labels)
+function p = compare_real_and_null(real_p, null_dist)
 
-[~, I] = keepeach( shuff_labels, {'roi', 'unit_uuid'} );
-
-new_shuff_data = nan( numel(I), 2 );
-
-for i = 1:numel(I)
-  mean_perc = mean( shuff_data(I{i}, 1) );
-  had_missing = any( shuff_data(I{i}, 2) > 0 );
-  
-  if ( had_missing )
-    mean_perc = nan;
-  end
-  
-  new_shuff_data(i, :) = [ mean_perc, double(had_missing) ];
-end
+p = sum( null_dist > real_p ) / numel( null_dist );
 
 end
 
@@ -281,6 +277,25 @@ if ( was_link )
   spike_file = shared_utils.io.fload( fullfile(spike_p, spike_file.data_file) );
   
   files = shared_utils.general.set( files, 'spikes', spike_file );
+end
+
+end
+
+function [new_shuff_data, shuff_labels] = default_reduce_shuffled_func(shuff_data, shuff_labels)
+
+[~, I] = keepeach( shuff_labels, {'roi', 'unit_uuid', 'session'} );
+
+new_shuff_data = nan( numel(I), size(shuff_data, 2) );
+
+for i = 1:numel(I)
+  mean_perc = mean( shuff_data(I{i}, 1) );
+  had_missing = any( shuff_data(I{i}, 2) > 0 );
+  
+  if ( had_missing )
+    mean_perc = nan;
+  end
+  
+  new_shuff_data(i, 1:2) = [ mean_perc, double(had_missing) ];
 end
 
 end
