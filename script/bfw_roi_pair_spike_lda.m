@@ -103,17 +103,13 @@ success = true( numel(lda_I), 1 );
 
 parfor i = 1:numel(lda_I)
   session = char( cellstr(spike_labels, 'session', lda_I{i}(1)) );
+  session = session(:)';
   
-  try
-    is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
-  catch err
-    warning( err.message );
-    success(i) = false;
-  end
+  is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
   
   % Do not put `continue` in `catch` block above -- matlab bug.
-  if ( ~success(i) || nnz(is_rng_state) ~= 1 )
-    warning( 'Failed to find rng state for: "%s".', strjoin(session, '_') );
+  if ( nnz(is_rng_state) ~= 1 )
+    warning( 'Failed to find rng state for: "%s".', session, '_' );
     success(i) = false;
     continue;
   end
