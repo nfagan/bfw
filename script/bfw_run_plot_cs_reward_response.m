@@ -34,13 +34,34 @@ bfw_plot_cs_reward_response( reward_response ...
   , 'do_save', true ...
 );
 
-%%
+%%  Run lda
+
+bfw_run_roi_pair_spike_lda()
+
+%%  Load lda
 
 lda_out = shared_utils.io.fload( fullfile(bfw.dataroot, 'analyses/spike_lda/041219/lda_out.mat') );
 
-[diffs, labels, I] = dsp3.summary_binary_op( lda_out.percent_correct, lda_out.labels' ...
+if ( isfield(lda_out, 'percent_correct') )
+  lda_out.performance = lda_out.percent_correct;
+  lda_out = rmfield( lda_out, 'percent_correct' );
+end
+
+[diffs, labels, I] = dsp3.summary_binary_op( lda_out.performance, lda_out.labels' ...
   , {'unit_uuid', 'session', 'roi'}, 'non-shuffled', 'shuffled', @minus, @identity );
 
-any_missing = cellfun( @(x) any(lda_out.percent_correct(x, 2)), I );
+any_missing = cellfun( @(x) any(lda_out.performance(x, 2)), I );
 diffs(any_missing, :) = nan;
+
+%%
+
+sens_perf = sensitivity_outs.model_stats(:, strcmp(sensitivity_outs.model_stats_key, 'pValue'));
+sens_labels = sensitivity_outs.labels';
+
+lda_perf = lda_out.performance;
+lda_labels = lda_out.labels';
+
+sens_perf = indexpair( sens_perf, sens_labels, findnone(sens_labels, 'unit_uuid__NaN') );
+
+bfw_correlate_cs_reward_sensitivity_to_gaze_lda( sens_perf, sens_labels', lda_perf, lda_labels' );
 

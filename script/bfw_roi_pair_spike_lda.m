@@ -130,7 +130,7 @@ function outs = masked_lda(spike_rate, spike_labels, mask, params)
 
 null_iters = params.null_iters;
 
-rois = combs( spike_labels, 'roi', mask );
+rois = sort( combs(spike_labels, 'roi', mask) );
 roi_pair_indices = nchoosek( 1:numel(rois), 2 );
 
 unit_I = findall( spike_labels, 'unit_uuid', mask );
@@ -173,7 +173,7 @@ for i = 1:size(index_combinations, 2)
   real_data(real_stp, :) = [ p, had_missing, p_real_v_null ];
   real_stp = real_stp + 1;
 
-  roi_lab = strjoin( roi_pair, '_' );
+  roi_lab = strjoin( roi_pair, '/' );
 
   append1( real_labels, spike_labels, full_unit_ind );
   setcat( real_labels, 'roi', roi_lab, length(real_labels) );
