@@ -36,7 +36,7 @@ bfw_plot_cs_reward_response( reward_response ...
 
 %%  Run lda
 
-bfw_run_roi_pair_spike_lda()
+bfw_run_roi_pair_spike_lda();
 
 %%  Load lda
 
@@ -58,10 +58,15 @@ diffs(any_missing, :) = nan;
 sens_perf = sensitivity_outs.model_stats(:, strcmp(sensitivity_outs.model_stats_key, 'pValue'));
 sens_labels = sensitivity_outs.labels';
 
-lda_perf = lda_out.performance;
+lda_perf = lda_out.performance(:, 1);
 lda_labels = lda_out.labels';
+bfw.unify_single_region_labels( lda_labels );
 
 sens_perf = indexpair( sens_perf, sens_labels, findnone(sens_labels, 'unit_uuid__NaN') );
 
-bfw_correlate_cs_reward_sensitivity_to_gaze_lda( sens_perf, sens_labels', lda_perf, lda_labels' );
+[sens_perf, lda_perf, corr_labels] = bfw_make_reward_sensitivity_lda_distributions( sens_perf, sens_labels', lda_perf, lda_labels' );
+
+%%
+
+bfw_correlate_cs_reward_sensitivity_to_gaze_lda( sens_perf, lda_perf, corr_labels ); 
 

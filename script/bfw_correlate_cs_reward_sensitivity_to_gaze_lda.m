@@ -1,17 +1,26 @@
-function bfw_correlate_cs_reward_sensitivity_to_gaze_lda(sens_perf, sens_labels, lda_perf, lda_labels, varargin)
+function bfw_correlate_cs_reward_sensitivity_to_gaze_lda(x, y, labels, varargin)
 
-assert_ispair( sens_perf, sens_labels );
-assert_ispair( lda_perf, lda_labels );
+basic_scatter( x, y, labels );
 
-sens_each = { 'event-name', 'session', 'unit_uuid' };
-lda_each = { 'shuffled-type', 'roi' };
+end
 
-[sens_I, sens_C] = findall( sens_labels, sens_each );
+function basic_scatter(x, y, labels)
 
-for i = 1:numel(sens_I)
-  sens_combs = sens_C(:, i);
+figures_each = { 'region' };
+
+gcats = { 'roi' };
+pcats = { 'event-name', 'region' };
+
+pl = plotlabeled.make_common();
+
+fig_I = findall( labels, figures_each );
+
+for i = 1:numel(fig_I)
+  ind = fig_I{i};
+
+  [axs, ids] = pl.scatter( x(ind), y(ind), prune(labels(ind)), gcats, pcats );
   
-  matches_lda = find( lda_labels, sens_combs(2:3) );
+  d = 10;
 end
 
 end

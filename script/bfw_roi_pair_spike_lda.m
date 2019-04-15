@@ -94,7 +94,7 @@ is_non_empty_rng_state = ~cellfun( @isempty, rng_state(:) );
 all_outs = cell( numel(lda_I), 1 );
 success = true( numel(lda_I), 1 );
 
-parfor i = 1:numel(lda_I)
+for i = 1:numel(lda_I)
   
   session = combs( spike_labels, 'session', lda_I{i} );
   is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
@@ -233,7 +233,7 @@ n_unique_train = numel( unique(train_group) );
 
 try
   cls = classify( test_data, train_data, train_group );
-  p = sum( cls == test_group ) / numel( test_group );
+  p = sum( cls(:) == test_group(:) ) / numel( test_group );
 
   had_missing = double( n_unique_train ~= 2 );
 catch err
