@@ -19,6 +19,11 @@ results = loop_runner.run( @gather_spikes, params );
 
 outputs = [ results([results.success]).output ];
 
+if ( ~isempty(outputs) )
+  non_empties = arrayfun( @(x) ~isempty(x.spike_rate), outputs );
+  outputs = outputs(non_empties);  
+end
+
 if ( isempty(outputs) )
   outs = lda_main( [], fcat(), {}, {}, params );
   

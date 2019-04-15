@@ -1,19 +1,21 @@
 function bfw_run_cs_lda_correlation(sens_perf, sens_p, sens_labels, lda_perf, lda_p, lda_labels, varargin)
 
 defaults = struct();
-defaults.absolute_sensitivity = false;
-defaults.significant_sensitivity = false;
+defaults.absolute_reward = false;
+defaults.significant_reward = false;
 defaults.base_subdir = 'default';
 defaults.do_save = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
-if ( params.absolute_sentivity )
+base_subdir = params.base_subdir;
+
+if ( params.absolute_reward )
   sens_perf = abs( sens_perf );
   base_subdir = 'absolute_sens';
 end
 
-if ( params.significant_sensivity )
+if ( params.significant_reward )
   sens_perf = indexpair( sens_perf, sens_labels, find(sens_p < 0.05) );
   base_subdir = sprintf( '%s_sig_reward', base_subdir );
 end

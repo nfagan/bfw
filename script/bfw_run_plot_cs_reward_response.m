@@ -65,7 +65,7 @@ sens_perf = model_stats(:, strcmp(stats_key, 'Estimate'));
 sens_p = model_stats(:, strcmp(stats_key, 'pValue'));
 sens_labels = sensitivity_outs.labels';
 
-lda_perf = lda_out.performance(:, 1);
+lda_perf = lda_out.performance(:, 1) * 100;
 lda_p = lda_out.performance(:, 3);
 lda_labels = lda_out.labels';
 bfw.unify_single_region_labels( lda_labels );
@@ -73,6 +73,7 @@ bfw.unify_single_region_labels( lda_labels );
 bfw_run_cs_lda_correlation( sens_perf, sens_p, sens_labels' ...
   , lda_perf, lda_p, lda_labels' ...
   , 'significant_reward', true ...
-  , 'significant
+  , 'absolute_reward', true ...
+  , 'do_save', true ...
 );
 
