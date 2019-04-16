@@ -107,9 +107,8 @@ parfor i = 1:numel(lda_I)
   
   is_rng_state = strcmp( sessions, session ) & is_non_empty_rng_state;
   
-  % Do not put `continue` in `catch` block above -- matlab bug.
   if ( nnz(is_rng_state) ~= 1 )
-    warning( 'Failed to find rng state for: "%s".', session, '_' );
+    warning( 'Failed to find rng state for: "%s".', session );
     success(i) = false;
     continue;
   end

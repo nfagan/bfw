@@ -12,7 +12,7 @@ base_subdir = params.base_subdir;
 
 if ( params.absolute_reward )
   sens_perf = abs( sens_perf );
-  base_subdir = 'absolute_sens';
+  base_subdir = sprintf( '%s_absolute_sens', base_subdir );
 end
 
 if ( params.significant_reward )
