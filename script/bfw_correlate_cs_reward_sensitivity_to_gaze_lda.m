@@ -1,9 +1,7 @@
 function bfw_correlate_cs_reward_sensitivity_to_gaze_lda(x, y, labels, varargin)
 
-defaults = bfw.get_common_make_defaults();
+defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.mask = rowmask( labels );
-defaults.do_save = false;
-defaults.base_subdir = '';
 
 params = bfw.parsestruct( defaults, varargin );
 

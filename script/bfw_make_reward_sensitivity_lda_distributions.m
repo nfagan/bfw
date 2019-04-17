@@ -21,7 +21,11 @@ for i = 1:numel(sens_I)
   % Find matching session and unit uuid, ignoring event-name, since lda
   % doens't have one.
   matches_lda = find( lda_labels, sens_combs(2:3) );
-  assert( ~isempty(matches_lda) );
+%   assert( ~isempty(matches_lda) );
+
+  if ( isempty(matches_lda) )
+    continue;
+  end
   
   [lda_labs, lda_I] = keepeach( lda_labels', lda_each, matches_lda );
   

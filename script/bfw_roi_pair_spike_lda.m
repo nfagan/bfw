@@ -9,6 +9,7 @@ defaults.p_train = 0.75;
 defaults.null_iters = 1e3;
 defaults.reduce_shuffled_data = true;
 defaults.reduce_shuffled_func = @default_reduce_shuffled_func;
+defaults.rois = {'eyes_nf', 'mouth', 'face'};
 
 inputs = { 'raw_events', 'spikes', 'meta', 'rng' };
 
@@ -47,7 +48,7 @@ function outs = gather_spikes(files, params)
 aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
   , 'window_size', params.window_size ...
   , 'step_size', params.step_size ...
-  , 'rois', {'eyes_nf', 'mouth', 'face'} ...
+  , 'rois', params.rois ...
 );
 
 meta_file = shared_utils.general.get( files, 'meta' );
