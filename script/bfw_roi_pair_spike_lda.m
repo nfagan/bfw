@@ -39,6 +39,8 @@ else
   outs = lda_main( spike_rate, spike_labels, sessions(:), rng_state(:), params );
 end
 
+outs.params = params;
+
 end
 
 function outs = gather_spikes(files, params)
