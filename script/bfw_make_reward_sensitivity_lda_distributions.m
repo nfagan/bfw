@@ -24,6 +24,7 @@ for i = 1:numel(sens_I)
 %   assert( ~isempty(matches_lda) );
 
   if ( isempty(matches_lda) )
+    % Lda does not have this unit-session combination.
     continue;
   end
   

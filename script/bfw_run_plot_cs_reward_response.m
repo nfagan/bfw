@@ -28,6 +28,8 @@ model_stats = sensitivity_outs.model_stats;
 ps = model_stats(:, strcmp(sensitivity_outs.model_stats_key, 'pValue'));
 
 is_sig = ps < 0.05;
+
+% Get unit ids significant in at least one epoch.
 sig_units = combs( sensitivity_outs.labels, 'unit_uuid', find(is_sig) );
 
 bfw_plot_cs_reward_response( reward_response ...

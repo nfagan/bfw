@@ -21,9 +21,9 @@ glm_I = feval( params.each_func, response_labels', non_nan_level_ind );
 models = rowcell( numel(glm_I) );
 model_stats = nan( numel(glm_I), 4 );
 
-glm_labels = fcat();
+glm_labels = rowcell( numel(glm_I) );
 
-for i = 1:numel(glm_I)
+parfor i = 1:numel(glm_I)
   mask = glm_I{i};
   
   levels = reward_levels(mask);
@@ -43,19 +43,23 @@ for i = 1:numel(glm_I)
   model_stats(i, :) = get_single_term_model_stats( mdl );
     
   models{i} = mdl;
-	append1( glm_labels, response_labels, mask );
+  glm_labels{i} = append1( fcat(), response_labels, mask );
 end
 
 outs = struct();
 outs.models = models;
-outs.labels = glm_labels;
+outs.labels = vertcat( fcat(), glm_labels{:} );
 outs.model_stats = model_stats;
+outs.params = params;
 
 if ( ~isempty(models) )
   outs.model_stats_key = models{1}.Coefficients.Properties.VariableNames;
 else
   outs.model_stats_key = {};
 end
+
+outs.performance = model_stats(:, strcmp(outs.model_stats_key, 'Estimate'));
+outs.significance = model_stats(:, strcmp(outs.model_stats_key, 'pValue'));
 
 end
 

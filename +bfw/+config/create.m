@@ -19,9 +19,9 @@ conf.(const.config_id) = true;
 
 %   PATHS
 PATHS = struct();
-PATHS.data_root = '/Volumes/My Passport/NICK/Chang Lab 2016/brains/free_viewing';
-PATHS.repositories = '/Volumes/My Passport/NICK/Chang Lab 2016/repositories';
-PATHS.plots = '/Volumes/My Passport/NICK/Chang Lab 2016/brains/free_viewing/plots';
+PATHS.data_root = '';
+PATHS.repositories = '';
+PATHS.plots = '';
 
 %   DEPENDENCIES
 DEPENDS = struct();
