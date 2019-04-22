@@ -2,16 +2,19 @@ reward_response = bfw_get_cs_reward_response( ...
   'event_names', {'cs_reward', 'cs_presentation'} ...
 );
 
-lda_outs = bfw_load_mult_cs_lda_data( {'041519/lda_out.mat', '041719/lda_out.mat'} );
+% lda_outs = bfw_load_mult_cs_lda_data( {'041519/lda_out.mat', '041719/lda_out.mat'} );
+lda_outs = bfw_load_mult_cs_lda_data( {'041719_pre_event/lda_out.mat'} );
 sensitivity_outs = bfw_determine_reward_sensitivity( reward_response );
 
 sens_perf = sensitivity_outs.performance;
 sens_p = sensitivity_outs.significance;
+sens_labels = sensitivity_outs.labels';
 
 %%
 
-bfw_reward_sensitivity_gaze_relationship( sens_perf, sens_p, stats_labels', lda_outs ...
+bfw_reward_sensitivity_gaze_relationship( sens_perf, sens_p, sens_labels', lda_outs ...
   , 'do_save', true ...
+  , 'base_subdir', 'pre_gaze_event' ...
 );
 
 %%

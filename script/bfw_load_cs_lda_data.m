@@ -34,4 +34,10 @@ lda = struct();
 lda.performance = [ lda_out.performance; diffs ];
 lda.labels = append( lda_out.labels, diff_labels );
 
+if ( isfield(lda_out, 'params') )
+  lda.params = lda_out.params;
+else
+  lda.params = struct( [] );
+end
+
 end

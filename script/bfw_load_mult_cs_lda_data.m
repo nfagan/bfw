@@ -9,6 +9,8 @@ for i = 1:numel(lda_files)
   
   if ( isempty(lda) )
     lda = tmp_lda;
+    lda.params = { tmp_lda.params };
+    lda.param_indices = ones( rows(lda.labels), 1 );
     continue;
   end
   
@@ -23,8 +25,12 @@ for i = 1:numel(lda_files)
     continue;
   end
   
+  param_inds = repmat( numel(lda.params) + 1, numel(new_roi_ind), 1 );
+  
   append( lda.labels, tmp_lda.labels, new_roi_ind );
   lda.performance = [ lda.performance; tmp_lda.performance(new_roi_ind, :) ];
+  lda.params{end+1} = tmp_lda.params;
+  lda.param_indices = [ lda.param_indices; param_inds ];
 end
 
 end

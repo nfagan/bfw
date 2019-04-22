@@ -46,9 +46,9 @@ end
 function base_subdir = get_base_subdir(base_subdir, is_minus_null)
 
 if ( is_minus_null )
-  base_subdir = sprintf( '%slda_minus_null', base_subdir );
+  base_subdir = fullfile( base_subdir, 'lda_minus_null' );
 else
-  base_subdir = sprintf( '%slda_real_percent', base_subdir );
+  base_subdir = fullfile( base_subdir, 'lda_real_percent' );
 end
 
 end
