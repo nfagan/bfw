@@ -8,7 +8,9 @@ lda_each = { 'shuffled-type', 'roi' };
 
 [sens_labs, sens_I, sens_C] = keepeach( sens_labels', sens_each );
 
-assert( max(cellfun(@numel, sens_I)) == 1, 'Not all combinations were specified.' );
+if ( ~isempty(sens_I) )
+  assert( max(cellfun(@numel, sens_I)) == 1, 'Not all combinations were specified.' );
+end
 
 labels = fcat();
 x = [];
