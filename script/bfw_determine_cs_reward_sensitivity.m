@@ -11,7 +11,7 @@ params = bfw.parsestruct( defaults, varargin );
 response_labels = reward_response.labels';
 psth = reward_response.psth;
 reward_levels = reward_response.reward_levels;
-model_type = validatestring( params.model_type, {'glm', 'lda', 'rf'}, mfilename );
+model_type = validatestring( params.model_type, {'glm', 'lda', 'rf', 'svm'}, mfilename );
 
 non_nan_level_ind = find( ~isnan(reward_levels) );
 
@@ -48,6 +48,8 @@ parfor i = 1:numel(glm_I)
       [mdl, current_model_stats] = lda_model( levels, response );
     case 'rf'
       [mdl, current_model_stats] = rf_model( levels, response );
+    case 'svm'
+      [mdl, current_model_stats] = svm_model( levels, response );
     otherwise
       error( 'Unhandled model: "%s".', model_type );
   end
@@ -82,11 +84,39 @@ function key = get_model_stats_key(models, model_type)
 switch ( model_type )
   case 'glm'
     key = models{1}.Coefficients.Properties.VariableNames;
-  case {'lda', 'rf'}
+  case {'lda', 'rf', 'svm'}
     key = models{1}.stats_key;
   otherwise
     error( 'Unhandled model: "%s".', model_type )
 end
+
+end
+
+function [mdl, model_stats] = svm_model(levels, response)
+
+partition = cvpartition( numel(levels), 'holdout', 0.25 );
+
+train_group = levels( partition.training );
+train_data = response( partition.training );
+
+test_data = response( partition.test );
+test_group = levels( partition.test );
+
+try
+  mdl = fitcsvm( train_data, train_group );
+  cls = predict( mdl, test_data );
+  
+  p = sum( cls(:) == test_group(:) ) / numel( test_group );
+catch err
+  warning( err.message );
+  p = nan;
+end
+
+mdl = struct();
+mdl.stats_key = { 'Estimate', 'pValue' };
+
+% No p value calculated yet.
+model_stats = [ p, nan ];
 
 end
 
