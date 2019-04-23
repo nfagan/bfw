@@ -10,6 +10,7 @@ defaults.null_iters = 1e3;
 defaults.reduce_shuffled_data = true;
 defaults.reduce_shuffled_func = @default_reduce_shuffled_func;
 defaults.rois = {'eyes_nf', 'mouth', 'face'};
+defaults.collapse_nonsocial_object_rois = true;
 
 inputs = { 'raw_events', 'spikes', 'meta', 'rng' };
 
@@ -65,8 +66,11 @@ end
 
 spike_labels = fcat.from( aligned_spike_file );
 
-% Subset of rows of spike_labels that contain events that are
-% non-overlapping
+if ( params.collapse_nonsocial_object_rois )
+  collapse_nonsocial_object_rois( spike_labels );
+end
+
+% Subset of rows of spike_labels that contain events that are non-overlapping
 non_overlapping = get_non_overlapping_event_indices( events_file );
 ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping) );
 
@@ -308,5 +312,17 @@ for i = 1:numel(I)
   
   new_shuff_data(i, 1:2) = [ mean_perc, double(had_missing) ];
 end
+
+end
+
+function labels = collapse_nonsocial_object_rois(labels)
+
+if ( isempty(labels) )
+  return;
+end
+
+left_ind = find( labels, 'left_nonsocial_object' );
+right_ind = find( labels, 'right_nonsocial_object' );
+setcat( labels, 'roi', 'nonsocial_object', union(left_ind, right_ind) );
 
 end

@@ -2,6 +2,8 @@ reward_response = bfw_get_cs_reward_response( ...
   'event_names', {'cs_reward', 'cs_presentation'} ...
 );
 
+%%
+
 sensitivity_outs = bfw_determine_reward_sensitivity_runner( reward_response ...
   , 'make_levels_binary', true ...
   , 'model_type', 'lda' ...
@@ -13,17 +15,17 @@ sens_labels = sensitivity_outs.labels';
 
 %%
 
-lda_subdirs = { '041519', '041719', 'outside1_post_event_042219' };
-% lda_subdirs = {'041719_pre_event/lda_out.mat'};
-lda_files = cellfun( @(x) fullfile(x, 'lda_out.mat'), lda_subdirs, 'un', 0 );
+% lda_subdirs = { '041519', '041719', 'outside1_post_event_042219' };
+lda_subdirs = { 'outside1_pre_event_042219', 'everywhere_pre_event_042219' };
 
+lda_files = cellfun( @(x) fullfile(x, 'lda_out.mat'), lda_subdirs, 'un', 0 );
 lda_outs = bfw_load_mult_cs_lda_data( lda_files );
 
 %%
 
 bfw_reward_sensitivity_gaze_relationship( sens_perf, sens_p, sens_labels', lda_outs ...
   , 'do_save', true ...
-  , 'base_subdir', 'post_gaze_event_lda_reward_with_outside' ...
+  , 'base_subdir', 'pre_gaze_lda_sensitivity' ...
 );
 
 %%

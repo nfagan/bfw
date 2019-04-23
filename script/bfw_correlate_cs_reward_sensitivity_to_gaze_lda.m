@@ -36,6 +36,9 @@ for i = 1:numel(fig_I)
   [axs, ids] = pl.scatter( use_x, use_y, use_labs, gcats, pcats );
   [h, stats] = pl.scatter_addcorr( ids, use_x, use_y );
   
+  xlabel( axs(1), 'Reward sensitivity' );
+  ylabel( axs(1), 'Gaze sensitivity' );
+  
   all_stats = [ all_stats; stats ];
   
   for j = 1:numel(ids)
