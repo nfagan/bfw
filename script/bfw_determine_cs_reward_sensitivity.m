@@ -11,7 +11,7 @@ params = bfw.parsestruct( defaults, varargin );
 response_labels = reward_response.labels';
 psth = reward_response.psth;
 reward_levels = reward_response.reward_levels;
-model_type = validatestring( params.model_type, {'glm', 'lda'}, mfilename );
+model_type = validatestring( params.model_type, {'glm', 'lda', 'rf'}, mfilename );
 
 non_nan_level_ind = find( ~isnan(reward_levels) );
 
@@ -46,6 +46,8 @@ parfor i = 1:numel(glm_I)
       [mdl, current_model_stats] = glm_model( levels, response );
     case 'lda'
       [mdl, current_model_stats] = lda_model( levels, response );
+    case 'rf'
+      [mdl, current_model_stats] = rf_model( levels, response );
     otherwise
       error( 'Unhandled model: "%s".', model_type );
   end
@@ -80,11 +82,29 @@ function key = get_model_stats_key(models, model_type)
 switch ( model_type )
   case 'glm'
     key = models{1}.Coefficients.Properties.VariableNames;
-  case 'lda'
+  case {'lda', 'rf'}
     key = models{1}.stats_key;
   otherwise
     error( 'Unhandled model: "%s".', model_type )
 end
+
+end
+
+function [mdl, model_stats] = rf_model(levels, response)
+
+mdl = TreeBagger( 50, levels, response, 'OOBPrediction', 'on' );
+cls = oobPredict( mdl );
+cls = cellfun( @str2double, cls );
+
+assert( ~any(isnan(cls)), 'Some string class labels were not converted to number.' );
+
+p = sum( cls == levels ) / numel( levels );
+
+mdl = struct();
+mdl.stats_key = { 'Estimate', 'pValue' };
+
+% No p value calculated yet.
+model_stats = [ p, nan ];
 
 end
 
