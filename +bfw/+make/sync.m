@@ -82,12 +82,8 @@ if ( ~bfw.is_image_task(task_type) )
     , unified_filename );
 end
 
-%   current_sync should have one fewer element than mat_sync. This is
-%   because the first mat_sync time corresponds to the start_sync pulse
-
-assert( numel(mat_sync) == numel(current_plex_sync) + 1 ...
-  , 'Mismatch between number of plex sync and mat sync pulses for "%s".' ...
-  , unified_filename );
+[mat_sync, current_plex_sync] = ...
+  validate_sync_times( mat_sync, current_plex_sync, task_type, unified_filename );
 
 current_plex_sync = [ current_plex_start; current_plex_sync ];
 current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
@@ -102,6 +98,30 @@ sync_file.sync_key = { 'mat', 'plex' };
 
 for j = 1:numel(copy_fields)
   sync_file.(copy_fields{j}) = unified.(first).(copy_fields{j});
+end
+
+end
+
+function [mat_sync, plex_sync] = validate_sync_times(mat_sync, plex_sync, task_type, unified_filename)
+
+n_mat = numel( mat_sync );
+n_plex = numel( plex_sync );
+
+if ( n_mat == n_plex + 1 )
+  % Ok -- first mat_sync_time is the start_sync pulse in plexon.
+  return
+end
+
+if ( bfw.is_image_task(task_type) && n_mat == n_plex + 2 )
+  % Ok -- image task can possibly have one additional extra sync time
+  % registered, which we will discard
+  assert( n_plex >= 2 );
+  mean_plex_diff = round( median(diff(plex_sync)) );
+  assert( ~isnan(mean_plex_diff) );
+  plex_sync(end+1) = plex_sync(end) + mean_plex_diff;
+else
+  error( 'Mismatch between number of plex sync and mat sync pulses for "%s".' ...
+    , unified_filename );
 end
 
 end

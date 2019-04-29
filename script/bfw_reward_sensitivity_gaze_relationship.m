@@ -3,11 +3,11 @@ function bfw_reward_sensitivity_gaze_relationship(sens_perf, sens_p, sens_labels
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 params = bfw.parsestruct( defaults, varargin );
 
-mult_is_minus_null = [ true, false ];
-mult_is_absolute_sensitivity = [ true, false ];
-mult_is_significant_sensitivity = [ true, false ];
-mult_is_significant_lda = [ true, false ];
-mult_is_absolute_lda = [ true, false ];
+mult_is_minus_null = [ false ];
+mult_is_absolute_sensitivity = [ true ];
+mult_is_significant_sensitivity = [ false ];
+mult_is_significant_lda = [ false ];
+mult_is_absolute_lda = [ false ];
 
 C = dsp3.numel_combvec( mult_is_minus_null, mult_is_absolute_sensitivity ...
   , mult_is_significant_sensitivity, mult_is_significant_lda, mult_is_absolute_lda );
@@ -18,9 +18,9 @@ for i = 1:size(C, 2)
   indices = C(:, i);
   
   is_minus_null = mult_is_minus_null(indices(1));
-  is_absolute_sensitivity = mult_is_minus_null(indices(2));
-  is_significant_sensitivity = mult_is_minus_null(indices(3));
-  is_significant_lda = mult_is_minus_null(indices(4));
+  is_absolute_sensitivity = mult_is_absolute_sensitivity(indices(2));
+  is_significant_sensitivity = mult_is_significant_sensitivity(indices(3));
+  is_significant_lda = mult_is_significant_lda(indices(4));
   is_absolute_lda = mult_is_absolute_lda(indices(5));
   
   if ( is_absolute_lda && ~is_minus_null )

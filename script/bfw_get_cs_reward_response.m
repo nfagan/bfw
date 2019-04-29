@@ -4,9 +4,10 @@ defaults = bfw.get_common_make_defaults();
 defaults.look_back = -0.5;
 defaults.look_ahead = 0.5;
 defaults.bin_size = 0.05;
+defaults.is_firing_rate = true;
 defaults.event_names = { 'cs_presentation' };
 
-inputs = { 'cs_labels/m1', 'cs_task_events/m1', 'cs_trial_data/m1' };
+inputs = { 'cs_task_events/m1', 'cs_labels/m1', 'cs_trial_data/m1' };
 output = '';
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
@@ -71,7 +72,7 @@ for i = 1:numel(units)
     event_time = event_times(j);
     
     if ( ~isnan(event_time) )
-      [psth, t] = dsp3.psth( spike_ts, event_time, look_back, look_ahead, bin_size );
+      [psth, t] = dsp3.psth( spike_ts, event_time, look_back, look_ahead, bin_size, params.is_firing_rate );
 
       if ( is_first )
         psth_mat = nan( numel(units) * size(event_times, 1), numel(t) );
