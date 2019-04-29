@@ -29,6 +29,9 @@ if ( isempty(outputs) )
   outs.has_rng_state = logical( [] );
   outs.rng_state = {};
   outs.t = [];
+  outs.events = [];
+  outs.event_labels = fcat();
+  outs.event_key = containers.Map();
 else
   outs.labels = vertcat( fcat(), outputs.labels );
   outs.spikes = vertcat( outputs.spikes );
@@ -36,6 +39,9 @@ else
   outs.has_rng_state = [ outputs.has_rng_state ]';
   outs.rng_state = { outputs.rng_state }';
   outs.t = outputs(1).t;
+  outs.events = vertcat( outputs.events );
+  outs.event_labels = vertcat( fcat, outputs.event_labels );
+  outs.event_key = outputs(1).event_key;
 end
 
 end
@@ -72,12 +78,21 @@ join( spike_labels, bfw.struct2fcat(meta_file) );
 prune( keep(spike_labels, ok_event_inds) );
 spikes = spikes(ok_event_inds, :);
 
+% Keep matching events
+event_labels = events_file.labels(aligned_spike_file.event_indices, :);
+events = events_file.events(aligned_spike_file.event_indices, :);
+events = events(ok_event_inds, :);
+event_labels = event_labels(ok_event_inds, :);
+
 outs = struct();
 outs.labels = spike_labels;
 outs.spikes = spikes;
 outs.session = combs( spike_labels, 'session' );
 outs.has_rng_state = ~was_link;
 outs.t = t;
+outs.events = events;
+outs.event_labels = fcat.from( event_labels, events_file.categories );
+outs.event_key = events_file.event_key;
 
 if ( ~was_link )
   outs.rng_state = rng_file.state;
