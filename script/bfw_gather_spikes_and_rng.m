@@ -66,7 +66,7 @@ ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping
 join( spike_labels, bfw.struct2fcat(meta_file) );
 
 prune( keep(spike_labels, ok_event_inds) );
-spikes = spikes(ok_event_inds);
+spikes = spikes(ok_event_inds, :);
 
 outs = struct();
 outs.labels = spike_labels;
