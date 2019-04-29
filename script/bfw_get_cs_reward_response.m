@@ -6,6 +6,7 @@ defaults.look_ahead = 0.5;
 defaults.bin_size = 0.05;
 defaults.is_firing_rate = true;
 defaults.event_names = { 'cs_presentation' };
+defaults.psth_func = @default_psth_func;
 
 inputs = { 'cs_task_events/m1', 'cs_labels/m1', 'cs_trial_data/m1' };
 output = '';
@@ -71,8 +72,8 @@ for i = 1:numel(units)
   for j = 1:numel(event_times)
     event_time = event_times(j);
     
-    if ( ~isnan(event_time) )
-      [psth, t] = dsp3.psth( spike_ts, event_time, look_back, look_ahead, bin_size, params.is_firing_rate );
+    if ( ~isnan(event_time) )      
+      [psth, t] = feval( params.psth_func, spike_ts, event_time, look_back, look_ahead, bin_size, params.is_firing_rate);
 
       if ( is_first )
         psth_mat = nan( numel(units) * size(event_times, 1), numel(t) );
@@ -103,6 +104,12 @@ out.psth = psth_mat;
 out.labels = psth_labels;
 out.reward_levels = reward_levels;
 out.t = t;
+
+end
+
+function [psth, t] = default_psth_func(spike_ts, event_time, look_back, look_ahead, bin_size, is_fr )
+
+[psth, t] = dsp3.psth( spike_ts, event_time, look_back, look_ahead, bin_size, is_fr );
 
 end
 

@@ -1,8 +1,10 @@
 function outs = bfw_gather_spikes_and_rng(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.window_size = 50;
-defaults.step_size = 50;
+defaults.window_size = 0.05;
+defaults.step_size = 0.05;
+defaults.look_back = -0.5;
+defaults.look_ahead = 0.5;
 defaults.rois = {'eyes_nf', 'face', 'outside1'};
 defaults.collapse_nonsocial_object_rois = true;
 defaults.spike_func = @(x, t) deal(x, t);
@@ -45,6 +47,8 @@ function outs = gather_spikes(files, params)
 aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
   , 'window_size', params.window_size ...
   , 'step_size', params.step_size ...
+  , 'look_back', params.look_back ...
+  , 'look_ahead', params.look_ahead ...
   , 'rois', params.rois ...
 );
 
