@@ -8,6 +8,7 @@ defaults.look_ahead = 0.5;
 defaults.rois = {'eyes_nf', 'face', 'outside1'};
 defaults.collapse_nonsocial_object_rois = true;
 defaults.spike_func = @(x, t) deal(x, t);
+defaults.non_overlapping_mask_inputs = {};
 
 inputs = { 'raw_events', 'spikes', 'meta', 'rng' };
 
@@ -69,8 +70,15 @@ if ( params.collapse_nonsocial_object_rois )
   collapse_nonsocial_object_rois( spike_labels );
 end
 
+if ( ~isempty(params.non_overlapping_mask_inputs) )
+  non_overlapping_mask = fcat.mask( fcat.from(events_file) ...
+    , params.non_overlapping_mask_inputs{:} );
+else
+  non_overlapping_mask = rowmask( events_file.labels );
+end
+
 % Subset of rows of spike_labels that contain events that are non-overlapping
-non_overlapping = get_non_overlapping_event_indices( events_file );
+non_overlapping = get_non_overlapping_event_indices( events_file, params.rois, non_overlapping_mask );
 ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping) );
 
 join( spike_labels, bfw.struct2fcat(meta_file) );
@@ -102,9 +110,14 @@ end
 
 end
 
-function non_overlapping = get_non_overlapping_event_indices(events_file)
+function non_overlapping = get_non_overlapping_event_indices(events_file, rois, mask)
 
-non_overlapping = bfw_exclusive_events_from_events_file( events_file );
+pairs = bfw_get_non_overlapping_pairs();
+
+is_pair_with_roi = cellfun( @(x) all(ismember(x, rois)), pairs );
+pairs = pairs(is_pair_with_roi);
+
+non_overlapping = bfw_exclusive_events_from_events_file( events_file, pairs, {}, mask );
 non_nan = bfw_non_nan_linearized_event_times( events_file );
 
 non_overlapping = intersect( non_overlapping, non_nan );
