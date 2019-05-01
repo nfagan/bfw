@@ -1,10 +1,12 @@
 function run_decoding(gaze_counts, reward_counts, varargin)
 
 defaults = bfw.get_common_make_defaults();
+defaults.base_subdir = '';
+
 params = bfw.parsestruct( defaults, varargin );
 
 data_p = get_data_p( params.config );
-save_p = fullfile( data_p, 'performance', dsp3.datedir );
+save_p = fullfile( data_p, 'performance', dsp3.datedir, params.base_subdir );
 
 if ( nargin < 2 || isempty(reward_counts) )
   reward_counts = shared_utils.io.fload( fullfile(data_p, 'reward_counts.mat') );
@@ -23,6 +25,12 @@ common_inputs = struct();
 common_inputs.base_reward_mask = reward_mask;
 common_inputs.base_gaze_mask = gaze_mask;
 common_inputs.n_iters = 100;
+common_inputs.match_trials = false;
+common_inputs.gaze_t_window = get_gaze_time_windows( gaze_counts.t );
+
+%%
+
+gr_outs = train_gaze_test_reward( gaze_counts, reward_counts, common_inputs );
 
 %%
 
@@ -39,7 +47,7 @@ rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs );
 %%
 
 shared_utils.io.require_dir( save_p );
-save( fullfile(save_p, 'performance.mat'), 'rg_outs', 'gg_outs', 'rr_outs' );
+save( fullfile(save_p, 'performance.mat'), 'gr_outs', 'rg_outs', 'gg_outs', 'rr_outs' );
 
 end
 
@@ -58,7 +66,6 @@ for i = 1:size(rwd_level_pairs, 1)
   decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
     , 'train_on', 'reward' ...
     , 'test_on', 'reward' ...
-    , 'match_trials', false ...
     , 'reward_level0', rwd0 ...
     , 'reward_level1', rwd1 ...
     , common_inputs ...
@@ -81,7 +88,6 @@ function decode_outs = train_gaze_test_gaze(gaze_counts, reward_counts, common_i
 decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
   , 'train_on', 'gaze' ...
   , 'test_on', 'gaze' ...
-  , 'match_trials', true ... %  match trial numbers.
   , common_inputs ...
 );
 
@@ -89,12 +95,19 @@ end
 
 function decode_outs = train_reward_test_gaze(gaze_counts, reward_counts, common_inputs)
 
-%%
-
 decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
   , 'train_on', 'reward' ...
   , 'test_on', 'gaze' ...
-  , 'match_trials', false ...
+  , common_inputs ...
+);
+
+end
+
+function decode_outs = train_gaze_test_reward(gaze_counts, reward_counts, common_inputs)
+
+decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
+  , 'train_on', 'gaze' ...
+  , 'test_on', 'reward' ...
   , common_inputs ...
 );
 
@@ -133,5 +146,20 @@ function reward_mask = get_reward_mask(labels)
 reward_mask = fcat.mask( labels ...
   , @findnone, 'iti' ...
 );
+
+end
+
+function t_windows = get_gaze_time_windows(t)
+
+ws = 0.15;
+starts = t;
+stops = t + ws;
+
+too_big = stops > max( t );
+
+starts = starts(~too_big);
+stops = stops(~too_big);
+
+t_windows = arrayfun( @(x, y) [x, y], starts, stops, 'un', false );
 
 end

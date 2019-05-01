@@ -21,6 +21,12 @@ if ( isfield(perf, 'rg_outs') )
   plot_train_reward_test_gaze( perf.rg_outs, params );
 end
 
+%%
+
+if ( isfield(perf, 'gr_outs') )
+  plot_train_gaze_test_reward( perf.gr_outs, params );
+end
+
 end
 
 function plot_perf(decode_outs, xcats, gcats, pcats, mask, subdir, params)
@@ -45,6 +51,18 @@ if ( params.do_save )
   shared_utils.plot.fullscreen( gcf );
   dsp3.req_savefig( gcf, save_p, pltlabs, pcats );
 end
+
+end
+
+function plot_train_gaze_test_reward(decode_outs, params)
+
+xcats = { 'roi' };
+gcats = { 'event-name' };
+pcats = { 'region' };
+
+mask = rowmask( decode_outs.labels );
+
+plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_gaze_test_reward', params );
 
 end
 

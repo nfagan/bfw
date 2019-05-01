@@ -13,6 +13,7 @@ defaults.train_on = 'reward';
 defaults.test_on = 'gaze';
 defaults.match_trials = false;
 defaults.require_fixation = true;
+defaults.fixation_duration = 0.4;
 defaults.reward_level0 = 1;
 defaults.reward_level1 = 3;
 
@@ -35,41 +36,81 @@ shared_ids = get_shared_unit_ids( reward_counts.labels, gaze_counts.labels ...
 keep_reward = find( reward_counts.labels, shared_ids, keep_reward );
 keep_gaze = find( gaze_counts.labels, shared_ids, keep_gaze );
 
-collapsed_rwd = collapse_counts( reward_counts.psth, reward_counts.t, params.reward_t_window );
-collapsed_gaze = collapse_counts( gaze_counts.spikes, gaze_counts.t, params.gaze_t_window );
+gaze_window = params.gaze_t_window;
+rwd_window = params.reward_t_window;
 
-[collapsed_rwd, rwd_labels] = indexpair( collapsed_rwd, reward_counts.labels', keep_reward );
-[collapsed_gaze, gaze_labels] = indexpair( collapsed_gaze, gaze_counts.labels', keep_gaze );
+[gaze_window, rwd_window] = get_time_windows( gaze_window, rwd_window );
 
-bfw.unify_single_region_labels( gaze_labels );
-bfw.unify_single_region_labels( rwd_labels );
+for i = 1:numel(gaze_window)
+  gaze_t = gaze_window{i};
+  reward_t = rwd_window{i};
+  
+  collapsed_rwd = collapse_counts( reward_counts.psth, reward_counts.t, reward_t );
+  collapsed_gaze = collapse_counts( gaze_counts.spikes, gaze_counts.t, gaze_t );
 
-prune( rwd_labels );
-prune( gaze_labels );
+  [collapsed_rwd, rwd_labels] = indexpair( collapsed_rwd, reward_counts.labels', keep_reward );
+  [collapsed_gaze, gaze_labels] = indexpair( collapsed_gaze, gaze_counts.labels', keep_gaze );
 
-reward_inputs = struct();
-reward_inputs.levels = reward_counts.reward_levels(keep_reward);
-reward_inputs.labels = rwd_labels;
-reward_inputs.spikes = collapsed_rwd;
+  unify_regions( gaze_labels, rwd_labels );
 
-gaze_inputs = struct();
-gaze_inputs.labels = gaze_labels;
-gaze_inputs.spikes = collapsed_gaze;
+  reward_inputs = struct();
+  reward_inputs.levels = reward_counts.reward_levels(keep_reward);
+  reward_inputs.labels = rwd_labels;
+  reward_inputs.spikes = collapsed_rwd;
 
-if ( strcmp(train_on, 'reward') && strcmp(test_on, 'gaze') )
-  [perf, labels] = run_train_reward_test_gaze( reward_inputs, gaze_inputs, params );
-elseif ( strcmp(train_on, 'gaze') && strcmp(test_on, 'gaze') )
-  [perf, labels] = run_train_gaze_test_gaze(  gaze_inputs, params );
-elseif ( strcmp(train_on, 'reward') && strcmp(test_on, 'reward') )
-  [perf, labels] = run_train_reward_test_reward( reward_inputs, params );
-else
-  error( 'Unrecognized combination: train on "%s"; test on "%s".', train_on, test_on );
+  gaze_inputs = struct();
+  gaze_inputs.labels = gaze_labels;
+  gaze_inputs.spikes = collapsed_gaze;
+
+  if ( strcmp(train_on, 'reward') && strcmp(test_on, 'gaze') )
+    [perf, labels] = run_train_reward_test_gaze( reward_inputs, gaze_inputs, params );
+  elseif ( strcmp(train_on, 'gaze') && strcmp(test_on, 'reward') )
+    [perf, labels] = run_train_gaze_test_reward( reward_inputs, gaze_inputs, params );
+  elseif ( strcmp(train_on, 'gaze') && strcmp(test_on, 'gaze') )
+    [perf, labels] = run_train_gaze_test_gaze(  gaze_inputs, params );
+  elseif ( strcmp(train_on, 'reward') && strcmp(test_on, 'reward') )
+    [perf, labels] = run_train_reward_test_reward( reward_inputs, params );
+  else
+    error( 'Unrecognized combination: train on "%s"; test on "%s".', train_on, test_on );
+  end
 end
 
 outs = struct();
 outs.performance = perf;
 outs.labels = labels;
 outs.params = params;
+
+end
+
+function [gaze, reward, t_series] = get_time_windows(gaze, reward)
+
+assert( ~(iscell(gaze) && iscell(reward)) ...
+  , 'Only one time window (either gaze or reward can be cell.' );
+
+match_cell = @(x, y) repmat({x}, numel(y), 1);
+get_t_series = @(y) cellfun(@(x) min(x), y);
+
+if ( iscell(gaze) )
+  reward = match_cell( reward, gaze );
+  t_series = get_t_series( gaze );
+elseif ( iscell(reward) )
+  reward = match_cell( gaze, reward );
+  t_series = get_t_series( reward );
+else
+  gaze = { gaze };
+  reward = { reward };
+  t_series = nan; % one time window only
+end
+
+end
+
+function unify_regions(gaze_labels, rwd_labels)
+
+bfw.unify_single_region_labels( gaze_labels );
+bfw.unify_single_region_labels( rwd_labels );
+
+prune( rwd_labels );
+prune( gaze_labels );
 
 end
 
@@ -89,6 +130,32 @@ function [rois, roi_pair_inds, n_pairs] = get_roi_combinations(gaze_labels)
 rois = sort( combs(gaze_labels, 'roi') );
 roi_pair_inds = nchoosek( 1:numel(rois), 2 );
 n_pairs = size( roi_pair_inds, 1 );
+
+end
+
+function [perf, labels] = run_train_gaze_test_reward(rwd_inputs, gaze_inputs, params)
+
+[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels );
+
+perf = cell( n_pairs, 1 );
+labels = cell( n_pairs, 1 );
+
+parfor i = 1:n_pairs
+  pair_ind = roi_pair_inds(i, :);
+  
+  roi_a = rois{pair_ind(1)};
+  roi_b = rois{pair_ind(2)};
+  
+  [roi_a, roi_b] = roi_order( roi_a, roi_b );
+  
+  [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs, roi_a, roi_b, params );
+  
+  perf{i} = one_perf;
+  labels{i} = one_labels;
+end
+
+perf = vertcat( perf{:} );
+labels = vertcat( fcat(), labels{:} );
 
 end
 
@@ -145,6 +212,12 @@ for i = 1:numel(reward_I)
   
   min_zeros = min( cellfun(@(x) sum(levels(x) == 0), unit_I) );
   min_ones = min( cellfun(@(x) sum(levels(x) == 1), unit_I) );
+  
+  if ( params.match_trials )
+    abs_min = min( min_zeros, min_ones );
+    min_zeros = abs_min;
+    min_ones = abs_min;
+  end
   
   assert( min_zeros >= params.condition_threshold && ...
     min_ones >= params.condition_threshold, 'Too few.' );
@@ -207,7 +280,7 @@ for i = 1:numel(reward_I)
     kept_unit_ids = unit_ids(keep_units);
     kept_stats = train_stats(keep_units, :);
     
-    [gaze_x, class_label] = get_gaze_distribution( gaze, gaze_ind, kept_unit_ids, kept_stats, roi_a, roi_b ); 
+    [gaze_x, class_label] = get_other_distribution( gaze, gaze_ind, kept_unit_ids, kept_stats, roi_a, roi_b ); 
     
     classified = predict( reward_model, gaze_x );
     performance(stp) = sum( classified == class_label ) / numel( class_label );
@@ -222,6 +295,120 @@ for i = 1:numel(reward_I)
   setcat( reward_labs, 'roi', sprintf('%s/%s', roi_a, roi_b) );
   
   append1( perf_labels, reward_labs, unit_I{i}, n_iters );
+end
+
+end
+
+function [performance, perf_labels] = train_gaze_test_reward(reward, gaze, roi_a, roi_b, params)
+
+%%
+
+n_iters = params.n_iters;
+
+gaze_ind = find( gaze.labels, {roi_a, roi_b} );
+
+region_I = findall( gaze.labels, 'region', gaze_ind );
+reward_I = findall( reward.labels, {'event-name'} );
+
+reward_labs = reward.labels';
+addsetcat( reward_labs, 'tmp-reward-level', 'tmp-reward-0', find(reward.levels == 0) );
+setcat( reward_labs, 'tmp-reward-level', 'tmp-reward-1', find(reward.levels == 1) );
+reward.labels = reward_labs;
+
+performance = nan( numel(reward_I) * n_iters * numel(region_I), 1 );
+perf_labels = fcat();
+stp = 1;
+
+for i = 1:numel(region_I)
+  rng( params.rng_seed );
+  
+  [unit_I, unit_C] = findall( gaze.labels, {'unit_uuid', 'session'}, region_I{i} );
+  unit_ids = unit_C(1, :);
+  
+  min_zeros = min_combination( gaze.labels, roi_b, unit_I );
+  min_ones = min_combination( gaze.labels, roi_a, unit_I );
+  
+  if ( params.match_trials )
+    abs_min = min( min_zeros, min_ones );
+    min_zeros = abs_min;
+    min_ones = abs_min;
+  end
+  
+  n_tot = min_zeros + min_ones;
+  
+  search_vec = [ zeros(min_zeros, 1); ones(min_ones, 1) ];
+  search_vec = search_vec(randperm(n_tot));
+  
+  n_train = floor( params.p_train * n_tot );
+  
+  for j = 1:n_iters
+    train_cond = search_vec(randperm(n_tot, n_train));
+    is_train_one = train_cond == 1;
+    is_train_zero = train_cond == 0;
+    
+    n_one = nnz( is_train_one );
+    n_zero = nnz( is_train_zero );
+    
+    train_data = nan( n_train, numel(unit_I) );
+    train_stats = nan( numel(unit_I), 2 );
+    keep_units = true( numel(unit_I), 1 );
+    
+    for k = 1:numel(unit_I)
+      unit_ind = unit_I{k};
+      
+      ones_this_unit = find( gaze.labels, roi_a, unit_ind );
+      zeros_this_unit = find( gaze.labels, roi_b, unit_ind );
+      
+      use_ones = ones_this_unit(randperm(numel(ones_this_unit), n_one));
+      use_zeros = zeros_this_unit(randperm(numel(zeros_this_unit), n_zero));
+      
+      train_one = gaze.spikes(use_ones);
+      train_zero = gaze.spikes(use_zeros);
+      
+      train_dat = nan( n_train, 1 );
+      train_dat(is_train_one) = train_one;
+      train_dat(is_train_zero) = train_zero;
+      
+      mean_train = nanmean( train_dat );
+      dev_train = nanstd( train_dat );
+      
+      if ( dev_train == 0 )
+        keep_units(k) = false;
+        continue;
+      end
+      
+      train_stats(k, :) = [ mean_train, dev_train ];
+      train_data(:, k) = ( train_dat - mean_train ) ./ dev_train;
+    end
+    
+    gaze_model = fitcdiscr( train_data(:, keep_units), train_cond, 'discrimtype', 'pseudoLinear' );
+    
+    kept_unit_ids = unit_ids(keep_units);
+    kept_stats = train_stats(keep_units, :);
+    
+    for k = 1:numel(reward_I)
+      rwd_ind = reward_I{k};
+      
+      lvl0 = 'tmp-reward-0';
+      lvl1 = 'tmp-reward-1';
+      
+      % Order is switched.
+      [rwd_x, class_label] = get_other_distribution( reward, rwd_ind, kept_unit_ids, kept_stats, lvl1, lvl0 );
+      
+      classified = predict( gaze_model, rwd_x );
+      performance(stp) = sum( classified == class_label ) / numel( class_label );
+      
+      gaze_labels = gaze.labels';
+      rwd_labels = one( reward.labels(rwd_ind) );
+      
+      join( gaze_labels, rwd_labels );
+      setcat( gaze_labels, 'roi', sprintf('%s/%s', roi_a, roi_b) );
+
+      append1( perf_labels, gaze_labels, unit_I{i} );
+
+      stp = stp + 1;    
+    end
+  end
 end
 
 end
@@ -407,7 +594,7 @@ samp_ind1 = ind1(randperm(numel(ind1), n1));
 
 end
 
-function [X, Y] = get_gaze_distribution(gaze, gaze_ind, unit_ids, stats, roi_a, roi_b)
+function [X, Y] = get_other_distribution(gaze, gaze_ind, unit_ids, stats, roi_a, roi_b)
 
 %%
 
@@ -458,7 +645,7 @@ meets_criterion = fcat.mask( gaze.labels, params.base_gaze_mask ...
 start_ts = gaze.events(:, gaze.event_key('start_time'));
 stop_ts = gaze.events(:, gaze.event_key('stop_time'));
 
-expect_stop = start_ts + params.gaze_t_window(2);
+expect_stop = start_ts + params.fixation_duration;
 
 if ( params.require_fixation )
   is_fix = find( expect_stop <= stop_ts );
