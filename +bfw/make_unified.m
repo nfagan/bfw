@@ -273,8 +273,12 @@ for idx = 1:numel(outerdirs)
         m_data(j).far_plane_calibration = m_roi;
       end
     end
-      
-    m_screen_rect = shared_utils.io.find( m_cal_dir, '.json' );
+    
+    if ( shared_utils.io.dexists(m_cal_dir) )
+      m_screen_rect = shared_utils.io.find( m_cal_dir, '.json' );
+    else
+      m_screen_rect = {};
+    end
     
     if ( numel(m_screen_rect) > 0 )
       scr_rect = bfw.jsondecode( m_screen_rect{1} );
