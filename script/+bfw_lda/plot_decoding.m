@@ -5,25 +5,25 @@ params = bfw.parsestruct( defaults, varargin );
 
 %%
 
-if ( isfield(perf, 'gg_outs') )
+if ( isfield(perf, 'gg_outs') && ~isempty(perf.gg_outs) )
   plot_train_gaze_test_gaze( perf.gg_outs, params );
 end
 
 %%
 
-if ( isfield(perf, 'rr_outs') )
+if ( isfield(perf, 'rr_outs') && ~isempty(perf.rr_outs)  )
   plot_train_reward_test_reward( perf.rr_outs, params );
 end
 
 %%
 
-if ( isfield(perf, 'rg_outs') )
+if ( isfield(perf, 'rg_outs') && ~isempty(perf.rg_outs)  )
   plot_train_reward_test_gaze( perf.rg_outs, params );
 end
 
 %%
 
-if ( isfield(perf, 'gr_outs') )
+if ( isfield(perf, 'gr_outs') && ~isempty(perf.gr_outs)  )
   plot_train_gaze_test_reward( perf.gr_outs, params );
 end
 

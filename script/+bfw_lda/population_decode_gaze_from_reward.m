@@ -3,6 +3,7 @@ function outs = population_decode_gaze_from_reward(gaze_counts, reward_counts, v
 defaults = bfw.get_common_make_defaults();
 defaults.gaze_t_window = [ 0.1, 0.4];  % s
 defaults.reward_t_window = [ 0.1, 0.4 ];  % s
+defaults.target_t_window = [ 0.1, 0.4 ];
 defaults.n_iters = 1000;
 defaults.rng_seed = 1;
 defaults.base_gaze_mask = rowmask( gaze_counts.labels );
@@ -12,10 +13,12 @@ defaults.p_train = 0.75;
 defaults.train_on = 'reward';
 defaults.test_on = 'gaze';
 defaults.match_trials = false;
+defaults.match_units = false;
 defaults.require_fixation = true;
 defaults.fixation_duration = 0.4;
 defaults.reward_level0 = 1;
 defaults.reward_level1 = 3;
+defaults.is_train_x_test_x_timecourse = false;
 
 params = bfw.parsestruct( defaults, varargin );
 train_on = validatestring( params.train_on, {'reward', 'gaze'} );
@@ -39,28 +42,48 @@ keep_gaze = find( gaze_counts.labels, shared_ids, keep_gaze );
 gaze_window = params.gaze_t_window;
 rwd_window = params.reward_t_window;
 
-[gaze_window, rwd_window] = get_time_windows( gaze_window, rwd_window );
+[gaze_window, rwd_window, t_series] = get_time_windows( gaze_window, rwd_window );
+
+all_perf = cell( 1, numel(gaze_window) );
 
 for i = 1:numel(gaze_window)
+  shared_utils.general.progress( i, numel(gaze_window) );
+  
   gaze_t = gaze_window{i};
   reward_t = rwd_window{i};
   
-  collapsed_rwd = collapse_counts( reward_counts.psth, reward_counts.t, reward_t );
-  collapsed_gaze = collapse_counts( gaze_counts.spikes, gaze_counts.t, gaze_t );
-
-  [collapsed_rwd, rwd_labels] = indexpair( collapsed_rwd, reward_counts.labels', keep_reward );
-  [collapsed_gaze, gaze_labels] = indexpair( collapsed_gaze, gaze_counts.labels', keep_gaze );
-
+  gaze_labels = gaze_counts.labels';
+  rwd_labels = reward_counts.labels';
+  
   unify_regions( gaze_labels, rwd_labels );
+
+  collapsed_rwd = reward_counts.psth;
+  collapsed_gaze = gaze_counts.spikes;
+  
+  if ( ~params.is_train_x_test_x_timecourse )
+    collapsed_rwd = collapse_counts( reward_counts.psth, reward_counts.t, reward_t );
+    collapsed_gaze = collapse_counts( gaze_counts.spikes, gaze_counts.t, gaze_t );
+  end
+  
+  if ( params.match_units )
+    [keep_gaze, keep_reward] = match_units( gaze_labels, rwd_labels, keep_gaze, keep_reward, params );
+  end
+
+  collapsed_rwd = indexpair( collapsed_rwd, rwd_labels, keep_reward );
+  collapsed_gaze = indexpair( collapsed_gaze, gaze_labels, keep_gaze );
 
   reward_inputs = struct();
   reward_inputs.levels = reward_counts.reward_levels(keep_reward);
   reward_inputs.labels = rwd_labels;
   reward_inputs.spikes = collapsed_rwd;
+  reward_inputs.t = reward_counts.t;
+  reward_inputs.test_t_window = reward_t;
 
   gaze_inputs = struct();
   gaze_inputs.labels = gaze_labels;
   gaze_inputs.spikes = collapsed_gaze;
+  gaze_inputs.t = gaze_counts.t;
+  gaze_inputs.test_t_window = gaze_t;
 
   if ( strcmp(train_on, 'reward') && strcmp(test_on, 'gaze') )
     [perf, labels] = run_train_reward_test_gaze( reward_inputs, gaze_inputs, params );
@@ -73,12 +96,82 @@ for i = 1:numel(gaze_window)
   else
     error( 'Unrecognized combination: train on "%s"; test on "%s".', train_on, test_on );
   end
+  
+  all_perf{i} = perf;
 end
 
 outs = struct();
-outs.performance = perf;
+outs.performance = horzcat( all_perf{:} );
 outs.labels = labels;
+outs.t = t_series;
 outs.params = params;
+
+end
+
+function [gaze_mask, reward_mask] = match_units(gaze, reward, gaze_mask, reward_mask, params)
+
+%%
+
+rng( params.rng_seed );
+
+[region_I, region_C] = findall( gaze, 'region', gaze_mask );
+[region_I, region_C] = sort_combinations( region_I, region_C );
+
+n_units = zeros( numel(region_I), 1 );
+unit_ids_per_region = {};
+all_unit_id_I= {};
+
+for i = 1:numel(region_I)
+  [unit_id_I, unit_id_C] = findall( gaze, {'unit_uuid', 'session'}, region_I{i} );
+  [unit_id_I, unit_id_C] = sort_combinations( unit_id_I, unit_id_C );
+  
+  unit_ids_per_region{i} = unit_id_C;
+  all_unit_id_I{i} = unit_id_I;
+  n_units(i) = numel( unit_id_I );
+end
+
+min_units = min( n_units );
+
+gaze_keep_ind = false( rows(gaze), 1 );
+rwd_keep_ind = false( rows(reward), 1 );
+
+for i = 1:numel(region_I)
+  reward_region_mask = find( reward, region_C(:, i), reward_mask );
+  
+  [reward_unit_I, reward_unit_C] = findall( reward, {'unit_uuid', 'session'}, reward_region_mask );
+  [reward_unit_I, reward_unit_C] = sort_combinations( reward_unit_I, reward_unit_C );
+  
+  gaze_unit_I = all_unit_id_I{i};
+  
+  assert( numel(reward_unit_I) == n_units(i) );
+  
+  if ( n_units(i) > min_units )
+    samp_units = randperm( n_units(i), min_units );
+    
+    gaze_unit_I = gaze_unit_I(samp_units);
+    reward_unit_I = reward_unit_I(samp_units);
+  end
+  
+  for j = 1:numel(reward_unit_I)
+    rwd_keep_ind(reward_unit_I{j}) = true;
+    gaze_keep_ind(gaze_unit_I{j}) = true;
+  end
+end
+
+gaze_mask = find( gaze_keep_ind );
+reward_mask = find( rwd_keep_ind );
+
+rng( 'shuffle' );
+
+end
+
+function [I, C] = sort_combinations(I, C)
+
+c = categorical( C )';
+[~, sort_ind] = sortrows( c );
+
+I = I(sort_ind);
+C = C(:, sort_ind);
 
 end
 
@@ -94,7 +187,7 @@ if ( iscell(gaze) )
   reward = match_cell( reward, gaze );
   t_series = get_t_series( gaze );
 elseif ( iscell(reward) )
-  reward = match_cell( gaze, reward );
+  gaze = match_cell( gaze, reward );
   t_series = get_t_series( reward );
 else
   gaze = { gaze };
@@ -273,7 +366,7 @@ for i = 1:numel(reward_I)
       train_data(:, k) = ( train_dat - mean_train ) ./ dev_train;
     end
     
-    reward_model = fitcdiscr( train_data(:, keep_units), train_cond );
+    reward_model = fitcdiscr( train_data(:, keep_units), train_cond, 'discrimtype', 'pseudoLinear' );
     
     %%
     
@@ -431,7 +524,7 @@ region_I = findall( reward_inputs.labels, {'region', 'event-name'}, mask );
 perf = cell( numel(region_I), 1 );
 labels = cell( size(perf) );
 
-parfor i = 1:numel(region_I)
+for i = 1:numel(region_I)
   rwd0 = 'reward-0';
   rwd1 = 'reward-1';
   
@@ -510,6 +603,13 @@ if ( params.match_trials )
   min_one = abs_min;
 end
 
+if ( params.is_train_x_test_x_timecourse )
+  target_t_ind = spike_inputs.t >= params.target_t_window(1) & ...
+    spike_inputs.t <= params.target_t_window(2);
+  test_t_ind = spike_inputs.t >= spike_inputs.test_t_window(1) & ...
+    spike_inputs.t <= spike_inputs.test_t_window(2);
+end
+
 n_tot = min_zero + min_one;
 n_train = floor( params.p_train * n_tot );
 n_test = n_tot - n_train;
@@ -548,9 +648,14 @@ for i = 1:n_iters
     ind1 = intersect( test_ind, level1_ind );
     
     [test0_ind, test1_ind] = sample_levels( ind0, ind1, nnz(test0), nnz(test1) );
-    
-    train_x(train0, k) = spike_inputs.spikes(train0_ind);
-    train_x(train1, k) = spike_inputs.spikes(train1_ind);
+
+    if ( params.is_train_x_test_x_timecourse )
+      train_x(train0, k) = nansum( spike_inputs.spikes(train0_ind, target_t_ind), 2 );
+      train_x(train1, k) = nansum( spike_inputs.spikes(train1_ind, target_t_ind), 2 );
+    else
+      train_x(train0, k) = spike_inputs.spikes(train0_ind);
+      train_x(train1, k) = spike_inputs.spikes(train1_ind);
+    end
     
     mean_train = nanmean(train_x(:, k));
     dev_train = nanstd(train_x(:, k));
@@ -562,8 +667,16 @@ for i = 1:n_iters
       continue;
     end
     
-    test_x(test0, k) = zscore( spike_inputs.spikes(test0_ind), mean_train, dev_train );
-    test_x(test1, k) = zscore( spike_inputs.spikes(test1_ind), mean_train, dev_train );
+    if ( params.is_train_x_test_x_timecourse )
+      tmp0 = nansum( spike_inputs.spikes(test0_ind, test_t_ind), 2 );
+      tmp1 = nansum( spike_inputs.spikes(test1_ind, test_t_ind), 2 );
+    else
+      tmp0 = spike_inputs.spikes(test0_ind);
+      tmp1 = spike_inputs.spikes(test1_ind);
+    end
+
+    test_x(test0, k) = zscore( tmp0, mean_train, dev_train );
+    test_x(test1, k) = zscore( tmp1, mean_train, dev_train );
   end
   
   mdl = fitcdiscr( train_x(:, ok_units), train_condition, 'discrimtype', 'pseudoLinear' );

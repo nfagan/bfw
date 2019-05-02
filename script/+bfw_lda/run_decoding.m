@@ -26,23 +26,29 @@ common_inputs.base_reward_mask = reward_mask;
 common_inputs.base_gaze_mask = gaze_mask;
 common_inputs.n_iters = 100;
 common_inputs.match_trials = false;
-common_inputs.gaze_t_window = get_gaze_time_windows( gaze_counts.t );
+common_inputs.match_units = true;
+
+is_over_time = true;
 
 %%
 
-gr_outs = train_gaze_test_reward( gaze_counts, reward_counts, common_inputs );
+% gr_outs = train_gaze_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
+gr_outs = [];
 
 %%
 
-rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs );
+% rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+rg_outs = [];
 
 %%
 
-gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs );
+% gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+gg_outs = [];
 
 %%
 
-rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs );
+rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
+% rr_outs = [];
 
 %%
 
@@ -51,7 +57,12 @@ save( fullfile(save_p, 'performance.mat'), 'gr_outs', 'rg_outs', 'gg_outs', 'rr_
 
 end
 
-function decode_outs = train_reward_test_reward(gaze_counts, reward_counts, common_inputs)
+function decode_outs = train_reward_test_reward(gaze_counts, reward_counts, common_inputs, is_over_time)
+
+if ( is_over_time )
+  common_inputs.reward_t_window = get_reward_time_windows( reward_counts.t );
+  common_inputs.is_train_x_test_x_timecourse = true;
+end
 
 rwd_levels = [ 1, 2, 3 ];
 rwd_level_pairs = nchoosek( 1:numel(rwd_levels), 2 );
@@ -83,7 +94,11 @@ decode_outs.labels = perf_labels;
 
 end
 
-function decode_outs = train_gaze_test_gaze(gaze_counts, reward_counts, common_inputs)
+function decode_outs = train_gaze_test_gaze(gaze_counts, reward_counts, common_inputs, is_over_time)
+
+if ( is_over_time )
+  common_inputs.gaze_t_window = get_gaze_time_windows( gaze_counts.t );
+end
 
 decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
   , 'train_on', 'gaze' ...
@@ -93,7 +108,11 @@ decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_co
 
 end
 
-function decode_outs = train_reward_test_gaze(gaze_counts, reward_counts, common_inputs)
+function decode_outs = train_reward_test_gaze(gaze_counts, reward_counts, common_inputs, is_over_time)
+
+if ( is_over_time )
+  common_inputs.gaze_t_window = get_gaze_time_windows( gaze_counts.t );
+end
 
 decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
   , 'train_on', 'reward' ...
@@ -103,7 +122,11 @@ decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_co
 
 end
 
-function decode_outs = train_gaze_test_reward(gaze_counts, reward_counts, common_inputs)
+function decode_outs = train_gaze_test_reward(gaze_counts, reward_counts, common_inputs, is_over_time)
+
+if ( is_over_time )
+  common_inputs.reward_t_window = get_reward_time_windows( reward_counts.t );
+end
 
 decode_outs = bfw_lda.population_decode_gaze_from_reward( gaze_counts, reward_counts ...
   , 'train_on', 'gaze' ...
@@ -149,9 +172,8 @@ reward_mask = fcat.mask( labels ...
 
 end
 
-function t_windows = get_gaze_time_windows(t)
+function t_windows = get_time_windows(t, ws)
 
-ws = 0.15;
 starts = t;
 stops = t + ws;
 
@@ -161,5 +183,17 @@ starts = starts(~too_big);
 stops = stops(~too_big);
 
 t_windows = arrayfun( @(x, y) [x, y], starts, stops, 'un', false );
+
+end
+
+function t_windows = get_reward_time_windows(t)
+
+t_windows = get_time_windows( t, 0.15 );
+
+end
+
+function t_windows = get_gaze_time_windows(t)
+
+t_windows = get_time_windows( t, 0.15 );
 
 end
