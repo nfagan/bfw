@@ -122,6 +122,7 @@ if ( bfw.is_image_task(task_type) )
   
   if ( n_mat == n_plex + 2 )
     plex_sync(end+1) = plex_sync(end) + med_diff;
+    n_plex = numel( plex_sync );
   end
 end
 
