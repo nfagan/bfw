@@ -82,12 +82,18 @@ if ( ~bfw.is_image_task(task_type) )
     , unified_filename );
 end
 
-[mat_sync, current_plex_sync] = ...
-  validate_sync_times( mat_sync, current_plex_sync, task_type, unified_filename );
-
+% Include start time.
 current_plex_sync = [ current_plex_start; current_plex_sync ];
-current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
 
+if ( bfw.is_image_task(task_type) )
+  [mat_sync, current_plex_sync] = ...
+    image_task_sync_times( mat_sync, current_plex_sync, unified_filename );
+else
+  [mat_sync, current_plex_sync] = ...
+    validate_sync_times( mat_sync, current_plex_sync, unified_filename );
+end
+
+current_plex_sync = arrayfun( @(x) id_times(x), current_plex_sync );
 current_plex_reward = arrayfun( @(x) id_times(x), current_plex_reward );
 
 sync_file = struct();
@@ -102,28 +108,37 @@ end
 
 end
 
-function [mat_sync, plex_sync] = validate_sync_times(mat_sync, plex_sync, task_type, unified_filename)
+function [mat_sync, plex_sync] = image_task_sync_times(mat_sync, plex_sync, unified_filename)
+
+mat_sync = mat_sync(2:end);
+
+if ( numel(plex_sync) > 1 )
+  med_diff = median( diff(plex_sync) );
+  last_diff = plex_sync(end) - plex_sync(end-1);
+
+  if ( last_diff > med_diff * 1.5 )
+    plex_sync = plex_sync(1:end-1);
+  end
+end
+
+assert( numel(mat_sync) == numel(plex_sync), make_mismatch_error_str(unified_filename) );
+
+end
+
+function [mat_sync, plex_sync] = validate_sync_times(mat_sync, plex_sync, unified_filename)
 
 n_mat = numel( mat_sync );
 n_plex = numel( plex_sync );
 
-if ( bfw.is_image_task(task_type) )
-  med_diff = median( diff(plex_sync) );
-  last_diff = plex_sync(end) - plex_sync(end-1);
-  
-  if ( last_diff > med_diff * 1.5 )
-    plex_sync(end) = plex_sync(end-1) + med_diff;
-  end
-  
-  if ( n_mat == n_plex + 2 )
-    plex_sync(end+1) = plex_sync(end) + med_diff;
-    n_plex = numel( plex_sync );
-  end
+if ( n_mat == n_plex )
+  error( make_mismatch_error_str(unified_filename) );
 end
 
-if ( n_mat ~= n_plex + 1 )
-  error( 'Mismatch between number of plex sync and mat sync pulses for "%s".' ...
-    , unified_filename );
 end
+
+function str = make_mismatch_error_str(unified_filename)
+
+str = sprintf( 'Mismatch between number of plex sync and mat sync pulses for "%s".' ...
+    , unified_filename );
 
 end
