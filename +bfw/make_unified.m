@@ -3,6 +3,8 @@ function make_unified(sub_dirs, varargin)
 ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
+defaults.allow_missing_far_plane_calibration = false;
+
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
@@ -248,10 +250,25 @@ for idx = 1:numel(outerdirs)
     %   attach calibration file to data, if it's not already attached
     %
 
-    m_cal = shared_utils.io.find( m_cal_dir, '.mat' );
+    try
+      m_cal = shared_utils.io.find( m_cal_dir, '.mat' );
+    catch err
+      if ( ~params.allow_missing_far_plane_calibration )
+        throw( err );
+      end
+    end
 
     if ( ~isfield(m_data, 'far_plane_calibration') )
-      m_roi = shared_utils.io.fload( m_cal{end} );
+      try
+        m_roi = shared_utils.io.fload( m_cal{end} );
+      catch err
+        if ( ~params.allow_missing_far_plane_calibration )
+          throw( err );
+        else
+          m_roi = [];
+        end
+      end
+        
       for j = 1:numel(m_data)
         m_data(j).far_plane_calibration = m_roi;
       end

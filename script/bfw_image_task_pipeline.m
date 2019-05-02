@@ -8,7 +8,9 @@ inputs = bfw.parsestruct( defaults, varargin );
 
 %%
 
-bfw.make_unified( {'04262019', '04282019', '04302019'}, inputs );
+bfw.make_unified( {'04262019', '04282019', '04302019'}, inputs ...
+  , 'allow_missing_far_plane_calibration', true ...
+);
 
 bfw.make_meta( inputs );
 bfw.make_stim_meta( inputs );
