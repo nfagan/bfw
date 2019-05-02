@@ -62,11 +62,6 @@ if ( sync_index < 1 || sync_index > numel(binned_sync) )
     , unified_filename, numel(binned_sync), sync_index );
 end
 
-if ( sync_index < numel(binned_sync) )
-  diff_next = start_pulses(sync_index+1) - max( binned_sync{sync_index} );
-  fprintf( '\n %0.3f', diff_next );
-end
-
 id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
 
 current_plex_sync = binned_sync{sync_index};
