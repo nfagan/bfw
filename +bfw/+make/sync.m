@@ -62,6 +62,11 @@ if ( sync_index < 1 || sync_index > numel(binned_sync) )
     , unified_filename, numel(binned_sync), sync_index );
 end
 
+if ( sync_index < numel(binned_sync) )
+  diff_next = start_pulses(sync_index+1) - max( binned_sync{sync_index} );
+  fprintf( '\n %0.3f', diff_next );
+end
+
 id_times = (0:numel(sync_pulse_raw.Values)-1) .* (1/sync_pulse_raw.ADFreq);
 
 current_plex_sync = binned_sync{sync_index};
@@ -107,19 +112,20 @@ function [mat_sync, plex_sync] = validate_sync_times(mat_sync, plex_sync, task_t
 n_mat = numel( mat_sync );
 n_plex = numel( plex_sync );
 
-if ( n_mat == n_plex + 1 )
-  % Ok -- first mat_sync_time is the start_sync pulse in plexon.
-  return
+if ( bfw.is_image_task(task_type) )
+  med_diff = median( diff(plex_sync) );
+  last_diff = plex_sync(end) - plex_sync(end-1);
+  
+  if ( last_diff > med_diff * 1.5 )
+    plex_sync(end) = plex_sync(end-1) + med_diff;
+  end
+  
+  if ( n_mat == n_plex + 2 )
+    plex_sync(end+1) = plex_sync(end) + med_diff;
+  end
 end
 
-if ( bfw.is_image_task(task_type) && n_mat == n_plex + 2 )
-  % Ok -- image task can possibly have one additional extra sync time
-  % registered, which we will discard
-  assert( n_plex >= 2 );
-  mean_plex_diff = round( median(diff(plex_sync)) );
-  assert( ~isnan(mean_plex_diff) );
-  plex_sync(end+1) = plex_sync(end) + mean_plex_diff;
-else
+if ( n_mat ~= n_plex + 1 )
   error( 'Mismatch between number of plex sync and mat sync pulses for "%s".' ...
     , unified_filename );
 end
