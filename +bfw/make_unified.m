@@ -393,7 +393,7 @@ for idx = 1:numel(outerdirs)
     cs_plus_dir = fullfile( m_dir, 'cs_plus' );
     
     if ( shared_utils.io.dexists(cs_plus_dir) )
-      csplus_unified( cs_unified_output_dir, m_plex_sync_map, m_data, last_dir, m_str, cs_plus_dir )
+      csplus_unified( cs_unified_output_dir, m_plex_sync_map, m_data, last_dir, m_str, cs_plus_dir, params )
     end
   end
   
@@ -430,13 +430,16 @@ for idx = 1:numel(outerdirs)
     
     shared_utils.io.require_dir( unified_output_dir );
     file = fullfile( unified_output_dir, u_filename );
-    save( file, 'data' );
+    
+    if ( ~bfw.conditional_skip_file(file, params.overwrite) )
+      save( file, 'data' );
+    end
   end
 end
 
 end
 
-function csplus_unified(cs_unified_p, plex_sync_map, m_data, session_dir, m_dir, filep)
+function csplus_unified(cs_unified_p, plex_sync_map, m_data, session_dir, m_dir, filep, params)
 
 mats = shared_utils.io.dirnames( filep, '.mat', false );
 edfs = shared_utils.io.dirnames( filep, '.edf', false );
@@ -480,9 +483,12 @@ for i = 1:numel(mats)
   end
   
   save_p = fullfile( cs_unified_p, m_dir );
+  save_file = fullfile( save_p, unified_filename );
   
-  shared_utils.io.require_dir( save_p );
-  save( fullfile(save_p, unified_filename), 'unified_file' );    
+  if ( ~bfw.conditional_skip_file(save_file, params.overwrite) )
+    shared_utils.io.require_dir( save_p );
+    save( fullfile(save_p, unified_filename), 'unified_file' );    
+  end
 end
 
 
