@@ -4,6 +4,7 @@ base_perf_p = fullfile( base_load_p, 'performance/050119/' );
 %%
 
 gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'timecourse', 'gaze_counts.mat') );
+reward_counts = shared_utils.io.fload( fullfile(base_load_p, 'timecourse', 'reward_counts.mat') );
 
 %%
 
