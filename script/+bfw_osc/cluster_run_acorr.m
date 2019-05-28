@@ -1,6 +1,6 @@
-analysis_subdir = fullfile( bfw.dataroot(), 'analyses', 'spike_osc' );
+analysis_path = fullfile( bfw.dataroot(), 'analyses', 'spike_osc' );
 
-spike_filename = fullfile( analysis_subdir, 'spikes_events.mat' );
+spike_filename = fullfile( analysis_path, 'spikes_events.mat' );
 spikes_events = shared_utils.io.fload( spike_filename );
 
 %%
@@ -13,5 +13,8 @@ session_I = findall( spikes_events.meta_labs, 'session', session_mask );
 
 acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_window );
 
-acorr_filename = fullfile( analysis_subdir, output_subdir, 'acorr_outs.mat' );
-save( acorr_filename, acorr_outs, '-v7.3' );
+acorr_path = fullfile( analysis_path, output_subdir );
+shared_utils.io.require_dir( acorr_path );
+
+acorr_filename = fullfile( acorr_path, 'acorr_outs.mat' );
+save( acorr_filename, 'acorr_outs', '-v7.3' );
