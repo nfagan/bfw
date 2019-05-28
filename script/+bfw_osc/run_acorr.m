@@ -11,12 +11,19 @@ acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_w
 
 %%
 
+acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'beta', 'acorr_outs.mat' );
+acorr_outs = shared_utils.io.fload( acorr_filepath );
+
+%%
+
 scores = acorr_outs.osc_info(:, 2);
 f_osc = acorr_outs.osc_info(:, 1);
 labs = acorr_outs.labels';
 
+bfw.unify_single_region_labels( labs );
+
 mask = fcat.mask( labs ...
-  , @find, {'bla', 'ofc'} ...
+  , @find, {'bla', 'acc'} ...
   , @findnone, 'unit_uuid__NaN' ...
 );
 

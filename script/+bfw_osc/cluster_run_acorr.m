@@ -5,8 +5,8 @@ spikes_events = shared_utils.io.fload( spike_filename );
 
 %%
 
-freq_window = [ 15, 25 ];
-output_subdir = 'first';
+freq_window = [ 45, 70 ];
+output_subdir = 'gamma';
 
 session_mask = rowmask( spikes_events.meta_labs );
 session_I = findall( spikes_events.meta_labs, 'session', session_mask );
