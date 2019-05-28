@@ -1,12 +1,11 @@
-function [bin_centers, fast_smoothed] = fast_peakless_acorr(spike_ts, freq_window, peak_deg_thresh)
+function [bin_centers, fast_smoothed, fast_smoothed_with_peak] = ...
+  fast_peakless_acorr(spike_ts, freq_window, peak_deg_thresh)
 
 fc = 1e3;
 acorr_w = bfw_osc.acorr_w( freq_window(1), fc );
 acorr_W = acorr_w * 2;
 
-%%
 corr_result = bfw_osc.acorr( spike_ts, acorr_w );
-%%
 
 acorr = corr_result.plot;
 bin_centers = corr_result.bincenters;
@@ -21,6 +20,7 @@ peak_start_ind = find( bin_centers == fast_peak_start );
 peak_end_ind = find( bin_centers == fast_peak_end );
 
 % Remove peak.
+fast_smoothed_with_peak = fast_smoothed;
 fast_smoothed(peak_start_ind:peak_end_ind) = fast_smoothed(peak_start_ind);
 
 end

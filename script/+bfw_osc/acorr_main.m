@@ -36,6 +36,7 @@ if ( isempty(all_outs) )
   outs.f = [];
   outs.osc_info = [];
   outs.acorr = [];
+  outs.acorr_with_peak = [];
   outs.acorr_bin_centers = [];
 else
   outs.labels = vertcat( fcat, all_outs.labels );
@@ -43,6 +44,7 @@ else
   outs.f = all_outs(1).f;
   outs.osc_info = vertcat( all_outs.osc_info );
   outs.acorr = vertcat( all_outs.acorr );
+  outs.acorr_with_peak = vertcat( all_outs.acorr_with_peak );
   outs.acorr_bin_centers = vertcat( all_outs.acorr_bin_centers );
 end
 
@@ -63,6 +65,7 @@ psd_fs = [];
 osc_info = [];
 
 acorr_traces = [];
+acorr_with_peak_traces = [];
 acorr_bin_centers = [];
 
 for i = 1:numel(units)
@@ -80,7 +83,7 @@ for i = 1:numel(units)
     is_ok = true;
     
     try
-      [bin_centers, smoothed_acorr] = ...
+      [bin_centers, smoothed_acorr, acorr_with_peak] = ...
         bfw_osc.fast_peakless_acorr( use_spikes, freq_window, deg_thresh );
       [f, psd] = bfw_osc.acorr_psd( smoothed_acorr );
       [f_osc, osc_score] = bfw_osc.osc_score( f, psd, freq_window );
@@ -97,6 +100,7 @@ for i = 1:numel(units)
       osc_info = [ osc_info; [f_osc, osc_score] ];
 
       acorr_traces = [ acorr_traces; smoothed_acorr ];
+      acorr_with_peak_traces = [ acorr_with_peak_traces; acorr_with_peak ];
       acorr_bin_centers = [ acorr_bin_centers; bin_centers ];
 
       append( acorr_labels, interval_labels, j );
