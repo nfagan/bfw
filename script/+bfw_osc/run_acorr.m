@@ -4,7 +4,7 @@ spikes_events = bfw_osc.gather_spikes_and_events();
 
 freq_window = [ 15, 25 ];
 
-session_mask = find( spikes_events.meta_labs, {'01022019', '01092019'} );
+session_mask = find( spikes_events.meta_labs, {'01102019'} );
 session_I = findall( spikes_events.meta_labs, 'session', session_mask );
 
 acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_window );
@@ -13,6 +13,10 @@ acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_w
 
 acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'gamma', 'acorr_outs.mat' );
 acorr_outs = shared_utils.io.fload( acorr_filepath );
+
+%%
+
+bfw_osc.plot_per_unit_acorr_outs( acorr_outs, 'do_save', false );
 
 %%
 

@@ -38,6 +38,8 @@ if ( isempty(all_outs) )
   outs.acorr = [];
   outs.acorr_with_peak = [];
   outs.acorr_bin_centers = [];
+  outs.psth_t = [];
+  outs.psth = [];
 else
   outs.labels = vertcat( fcat, all_outs.labels );
   outs.psd = vertcat( all_outs.psd );
@@ -46,6 +48,8 @@ else
   outs.acorr = vertcat( all_outs.acorr );
   outs.acorr_with_peak = vertcat( all_outs.acorr_with_peak );
   outs.acorr_bin_centers = vertcat( all_outs.acorr_bin_centers );
+  outs.psth_t = vertcat( all_outs.psth_t );
+  outs.psth = vertcat( all_outs.psth );
 end
 
 end
@@ -68,17 +72,24 @@ acorr_traces = [];
 acorr_with_peak_traces = [];
 acorr_bin_centers = [];
 
+psth_ts = [];
+psth_traces = [];
+
 for i = 1:numel(units)
   spike_ts = units(i).times;
   unit_labs = bfw.unit_struct_to_fcat( units(i) );
   merge( interval_labels, unit_labs );
   
+  ensure_unique_unit_id( acorr_labels, interval_labels );
+  
   for j = 1:numel(intervals)
-    use_spikes = spike_ts(is_within_interval(spike_ts, intervals{j}));
+    use_spikes = spike_ts(is_within_interval(spike_ts, intervals{j}));  
     
     if ( isempty(use_spikes) )
       continue;
     end
+    
+    [psth_t, psth_trace] = make_psth( spike_ts, intervals{j}(:, 1), params );
     
     is_ok = true;
     
@@ -102,6 +113,9 @@ for i = 1:numel(units)
       acorr_traces = [ acorr_traces; smoothed_acorr ];
       acorr_with_peak_traces = [ acorr_with_peak_traces; acorr_with_peak ];
       acorr_bin_centers = [ acorr_bin_centers; bin_centers ];
+      
+      psth_ts = [ psth_ts; psth_t ];
+      psth_traces = [ psth_traces; psth_trace ];
 
       append( acorr_labels, interval_labels, j );
     end
@@ -116,6 +130,38 @@ out.osc_info = osc_info;
 out.acorr = acorr_traces;
 out.acorr_with_peak = acorr_with_peak_traces;
 out.acorr_bin_centers = acorr_bin_centers;
+out.psth_t = psth_ts;
+out.psth = psth_traces;
+
+end
+
+function ensure_unique_unit_id(acorr_labels, unit_labels)
+
+unit_uuid = combs( unit_labels, 'unit_uuid' );
+assert( numel(unit_uuid) == 1 );
+
+if ( ~strcmp(unit_uuid, bfw.nan_unit_uuid) && numel(find(acorr_labels, unit_uuid)) > 0 )
+  % Duplicate unit id
+  curr_id = unit_uuid{1};
+  stp = 1;
+  
+  while ( stp == 1 || numel(find(acorr_labels, new_id)) > 0 )
+    new_id = sprintf( '%s-%d', curr_id, stp );
+    stp = stp + 1;
+  end
+  
+  replace( unit_labels, unit_uuid, new_id );
+end
+
+end
+
+function [psth_t, psth_trace] = make_psth(spike_ts, events, params)
+
+lb = params.psth_look_back;
+la = params.psth_look_ahead;
+bs = params.psth_bin_size;
+
+[psth_trace, psth_t] = dsp3.psth( spike_ts, events, lb, la, bs );
 
 end
 
