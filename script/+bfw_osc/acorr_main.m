@@ -28,6 +28,7 @@ end
 all_outs = [ all_outs{:} ];
 
 outs = struct();
+outs.params = params;
 
 if ( isempty(all_outs) )
   outs.labels = fcat();

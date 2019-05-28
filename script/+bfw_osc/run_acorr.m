@@ -11,7 +11,7 @@ acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_w
 
 %%
 
-acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'beta', 'acorr_outs.mat' );
+acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'gamma', 'acorr_outs.mat' );
 acorr_outs = shared_utils.io.fload( acorr_filepath );
 
 %%
@@ -32,7 +32,10 @@ xcats = { 'region' };
 gcats = { 'roi' };
 pcats = {};
 
-axs = pl.bar( scores(mask), labs(mask), xcats, gcats, pcats );
+pltdat = scores(mask);
+pltlabs = prune( labs(mask) );
+
+axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
 
 %%
 pcats = [ xcats, gcats ];
@@ -45,12 +48,12 @@ psds = acorr_outs.psd;
 labs = acorr_outs.labels';
 
 mask = fcat.mask( labs ...
-  , @find, {'bla', 'ofc'} ...
+  , @find, {'bla', 'acc'} ...
   , @findnone, 'unit_uuid__NaN' ...
 );
 
 f = acorr_outs.f(1, :);
-f_ind = f < 25;
+f_ind = f <= 70;
 
 pl = plotlabeled.make_common();
 pl.x = f(f_ind);
