@@ -114,6 +114,7 @@ out.psd = psds;
 out.f = psd_fs;
 out.osc_info = osc_info;
 out.acorr = acorr_traces;
+out.acorr_with_peak = acorr_with_peak_traces;
 out.acorr_bin_centers = acorr_bin_centers;
 
 end
