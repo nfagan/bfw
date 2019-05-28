@@ -1,51 +1,53 @@
+
 conf = bfw.config.load();
 conf.PATHS.data_root = fullfile( '/mnt/dunham', bfw_image_task_data_root() );
 
+common_inputs = struct();
+common_inputs.files_containing = {'04202019', '04222019', '04262019', '04282019', '04302019'};
+common_inputs.config = conf;
+common_inputs.rect_padding = 0.05;
+common_inputs.is_parallel = true;
+
+%%
+
 look_outs = bfw_check_image_task_stim_looking( ...
-    'is_parallel', true ...
-  , 'files_containing', {'04202019', '04222019', '04262019', '04282019', '04302019'} ...
-  , 'config', conf ...
-  , 'rect_padding', 0.05 ...
-  , 'look_ahead', 5e3 ...
+    'look_ahead', 5e3 ...
   , 'bin_size', 100 ...
+  , common_inputs ...
 );
 
 %%
 
-% 0420 -> 100 hz
-% 0422, 0426 -> 200 hz
-% 0428, 0430 -> 300 hz
+fix_outs = bfw_image_task_stim_fixations( ...
+  'look_ahead', 5e3 ...
+  , common_inputs ...
+);
+
+%%
+
+bfw_plot_image_task_fix_info( fix_outs ...
+  , 'do_save', true ...
+);
+
+%%
+
+bfw_it.run_stim_minus_sham_fixation_decay( look_outs ...
+  , 'plot_err', true ...
+  , 'do_save', true ...
+);
+
+%%
 
 labels = look_outs.labels';
 
-ind_100 = find( labels, '04202019' );
-ind_200 = find( labels, {'04222019', '04262019'} );
-ind_300 = find( labels, {'04282019', '04302019'} );
+bfw_it.add_stim_frequency_labels( labels );
+bfw_it.decompose_image_id_labels( labels );
 
-make_unfilename = @(day, num) sprintf('%s_image_control_%d.mat', day, num);
-make_unfilenames = @(day, nums) arrayfun( @(x) make_unfilename(day, x), nums, 'un', 0 );
+mask = bfw_it.find_non_error_runs( labels );
 
-mask = fcat.mask( labels ...
-  , @findnone, make_unfilename('04202019', 1) ...
-  , @findnone, make_unfilenames('04222019', [1, 2]) ...
-  , @findnone, make_unfilenames('04282019', [1:3, 8]) ...
-);
+%%  decay
 
-freq_cat = 'stim_frequency';
-addcat( labels, freq_cat );
-setcat( labels, freq_cat, '100hz', ind_100 );
-setcat( labels, freq_cat, '200hz', ind_200 );
-setcat( labels, freq_cat, '300hz', ind_300 );
-
-image_types = labels(:, 'image_id');
-monkeys = cellfun( @(x) strsplit(x, '/'), image_types, 'un', 0 );
-monkey = cellfun( @(x) sprintf('monkey-%s', x{1}), monkeys, 'un', 0 );
-
-addsetcat( labels, 'image_monkey', monkey );
-
-%%
-
-do_save = true;
+do_save = false;
 
 pl = plotlabeled.make_common();
 pl.x = look_outs.t;

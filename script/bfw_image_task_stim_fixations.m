@@ -1,10 +1,9 @@
-function outs = bfw_check_image_task_stim_looking(varargin)
+function outs = bfw_image_task_stim_fixations(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.look_back = -1e3;
-defaults.look_ahead = 1e3;
-defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
+defaults.min_dur = 30; % ms
+defaults.look_ahead = 5e3;  % ms
 
 inputs = { 'image_task_events', 'aligned_raw_samples/position' ...
   , 'aligned_raw_samples/time', 'aligned_raw_samples/raw_eye_mmv_fixations' ...
@@ -13,26 +12,24 @@ inputs = { 'image_task_events', 'aligned_raw_samples/position' ...
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
 
-results = runner.run( @check_bounds, params );
+results = runner.run( @main, params );
 outputs = [ results([results.success]).output ];
 
 outs = struct();
 outs.params = params;
 
 if ( isempty(outputs) )
-  outs.t = [];
   outs.labels = fcat();
-  outs.bounds = logical( [] );
+  outs.fix_info = [];
 else
-  outs.t = outputs(1).t;
   outs.labels = vertcat( fcat, outputs.labels );
-  outs.bounds = vertcat( outputs.bounds );
+  outs.fix_info = vertcat( outputs.fix_info );
 end
 
 end
 
-function outs = check_bounds(files, params)
-
+function outs = main(files, params)
+%%
 import shared_utils.*;
 
 un_file = general.get( files, 'unified' );
@@ -40,6 +37,7 @@ events_file = general.get( files, 'image_task_events' );
 pos_file = general.get( files, 'position' );
 t_file = general.get( files, 'time' );
 stim_file = general.get( files, 'stim' );
+fix_file = general.get( files, 'raw_eye_mmv_fixations' );
 
 stim_rects = bfw_it.stim_rects_from_unified_file( un_file );
 
@@ -47,48 +45,39 @@ image_on = events_file.m1.events(:, strcmp(events_file.event_key, 'image_onset')
 stim_times = [ stim_file.stimulation_times(:); stim_file.sham_times(:) ];
 stim_start_inds = bfw_it.find_nearest_stim_time( t_file.t, stim_times );
 
-look_ahead = params.look_ahead;
-look_back = params.look_back;
-bin_amt = params.bin_size;
-
-t_course = shared_utils.vector.slidebin( look_back:look_ahead, bin_amt, bin_amt, true );
-t_course = cellfun( @(x) x(1), t_course );
-
-bounds = false( numel(stim_times), numel(t_course) );
 image_indices = nan( numel(stim_times), 1 );
+fix_info = nan( numel(stim_times), 2 );
 
 for i = 1:numel(stim_times)
   nearest_image = find( stim_times(i) > image_on, 1, 'last' );
   assert( ~isempty(nearest_image), 'No image preceded stim.' );
   
-  t_course_ind = (stim_start_inds(i) + look_back):(stim_start_inds(i)+look_ahead);
-  left_over = numel( t_file.t ) - max( t_course_ind );
-  
-  if ( left_over < 0 )
-    t_course_ind(t_course_ind > numel(t_file.t)) = [];
-  end
-  
   eye_rect = bfw_it.pad_rect( stim_rects(nearest_image, :), params.rect_padding );
   
-  eye_pos = pos_file.m1(:, t_course_ind);
-  ib = bfw.bounds.rect( eye_pos(1, :), eye_pos(2, :), eye_rect );
-  ib = shared_utils.vector.slidebin( ib, bin_amt, bin_amt, true );
+  x_pos = pos_file.m1(1, :);
+  y_pos = pos_file.m1(2, :);
   
-  tmp_bounds = cellfun( @(x) any(x), ib );
+  ib = bfw.bounds.rect( x_pos, y_pos, eye_rect );
+  ib_fix = ib & fix_file.m1;
+  [fix_starts, fix_durs] = shared_utils.logical.find_all_starts( ib_fix );
   
-  if ( numel(tmp_bounds) < numel(t_course) )
-    tmp_bounds(end+1:numel(t_course)) = false;
-  end
+  is_long_enough = fix_durs >= params.min_dur;
+  is_within_t_bounds = fix_starts >= stim_start_inds(i) & ...
+    fix_starts < stim_start_inds(i) + params.look_ahead;
   
-  bounds(i, :) = tmp_bounds;
+  is_target_fix = is_long_enough & is_within_t_bounds;
+  
+  fix_starts = fix_starts(is_target_fix);
+  fix_durs = fix_durs(is_target_fix);
+  
   image_indices(i) = nearest_image;
+  fix_info(i, :) = [ numel(fix_starts), median(fix_durs) ];
 end
 
 labels = bfw_it.make_stim_labels( files, image_indices );
 
 outs = struct();
-outs.t = t_course;
-outs.bounds = bounds;
+outs.fix_info = fix_info;
 outs.labels = labels;
 
 end
