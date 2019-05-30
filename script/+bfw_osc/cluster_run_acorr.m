@@ -10,6 +10,7 @@ freq_roi_names = { 'beta', 'gamma' };
 
 assert( numel(freq_windows) == numel(freq_roi_names) );
 
+% Use all sessions.
 session_mask = rowmask( spikes_events.meta_labs );
 session_I = findall( spikes_events.meta_labs, 'session', session_mask );
 

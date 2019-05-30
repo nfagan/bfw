@@ -3,6 +3,7 @@ function run_stim_minus_sham_fixation_decay(look_outs, varargin)
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.plot_err = false;
 defaults.seed = 1;
+defaults.abs = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -56,6 +57,7 @@ for i = 1:numel(cond_I)
 
   [p, tmp_labs, tmp_diffs, tmp_null] = bfw_it.stim_minus_sham_fixation_decay( bounds, labs', run_I ...
     , 'seed', params.seed ...
+    , 'abs', params.abs ...
   );
 
   append( p_labs, tmp_labs );

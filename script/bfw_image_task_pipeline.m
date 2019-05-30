@@ -1,14 +1,14 @@
 function bfw_image_task_pipeline(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.config.PATHS.data_root = '/media/chang/T41/data/bfw/image-task/';
+defaults.config.PATHS.data_root = bfw_image_task_data_root;
 defaults.skip_existing = true;
 
 inputs = bfw.parsestruct( defaults, varargin );
 
 %%
 
-bfw.make_unified( {'04262019', '04282019', '04302019'}, inputs ...
+bfw.make_unified( {'05052019'}, inputs ...
   , 'allow_missing_far_plane_calibration', true ...
 );
 

@@ -8,7 +8,7 @@ assert( ~isempty(params.freq_window), 'Specify a `freq_window`.' );
 
 all_outs = {};
 
-parfor i = 1:numel(session_I)
+for i = 1:numel(session_I)
   shared_utils.general.progress( i, numel(session_I) );
   
   run_inds = session_I{i};

@@ -3,7 +3,7 @@ conf = bfw.config.load();
 conf.PATHS.data_root = fullfile( '/mnt/dunham', bfw_image_task_data_root() );
 
 common_inputs = struct();
-common_inputs.files_containing = {'04202019', '04222019', '04262019', '04282019', '04302019'};
+common_inputs.files_containing = {'04202019', '04222019', '04262019', '04282019', '04302019', '05052019'};
 common_inputs.config = conf;
 common_inputs.rect_padding = 0.05;
 common_inputs.is_parallel = true;
@@ -34,6 +34,7 @@ bfw_plot_image_task_fix_info( fix_outs ...
 bfw_it.run_stim_minus_sham_fixation_decay( look_outs ...
   , 'plot_err', true ...
   , 'do_save', true ...
+  , 'abs', true ...
 );
 
 %%

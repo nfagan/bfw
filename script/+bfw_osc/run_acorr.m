@@ -11,12 +11,12 @@ acorr_outs = bfw_osc.acorr_main( spikes_events, session_I, 'freq_window', freq_w
 
 %%
 
-acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'gamma', 'acorr_outs.mat' );
+acorr_filepath = fullfile( bfw.dataroot(), 'analyses', 'spike_osc', 'beta', 'acorr_outs.mat' );
 acorr_outs = shared_utils.io.fload( acorr_filepath );
 
 %%
 
-bfw_osc.plot_per_unit_acorr_outs( acorr_outs, 'do_save', false );
+bfw_osc.plot_per_unit_acorr_outs( acorr_outs, 'do_save', true, 'base_subdir', 'beta' );
 
 %%
 

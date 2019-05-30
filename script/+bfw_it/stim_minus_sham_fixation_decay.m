@@ -4,6 +4,7 @@ defaults = struct();
 defaults.iters = 1e3;
 defaults.seed = [];
 defaults.test_signed = false;
+defaults.abs = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -20,7 +21,14 @@ null_diffs = nan( size(real_diffs) );
 p_labs = fcat();
 
 for i = 1:numel(perm_I)
-  real_diffs(i, :) = mean_stim_minus_sham( bounds, labels, perm_I{i}, false );
+  current_real_diff = mean_stim_minus_sham( bounds, labels, perm_I{i}, false );
+  
+  if ( params.abs )
+    real_diffs(i, :) = abs( current_real_diff );
+  else
+    real_diffs(i, :) = current_real_diff;
+  end
+  
   append1( p_labs, labels, perm_I{i} );
 end
 
@@ -32,7 +40,13 @@ for i = 1:params.iters
   null_diffs(:) = nan;
   
   for j = 1:numel(perm_I)
-    null_diffs(j, :) = mean_stim_minus_sham( bounds, labels, perm_I{j}, true );
+    current_null_diff = mean_stim_minus_sham( bounds, labels, perm_I{j}, true );
+    
+    if ( params.abs )
+      null_diffs(j, :) = abs( current_null_diff );
+    else
+      null_diffs(j, :) = current_null_diff;
+    end
   end
   
   null_diff = nanmean( null_diffs, 1 );
