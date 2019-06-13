@@ -20,6 +20,11 @@ image_ids = { trial_data(image_indices).image_identifier };
 addcat( labels, 'image_id' );
 setcat( labels, 'image_id', image_ids );
 
+stim_ids = arrayfun( @(x) sprintf('stim_id_%d', x), 1:n_stim_times, 'un', 0 );
+
+addcat( labels, 'stim_id' );
+setcat( labels, 'stim_id', stim_ids );
+
 prune( labels );
 
 end

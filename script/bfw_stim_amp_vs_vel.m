@@ -33,7 +33,7 @@ labels = cell( s );
 ns = cell( s );
 is_ok = true( s );
 
-parfor i = 1:numel(mats)
+for i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats), mfilename );
   
   stim_file = shared_utils.io.fload( mats{i} );

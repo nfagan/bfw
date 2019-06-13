@@ -4,6 +4,7 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.plot_err = false;
 defaults.seed = 1;
 defaults.abs = false;
+defaults.plot_collapse = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -14,9 +15,9 @@ t = look_outs.t;
 handle_labels( labs );
 mask = get_base_mask( labs );
 
-per_freq( t, bounds, labs, mask, params );
+% per_freq( t, bounds, labs, mask, params );
 per_freq_and_image( t, bounds, labs, mask, params );
-per_freq_and_image_direction( t, bounds, labs, mask, params );
+% per_freq_and_image_direction( t, bounds, labs, mask, params );
 
 end
 
@@ -69,10 +70,34 @@ for i = 1:numel(cond_I)
 end
 
 plot_performance( t, ps, p_labs', nulls, diffs, diff_labs', cond_spec, fcats, params );
+plot_average_performance( t, ps, p_labs', nulls, diffs, diff_labs', cond_spec, fcats, params );
+
+end
+
+function plot_average_performance(t, ps, p_labs, nulls, diffs, diff_labs, cond_spec, fcats, params)
+
+%%
+
+t_ind = t >= 0;
+
+plt_diffs = nanmean( diffs(:, t_ind), 2 );
+
+xcats = 'stim_frequency';
+gcats = {'image_monkey'};
+pcats = {};
+
+pl = plotlabeled.make_common();
+
+axs = pl.bar( plt_diffs, diff_labs, xcats, gcats, pcats );
 
 end
 
 function plot_performance(t, ps, p_labs, nulls, diffs, diff_labs, spec, fcats, params)
+
+%%
+
+collapsecat( diff_labs, params.plot_collapse );
+collapsecat( p_labs, params.plot_collapse );
 
 [~, sort_I] = sortrows( diff_labs );
 diffs = diffs(sort_I, :);
@@ -103,10 +128,13 @@ for i = 1:numel(fig_I)
     end
 
     p_ind = find( p_labs, plot_C(:, j) );
-    assert( numel(p_ind) == 1 );  
     
-    add_stars( ax, t, ps(p_ind, :) );
-    plot( ax, t, nulls(p_ind, :), 'r' );
+    if ( p_ind == 1 )
+      add_stars( ax, t, ps(p_ind, :) );
+    else
+      warning( 'Multiple values matched.' );
+      plot( ax, t, nanmean(nulls(p_ind, :), 1), 'r' );
+    end
 
     title_str = strjoin( plot_C(:, j), ' | ' );
     title_str = strrep( title_str, '_', ' ' );
@@ -120,7 +148,7 @@ for i = 1:numel(fig_I)
   
   shared_utils.plot.match_ylims( axs );
 
-%   shared_utils.plot.add_horizontal_lines( axs, 0 );
+  shared_utils.plot.add_horizontal_lines( axs, 0 );
   shared_utils.plot.add_vertical_lines( axs, 0 );
   
   if ( params.do_save )    

@@ -71,7 +71,8 @@ for i = 1:numel(stim_times)
   fix_durs = fix_durs(is_target_fix);
   
   image_indices(i) = nearest_image;
-  fix_info(i, :) = [ numel(fix_starts), median(fix_durs) ];
+%   fix_info(i, :) = [ numel(fix_starts), median(fix_durs) ];
+  fix_info(i, :) = [ numel(fix_starts), sum(fix_durs) ];
 end
 
 labels = bfw_it.make_stim_labels( files, image_indices );

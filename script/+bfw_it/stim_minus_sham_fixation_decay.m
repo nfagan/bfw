@@ -68,6 +68,7 @@ end
 
 p = 1 - ( sig_counts / params.iters );
 mean_null = nanmean( all_null, 1 );
+% mean_null = all_null(randi(params.iters), :);
 
 one( p_labs );
 
