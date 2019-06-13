@@ -1,4 +1,4 @@
-function bfw_image_task_pipeline(varargin)
+function bfw_image_task_pipeline(subdirs, varargin)
 
 defaults = bfw.get_common_make_defaults();
 defaults.config.PATHS.data_root = bfw_image_task_data_root;
@@ -8,7 +8,7 @@ inputs = bfw.parsestruct( defaults, varargin );
 
 %%
 
-bfw.make_unified( {'05052019'}, inputs ...
+bfw.make_unified( subdirs, inputs ...
   , 'allow_missing_far_plane_calibration', true ...
 );
 
