@@ -1,7 +1,5 @@
 function cluster_run_null_matrix()
 
-p = parpool( feature('NumCores') );
-
 spike_data = bfw_pm.load_spike_data( bfw.dataroot() );
 spike_labels = fcat.from( spike_data.save_spike_labels );
 
