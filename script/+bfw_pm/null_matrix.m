@@ -7,7 +7,8 @@ defaults = struct();
 defaults.t_window_bins = default_t_window_bins();
 defaults.roi_contrasts = default_roi_contrasts();
 defaults.alpha = 0.05;
-defaults.n_consecutive_bin_threshold = 5;
+defaults.n_bin_threshold = 5;
+defaults.require_consecutive_bins = true;
 defaults.iters = 1e3;
 defaults.seed = [];
 
@@ -98,7 +99,8 @@ function [p_sig_units, sig_labels] = ...
 
 t_window_bins = params.t_window_bins;
 alpha = params.alpha;
-n_consecutive_bin_threshold = params.n_consecutive_bin_threshold;
+n_bin_threshold = params.n_bin_threshold;
+require_consecutive_bins = params.require_consecutive_bins;
 
 lab1 = roi_contrast{1};
 lab2 = roi_contrast{2};
@@ -149,9 +151,15 @@ for i = 1:num_cell_inds
     in_bounds_t = t >= bin_start & t <= bin_stop;
     
     subset_ps = sig_ps(in_bounds_t);
-    [~, durs] = shared_utils.logical.find_all_starts( subset_ps );
     
-    is_sig_unit(i, k) = any( durs > n_consecutive_bin_threshold );
+    if ( require_consecutive_bins )
+      [~, durs] = shared_utils.logical.find_all_starts( subset_ps );
+      curr_is_sig = any( durs >= n_bin_threshold );
+    else
+      curr_is_sig = sum( subset_ps ) >= n_bin_threshold;
+    end
+    
+    is_sig_unit(i, k) = curr_is_sig;
   end
   
   subset_inds{i} = union( ind1, ind2 );
