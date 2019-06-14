@@ -3,14 +3,7 @@ function outs = null_matrix(data, labels, t, varargin)
 assert_ispair( data, labels );
 assert( numel(t) == size(data, 2), 'T does not match data.' );
 
-defaults = struct();
-defaults.t_window_bins = default_t_window_bins();
-defaults.roi_contrasts = default_roi_contrasts();
-defaults.alpha = 0.05;
-defaults.n_bin_threshold = 5;
-defaults.require_consecutive_bins = true;
-defaults.iters = 1e3;
-defaults.seed = [];
+defaults = bfw_pm.null_matrix_defaults();
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -225,18 +218,5 @@ for i = 1:numel(bins)
 
   assert( numel(t_start) == 1 && numel(t_stop) == 1 && t_stop > t_start, 'Invalid bin.' );
 end
-
-end
-
-function contrasts = default_roi_contrasts()
-
-contrasts = { {'m1eyes', 'm1object'}, {'m1eyes', 'm1outside1'} ...
-  , {'m1eyes', 'm1noneyesface'} };
-
-end
-
-function bins = default_t_window_bins()
-
-bins = { [-0.4, -0.2], [-0.2, 0], [0, 0.2], [0.2, 0.4] };
 
 end
