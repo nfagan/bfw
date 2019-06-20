@@ -2,6 +2,7 @@ function bfw_check_eyelink_fixations(varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.rois = { 'face', 'left_nonsocial_object', 'right_nonsocial_object', 'screen' };
+defaults.x_lims = [];
 
 inputs = { 'aligned_raw_samples/position' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations', 'rois', 'single_origin_offsets', 'meta' };
@@ -78,6 +79,10 @@ labs = fcat.strjoin( combs(labels, titles_are), ' | ' );
 labs = strrep( labs, '_', ' ' );
 title( labs );
 
+if ( ~isempty(params.x_lims) )
+  xlim( ax, params.x_lims );
+end
+
 if ( params.do_save )
   shared_utils.plot.fullscreen( f );
   save_p = get_plot_p( params );
@@ -89,7 +94,7 @@ end
 function plot_p = get_plot_p(params)
 
 plot_p = fullfile( bfw.dataroot(params.config), 'plots', 'check_fixations' ...
-  , dsp3.datedir );
+  , dsp3.datedir, params.base_subdir );
 
 end
 
