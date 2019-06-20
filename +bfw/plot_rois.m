@@ -5,6 +5,7 @@ defaults.color_func = @hot;
 params = bfw.parsestruct( defaults, varargin );
 
 if ( nargin < 2 ), roi_names = keys( rects ); end
+roi_names = cellstr( roi_names );
 
 hs = gobjects( numel(roi_names), 1 );
 
@@ -19,6 +20,6 @@ for i = 1:numel(roi_names)
   set( hs(i), 'edgecolor', colors(i, :) );
 end
 
-legend( roi_names );
+legend( strrep(roi_names, '_', ' ') );
 
 end

@@ -5,6 +5,7 @@ defaults.plot_err = false;
 defaults.seed = 1;
 defaults.abs = false;
 defaults.plot_collapse = {};
+defaults.n_is = { 'unified_filename' };
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -15,8 +16,8 @@ t = look_outs.t;
 handle_labels( labs );
 mask = get_base_mask( labs );
 
-% per_freq( t, bounds, labs, mask, params );
-per_freq_and_image( t, bounds, labs, mask, params );
+per_freq( t, bounds, labs, mask, params );
+% per_freq_and_image( t, bounds, labs, mask, params );
 % per_freq_and_image_direction( t, bounds, labs, mask, params );
 
 end
@@ -54,7 +55,7 @@ diffs = [];
 diff_labs = fcat();
 
 for i = 1:numel(cond_I)
-  run_I = findall( labs, 'unified_filename', cond_I{i} );
+  run_I = findall( labs, params.n_is, cond_I{i} );
 
   [p, tmp_labs, tmp_diffs, tmp_null] = bfw_it.stim_minus_sham_fixation_decay( bounds, labs', run_I ...
     , 'seed', params.seed ...

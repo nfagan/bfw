@@ -63,7 +63,8 @@ end
 
 end
 
-function [p_sig_units, sig_labels] = p_sig_units_for_all_contrasts(data, labels, t, is_shuffled, params)
+function [p_sig_units, sig_labels] = ...
+  p_sig_units_for_all_contrasts(data, labels, t, is_shuffled, params)
 
 roi_contrasts = params.roi_contrasts;
 
