@@ -7,7 +7,6 @@ inputs = { 'aligned_raw_samples/position' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations', 'rois', 'single_origin_offsets', 'meta' };
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
-loop_runner.is_parallel = false;  % can't run in parallel for plotting.
 loop_runner.convert_to_non_saving_with_output();
 
 results = loop_runner.run( @main, params );
@@ -15,8 +14,6 @@ results = loop_runner.run( @main, params );
 end
 
 function status = main(files, params)
-
-%%
 
 status = 0;
 
@@ -56,8 +53,6 @@ end
 
 function plot_rois(fix_x, fix_y, rects, labels, params)
 
-%%
-
 f = figure(1);
 clf( f );
 ax = gca();
@@ -77,17 +72,17 @@ for i = 1:numel(plot_rois)
   set( hs, 'linewidth', 1 );
 end
 
-labs = fcat.strjoin( combs(labels, {'mat_filename', 'session'}), ' | ' );
+titles_are = {'mat_filename', 'session'};
+
+labs = fcat.strjoin( combs(labels, titles_are), ' | ' );
 labs = strrep( labs, '_', ' ' );
 title( labs );
 
 if ( params.do_save )
   shared_utils.plot.fullscreen( f );
   save_p = get_plot_p( params );
-  dsp3.req_savefig( f, save_p, labels, {'unified_filename'} );
+  dsp3.req_savefig( f, save_p, labels, titles_are );
 end
-
-% title( 
 
 end
 
