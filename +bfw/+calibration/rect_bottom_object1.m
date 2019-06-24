@@ -7,8 +7,8 @@ min_y = object_bounds(2);
 max_x = object_bounds(3);
 max_y = object_bounds(4);
 
-h = (max_y - min_y) / 2;
+h = max_y - min_y;
 
-bounds = [ min_x, h/2, max_x, h ];
+bounds = [ min_x, min_y+h/2, max_x, max_y ];
 
 end
