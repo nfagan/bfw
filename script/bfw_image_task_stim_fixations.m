@@ -13,6 +13,8 @@ inputs = { 'image_task_events', 'aligned_raw_samples/position' ...
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
 
+params.day_info_xls = get_day_info_xls( params.config );
+
 results = runner.run( @main, params );
 outputs = [ results([results.success]).output ];
 
@@ -38,7 +40,7 @@ end
 end
 
 function outs = main(files, params)
-%%
+
 import shared_utils.*;
 
 un_file = general.get( files, 'unified' );
@@ -106,9 +108,6 @@ for i = 1:numel(stim_times)
     
     is_within_t_bounds = fix_starts >= stim_start_inds(i) & ...
       fix_starts < stop_ind;
-    
-%     is_within_t_bounds = fix_starts >= stim_start_inds(i) & ...
-%       fix_starts < image_off_inds(nearest_image);
   else
     is_within_t_bounds = fix_starts >= stim_start_inds(i) & ...
       fix_starts < stim_start_inds(i) + params.look_ahead;
@@ -140,6 +139,7 @@ for i = 1:numel(stim_times)
 end
 
 labels = bfw_it.make_stim_labels( files, image_indices );
+bfw_it.add_day_info_labels( labels, params.day_info_xls );
 
 outs = struct();
 outs.fix_info = fix_info;
@@ -148,5 +148,11 @@ outs.relative_start_times = relative_starts;
 outs.next_fixation_start_times = next_fix_start_times;
 outs.trial_starts = trial_starts;
 outs.image_offsets = image_offsets;
+
+end
+
+function day_info = get_day_info_xls(conf)
+
+day_info = bfw_it.process_day_info_xls( bfw_it.load_day_info_xls(conf) );
 
 end

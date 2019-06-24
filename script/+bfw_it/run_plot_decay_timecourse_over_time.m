@@ -1,8 +1,11 @@
 conf = bfw.config.load();
 conf = bfw.set_dataroot( fullfile(conf.PATHS.mount, bfw_image_task_data_root()), conf );
 
-use_days = { '08', '09', '12', '13' };
-use_files = cellfun( @(x) sprintf('06%s2019', x), use_days, 'un', 0 );
+day_info_xls = bfw_it.process_day_info_xls( bfw_it.load_day_info_xls(conf) );
+use_files = day_info_xls('date');
+
+% use_days = { '08', '09', '12', '13' };
+% use_files = cellfun( @(x) sprintf('06%s2019', x), use_days, 'un', 0 );
 
 common_inputs = struct();
 % common_inputs.files_containing = {'04202019', '04222019', '04262019', '04282019', '04302019', '05052019'};

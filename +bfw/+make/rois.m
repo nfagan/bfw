@@ -133,6 +133,15 @@ roi_funcs('outside2') =     @bfw.calibration.rect_outside2;
 roi_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
 roi_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;
 
+% //
+roi_funcs('top_eyes') =         @bfw.calibration.rect_top_eyes;
+roi_funcs('bottom_mouth') =     @bfw.calibration.rect_bottom_mouth;
+
+roi_funcs('top_object1') =      @bfw.calibration.rect_top_object1;
+roi_funcs('top_object2') =      @bfw.calibration.rect_top_object2;
+roi_funcs('bottom_object1') =   @bfw.calibration.rect_bottom_object1;
+roi_funcs('bottom_object2') =   @bfw.calibration.rect_bottom_object2;
+
 try
   r = un_file.stimulation_params.radius;
 catch err
