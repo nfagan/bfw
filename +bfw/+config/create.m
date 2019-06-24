@@ -22,6 +22,7 @@ PATHS = struct();
 PATHS.data_root = '';
 PATHS.repositories = '';
 PATHS.plots = '';
+PATHS.mount = '';
 
 %   DEPENDENCIES
 DEPENDS = struct();
