@@ -19,6 +19,54 @@ for i = 1:numel(kinds)
 
   plot_each_session_over_runs( use_dat, labels', mask, kinds{i}, params );
   plot_design_types_over_runs( use_dat, labels', mask, kinds{i}, params );
+  plot_compare_sham_types_over_runs( use_dat, labels', mask, kinds{i}, params );
+end
+
+end
+
+
+function plot_compare_sham_types_over_runs(data, labels, mask, kind, params)
+
+import shared_utils.plot.label_str;
+
+assert_ispair( data, labels );
+assert( isvector(data) );
+
+% Only block or no stimulation blocks, only sham.
+mask = fcat.mask( labels, mask ...
+  , @find, 'block' ...
+  , @find, 'sham' ...
+);
+
+figs_each = { 'roi' };
+fig_I = findall_or_one( labels, figs_each, mask );
+
+for i = 1:numel(fig_I)
+  fig = gcf();
+  clf( fig );
+  
+  fig_ind = fig_I{i};
+  
+  pl = plotlabeled.make_common();
+  pl.fig = fig;
+  pl.x_order = get_sorted_run_numbers( labels, fig_ind );
+  pl.errorbar_connect_non_nan = true;
+  
+  xcats = { 'run_number' };
+  pcats = { 'block_design', 'stim_type', 'block_design', 'roi' };
+  gcats = { 'region' };
+  
+  pltdat = data(fig_ind);
+  pltlabs = prune( labels(fig_ind) );
+  
+  axs = pl.errorbar( pltdat, pltlabs, xcats, gcats, pcats );
+  ylabel( axs(1), label_str(kind) );
+  
+  if ( params.do_save )
+    save_p = get_save_p( params, kind, 'by_sham_type' );
+    shared_utils.plot.fullscreen( fig );
+    dsp3.req_savefig( fig, save_p, pltlabs, [pcats, figs_each] );
+  end
 end
 
 end

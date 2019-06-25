@@ -5,8 +5,7 @@
 % cp *.mat ./<foldername>
 
 % Fill in new roi names
-use_rois = { 'top_eyes', 'bottom_mouth', 'top_object1' ...
-  , 'top_object2', 'bottom_object1', 'bottom_object2' };
+use_rois = { 'right_middle_nonsocial_object' };
 
 inputs = struct();
 

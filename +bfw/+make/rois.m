@@ -132,6 +132,7 @@ roi_funcs('outside2') =     @bfw.calibration.rect_outside2;
 % //
 roi_funcs('left_nonsocial_object') = @bfw.calibration.rect_left_nonsocial_object;
 roi_funcs('right_nonsocial_object') = @bfw.calibration.rect_right_nonsocial_object;
+roi_funcs('right_middle_nonsocial_object') = @bfw.calibration.rect_right_middle_nonsocial_object;
 
 % //
 roi_funcs('top_eyes') =         @bfw.calibration.rect_top_eyes;
