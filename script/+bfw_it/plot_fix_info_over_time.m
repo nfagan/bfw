@@ -1,36 +1,161 @@
 function plot_fix_info_over_time(fix_outs, varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
+defaults.bar_width = 2;
+defaults.y_lims = [];
+defaults.mask = rowmask( fix_outs.labels );
+
 params = bfw.parsestruct( defaults, varargin );
 
 labels = fix_outs.labels';
 
 handle_labels( labels );
-mask = get_base_mask( labels );
+mask = get_base_mask( labels, params.mask );
 
-% plot_bar( fix_outs, labels, mask, params, 'next_fixation' );
-plot_bar( fix_outs, labels, mask, params, 'n_fix' );
-plot_bar( fix_outs, labels, mask, params, 'total_duration' );
+plot_interleaved_bar( fix_outs, labels, mask, params, 'total_duration' );
+plot_interleaved_bar( fix_outs, labels, mask, params, 'n_fix' );
 
-% plot_dur( fix_outs, labels, mask, params, 'next_fixation' );
-% plot_n_fix( fix_outs, labels, mask, params );
+end
+
+function plot_interleaved_bar(fix_outs, labels, mask, params, kind)
+
+stop_col = find( strcmp(fix_outs.fix_info_key, kind) );
+assert( ~isempty(stop_col), 'No key matched "%s".', kind );
+
+y_lims = params.y_lims;
+
+if ( strcmp(kind, 'total_duration') && isempty(y_lims) )
+  y_lims = [0, 10e3];
+end
+
+bar_width = params.bar_width;
+
+figs_are = { 'session' };
+pcats = { 'session', 'run_number', 'region', 'block_design' };
+gcats = { 'stim_type' };
+
+f_I = findall( labels, figs_are, mask );
+fig = gcf();
+
+for i = 1:numel(f_I)
+
+  [p_I, p_C] = findall( labels, pcats, f_I{i} );
+  
+  run_numbers = bfw_it.parse_run_numbers( p_C(2, :) );
+  [~, sorted_I] = sort( run_numbers );
+  p_I = p_I(sorted_I);
+  p_C = p_C(:, sorted_I);
+  
+  use_cols = 2;
+  use_rows = ceil( numel(p_I) / use_cols );
+  sub_shape = [ use_rows, use_cols ];
+  
+  clf( fig );
+  
+  axs = gobjects( size(p_I) );
+  has_leg = containers.Map();
+  
+  vert_lines = cell( size(p_I) );
+  horz_lines = cell( size(p_I) );
+
+  for j = 1:numel(p_I)
+    ax = bfw.subplot( sub_shape, j );
+    cla( ax );
+    axs(j) = ax;
+    hold( ax, 'on' );
+    
+    if ( ~isempty(y_lims) )
+      ylim( ax, y_lims );
+    end
+
+    xlim( ax, [-10, 310] );
+    
+    panel_ind = p_I{j};
+    [g_I, g_C] = findall( labels, gcats, panel_ind );
+    
+    for k = 1:numel(g_I)
+      group_ind = g_I{k};
+      stim_t = g_C{1, k};
+      
+      if ( strcmp(stim_t, 'stim') )
+        color = 'r';
+      else
+        color = 'b';
+      end
+      
+      if ( strcmp(kind, 'next_fixation') )
+        x_coords = fix_outs.next_fixation_start_times(group_ind);
+      else
+        x_coords = fix_outs.relative_start_times(group_ind);
+      end
+
+      y_coords = fix_outs.fix_info(group_ind, stop_col);
+      trial_starts = fix_outs.trial_starts(group_ind);
+      image_offsets = fix_outs.image_offsets(group_ind);
+
+      for h = 1:numel(x_coords)        
+        rect = [ x_coords(h), 0, x_coords(h)+bar_width, y_coords(h) ];
+        
+%         hs = bfw.plot_rect_as_lines( ax, rect );
+%         set( hs, 'linewidth', 1.5 );
+%         set( hs, 'color', color );
+
+        [xs, ys] = bfw.rect2verts( rect );
+        hs = patch( ax, xs, ys, color );
+        
+        if ( ~isKey(has_leg, stim_t) )
+          has_leg(stim_t) = hs(1);
+        end
+      end
+      
+      vert_lines{j} = [ vert_lines{j}; unique(trial_starts) ];
+      horz_lines{j} = [ horz_lines{j}; unique(image_offsets) ];
+    end
+    
+    titles_are = { 'session', 'run_number', 'stim_frequency', 'region', 'block_design' };
+    
+    title_labs = fcat.strjoin( combs(labels, titles_are, panel_ind) );
+    title_labs = strrep( title_labs, '_', ' ' );
+    
+    title( ax, title_labs );
+  end
+  
+  shared_utils.plot.match_ylims( axs );
+  ylabel( axs(1), strrep(kind, '_', ' ') );
+  
+  for j = 1:numel(axs)
+    start_hs = shared_utils.plot.add_vertical_lines( axs(j), vert_lines{j}, 'k' );
+    set( start_hs, 'linewidth', 1 );
+
+    stop_hs = shared_utils.plot.add_vertical_lines( axs(j), horz_lines{j}, 'k--' );
+    set( stop_hs, 'linewidth', 0.5 );
+  end
+  
+  leg_entries = keys( has_leg );
+  leg_handles = values( has_leg );
+  legend( horzcat(leg_handles{:}), leg_entries );
+  
+  if ( params.do_save )
+    shared_utils.plot.fullscreen( fig );
+    plt_labs = prune( labels(f_I{i}) );
+    
+    save_p = get_save_p( params, kind );
+    dsp3.req_savefig( fig, save_p, plt_labs, figs_are, 'bars' );
+  end
+end
+
 
 end
 
 function plot_bar(fix_outs, labels, mask, params, kind)
 
-switch ( kind )
-  case 'n_fix'
-    stop_col = 1;
-    y_lims = [];
-  case 'total_duration'
-    stop_col = 2;
-    y_lims = [0, 10e3];
-  case 'next_fixation'
-    stop_col = 3;
-    y_lims = [];
-  otherwise
-    error( 'Unrecognized kind: "%s".', kind );
+stop_col = find( strcmp(fix_outs.fix_info_key, kind) );
+assert( ~isempty(stop_col), 'No key matched "%s".', kind );
+
+if ( strcmp(kind, 'total_duration') )
+  y_lims = [0, 10e3];
+else
+  y_lims = [];
 end
 
 figs_are = { 'session' };
@@ -335,8 +460,8 @@ bfw_it.add_run_number( labels );
 
 end
 
-function mask = get_base_mask(labels)
+function mask = get_base_mask(labels, mask)
 
-mask = bfw_it.find_non_error_runs( labels );
+mask = bfw_it.find_non_error_runs( labels, mask );
 
 end

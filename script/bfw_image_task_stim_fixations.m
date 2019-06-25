@@ -5,6 +5,7 @@ defaults.rect_padding = 0.1;
 defaults.min_dur = 30; % ms
 defaults.look_ahead = 5e3;  % ms
 defaults.use_image_offset = false;
+defaults.roi = 'eyes';
 
 inputs = { 'image_task_events', 'aligned_raw_samples/position' ...
   , 'aligned_raw_samples/time', 'aligned_raw_samples/raw_eye_mmv_fixations' ...
@@ -12,6 +13,8 @@ inputs = { 'image_task_events', 'aligned_raw_samples/position' ...
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
+
+validatestring( params.roi, {'eyes', 'image'}, mfilename, 'roi' );
 
 params.day_info_xls = get_day_info_xls( params.config );
 
@@ -24,6 +27,7 @@ outs.params = params;
 if ( isempty(outputs) )
   outs.labels = fcat();
   outs.fix_info = [];
+  outs.fix_info_key = {};
   outs.relative_start_times = [];
   outs.next_fixation_start_times = [];
   outs.trial_starts = [];
@@ -31,6 +35,7 @@ if ( isempty(outputs) )
 else
   outs.labels = vertcat( fcat, outputs.labels );
   outs.fix_info = vertcat( outputs.fix_info );
+  outs.fix_info_key = outputs(1).fix_info_key;
   outs.relative_start_times = vertcat( outputs.relative_start_times );
   outs.next_fixation_start_times = vertcat( outputs.next_fixation_start_times );
   outs.trial_starts = vertcat( outputs.trial_starts );
@@ -51,6 +56,7 @@ stim_file = general.get( files, 'stim' );
 fix_file = general.get( files, 'raw_eye_mmv_fixations' );
 
 stim_rects = bfw_it.stim_rects_from_unified_file( un_file );
+image_rects = bfw_it.image_rects_from_unified_file( un_file );
 
 image_on_event_ind = strcmp(events_file.event_key, 'image_onset');
 image_off_event_ind = strcmp(events_file.event_key, 'image_offset');
@@ -88,12 +94,21 @@ for i = 1:numel(stim_times)
   
   last_offset_ind = image_off_inds(last_offset);
   
-  eye_rect = bfw_it.pad_rect( stim_rects(nearest_image, :), params.rect_padding );
+  switch ( params.roi )
+    case 'eyes'
+      roi_rect = stim_rects(nearest_image, :);
+    case 'image'
+      roi_rect = image_rects(nearest_image, :);
+    otherwise
+      error( 'Unrecognized roi "%s".', params.roi )
+  end
+  
+  roi_rect = bfw_it.pad_rect( roi_rect, params.rect_padding );
   
   x_pos = pos_file.m1(1, :);
   y_pos = pos_file.m1(2, :);
   
-  ib = bfw.bounds.rect( x_pos, y_pos, eye_rect );
+  ib = bfw.bounds.rect( x_pos, y_pos, roi_rect );
   ib_fix = ib & fix_file.m1;
   [fix_starts, fix_durs] = shared_utils.logical.find_all_starts( ib_fix );
   
@@ -140,9 +155,11 @@ end
 
 labels = bfw_it.make_stim_labels( files, image_indices );
 bfw_it.add_day_info_labels( labels, params.day_info_xls );
+addsetcat( labels, 'roi', sprintf('roi_%s', params.roi) );
 
 outs = struct();
 outs.fix_info = fix_info;
+outs.fix_info_key = { 'n_fix', 'total_duration', 'duration_next_fixation' };
 outs.labels = labels;
 outs.relative_start_times = relative_starts;
 outs.next_fixation_start_times = next_fix_start_times;
