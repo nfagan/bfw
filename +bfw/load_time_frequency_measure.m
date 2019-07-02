@@ -1,4 +1,4 @@
-function [data, labels, freqs, t] = load_time_frequency_measure(mats, varargin)
+function [data, labels, freqs, t, is_ok] = load_time_frequency_measure(mats, varargin)
 
 %   LOAD_TIME_FREQUENCY_MEASURE -- Load time frequency data from files.
 %
@@ -28,6 +28,17 @@ function [data, labels, freqs, t] = load_time_frequency_measure(mats, varargin)
 %     an input and returns true if and only if the file should be excluded
 %     from the output.
 %
+%     [...] = bfw.load_time_frequency_measure( ..., 'uniform_output', value ); 
+%     uses the logical scalar `value` to indicate whether `data` has the
+%     same size across `mats`, and whether `freqs` and `t` have the same
+%     size and values across `mats`. Default is true. If false, then each
+%     output is an Mx1 cell array where M is the number of files that were
+%     not skipped with 'check_skip_func'.
+%
+%     [..., is_ok] = bfw.load_time_frequency_measure(...) also returns a 
+%     logical vector whose true elements correspond to files in `mats` that 
+%     were *not* skipped.
+%
 %     EX //
 %
 %     % Load time-frequency data from mat files given by `mats`. We pass in
@@ -45,6 +56,7 @@ defaults.get_labels_func = @(x) fcat.from(x);
 defaults.get_time_func = @(x) x.t;
 defaults.get_freqs_func = @(x) x.f;
 defaults.check_skip_func = @(x) false;
+defaults.uniform_output = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -71,17 +83,24 @@ parfor i = 1:numel(mats)
   fs{i} = params.get_freqs_func( measure_file );
 end
 
-data = vertcat( all_data{is_ok} );
-labels = vertcat( fcat(), all_labels{is_ok} );
+if ( params.uniform_output )
+  data = vertcat( all_data{is_ok} );
+  labels = vertcat( fcat(), all_labels{is_ok} );
 
-first_ok = find( is_ok, 1 );
+  first_ok = find( is_ok, 1 );
 
-if ( ~isempty(first_ok) )
-  freqs = fs{first_ok};
-  t = ts{first_ok};
+  if ( ~isempty(first_ok) )
+    freqs = fs{first_ok};
+    t = ts{first_ok};
+  else
+    freqs = [];
+    t = [];
+  end
 else
-  freqs = [];
-  t = [];
+  data = all_data(is_ok);
+  labels = all_labels(is_ok);
+  freqs = fs(is_ok);
+  t = ts(is_ok);
 end
 
 assert_ispair( data, labels );
