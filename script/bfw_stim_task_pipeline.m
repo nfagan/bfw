@@ -1,7 +1,7 @@
 function bfw_stim_task_pipeline(varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.config = bfw.set_dataroot( bfw_stim_task_data_root(), bfw.config.load() );
+defaults.config = bfw.set_dataroot( get_data_root(defaults.config) );
 defaults.skip_existing = true;
 
 params = bfw.parsestruct( defaults, varargin );
@@ -63,6 +63,12 @@ bfw.make_binned_aligned_samples( params );
 %%  events
 
 bfw_events_pipeline( params );
+
+end
+
+function dr = get_data_root(conf)
+
+dr = fullfile( conf.PATHS.mount, bfw_stim_task_data_root() );
 
 end
 
