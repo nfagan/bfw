@@ -10,7 +10,7 @@ folders = find_new_subfolders( params.config );
 
 %%  unified
 
-bfw.make_unified( folders, params );
+bfw.make_unified( folders, 'plex_sync_id', 'm1', params );
 bfw.make_meta( params );
 bfw.make_stim_meta( params );
 
@@ -24,6 +24,9 @@ bfw.make_stimulation_times( params );
 bfw.make_edfs( params );
 bfw.make_edf_raw_samples( params );
 bfw.make_edf_sync_times( params );
+
+bfw.make_calibration_coordinates( params );
+bfw.make_single_origin_offsets( params );
 
 %%  plex time
 

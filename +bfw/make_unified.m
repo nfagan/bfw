@@ -4,6 +4,7 @@ ff = @fullfile;
 
 defaults = bfw.get_common_make_defaults();
 defaults.allow_missing_far_plane_calibration = false;
+defaults.plex_sync_id = 'm2';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -193,8 +194,7 @@ for idx = 1:numel(outerdirs)
     %
     
     plex_sync_id_file = shared_utils.io.find( pl2_dir, 'plex_sync_id.json' );
-    
-    plex_sync_id = 'm2';
+    plex_sync_id = params.plex_sync_id;
     
     if ( numel(plex_sync_id_file) ~= 0 )
       plex_sync_id_struct = bfw.jsondecode( plex_sync_id_file{1} );
