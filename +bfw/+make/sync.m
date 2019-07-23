@@ -130,7 +130,7 @@ function [mat_sync, plex_sync] = validate_sync_times(mat_sync, plex_sync, unifie
 n_mat = numel( mat_sync );
 n_plex = numel( plex_sync );
 
-if ( n_mat == n_plex )
+if ( n_mat ~= n_plex )
   error( make_mismatch_error_str(unified_filename) );
 end
 

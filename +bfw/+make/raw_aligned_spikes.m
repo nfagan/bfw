@@ -103,6 +103,7 @@ function [events_file, event_indices] = handle_roi_selection(events_file, rois)
 rois = cellstr( rois );
 
 if ( numel(rois) == 1 && strcmp(rois, 'all') )
+  event_indices = 1:size( events_file.labels, 1 );
   return
 end
 
