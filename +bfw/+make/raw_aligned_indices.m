@@ -49,17 +49,23 @@ other_indices = zeros( size(match_indices) );
 
 is_within_time_bounds = other_time >= min_match & other_time <= max_match;
 inds_within_time_bounds = find( is_within_time_bounds );
-n_use = numel( inds_within_time_bounds );
+% n_use = numel( inds_within_time_bounds );
 
-for j = 1:n_use
-  from_idx = inds_within_time_bounds(j);
+% for j = 1:n_use
+%   from_idx = inds_within_time_bounds(j);
+% 
+%   ct = other_time(from_idx);
+% 
+%   [~, to_idx] = min( abs(match_time - ct) );
+% 
+%   other_indices(to_idx) = from_idx;
+% end
 
-  ct = other_time(from_idx);
+non_nans = find( ~isnan(match_time) );
+use_times = other_time(inds_within_time_bounds);
 
-  [~, to_idx] = min( abs(match_time - ct) );
-
-  other_indices(to_idx) = from_idx;
-end
+test_inds = non_nans(bfw.find_nearest(match_time(non_nans), use_times));
+other_indices(test_inds) = inds_within_time_bounds;
 
 if ( params.fill_gaps )
   other_indices = fill_gaps( other_indices, params.max_fill );
