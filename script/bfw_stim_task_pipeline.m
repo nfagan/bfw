@@ -63,18 +63,21 @@ bfw_events_pipeline( params );
 
 end
 
-function names = find_new_subfolders(conf)
+function subfolder_names = find_new_subfolders(conf)
 
 raw_p = fullfile( bfw.dataroot(conf), 'raw' );
 subfolder_names = shared_utils.io.filenames( shared_utils.io.find(raw_p, 'folders') );
 
 unified_p = bfw.gid( 'unified', conf );
 
-if ( ~shared_utils.io.dexists(unified_p) )
-  names = subfolder_names;
-else
-  current_unified_files = shared_utils.io.findmat( unified_p );
+if ( shared_utils.io.dexists(unified_p) )
+  current_unified_filenames = shared_utils.io.filenames( shared_utils.io.findmat(unified_p) );
   
+  for i = 1:numel(current_unified_filenames)
+    already_exists = cellfun( @(x) ~isempty(strfind(current_unified_filenames{i}, x)) ...
+      , subfolder_names );
+    subfolder_names(already_exists) = [];
+  end
 end
 
 end

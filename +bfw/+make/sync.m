@@ -69,7 +69,7 @@ current_plex_reward = binned_reward{sync_index};
 current_plex_start = start_pulses(sync_index);
 
 if ( numel(current_plex_sync) == 0 )
-  error( 'No sync times were found for "%s" and index %d. Check your plex_sync_map.json file.' ...
+  error( 'No sync times were found for "%s" and index %d.' ...
     , unified_filename, sync_index );
 end
 
