@@ -12,8 +12,19 @@ t = decay_outs.t;
 
 mask = get_base_mask( labels, params.mask );
 
+plot_per_monkey( bounds, t, labels, mask, params );
 plot_per_day( bounds, t, labels, mask, params );
 plot_across_days( bounds, t, labels, mask, params );
+
+end
+
+function plot_per_monkey(bounds, t, labels, mask, params)
+
+fig_cats = { 'task_type' };
+gcats = { 'stim_type' };
+pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'id_m1' };
+
+plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_monkey', params );
 
 end
 

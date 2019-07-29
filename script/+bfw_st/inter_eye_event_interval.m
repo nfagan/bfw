@@ -39,8 +39,13 @@ starts = event_file.events(m1_exclusive_eyes, event_file.event_key('start_time')
 is_non_nan = ~isnan( starts );
 non_nan_starts = sort( starts(is_non_nan) );
 
+to_keep = find( is_non_nan );
+to_keep = to_keep(2:end);
+
 outs = struct();
 outs.inter_event_intervals = diff( non_nan_starts );
-outs.labels = prune( keep(event_labs, find(is_non_nan)) );
+outs.labels = prune( keep(event_labs, to_keep) );
+
+assert_ispair( outs.inter_event_intervals, outs.labels );
 
 end

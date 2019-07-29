@@ -12,6 +12,10 @@ params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
 plot_params = shared_utils.struct.intersect( params, plot_defaults );
 
+%%  amp vs vel
+
+bfw_st.stim_amp_vs_vel( make_params );
+
 %%  isi
 stim_time_outs = params.stim_time_outs;
 
@@ -30,6 +34,7 @@ if ( isempty(decay_outs) )
 end
 
 bfw_st.plot_fixation_decay( decay_outs, plot_params );
+
 
 end
 

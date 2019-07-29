@@ -97,6 +97,7 @@ for i = 1:numel(stim_times)
 end
 
 bfw.get_region_labels( labels );
+bfw.add_monk_labels( labels );
 
 outs = struct();
 outs.t = t_course;
