@@ -9,3 +9,9 @@ params = bfw.parsestruct( defaults, varargin );
 results = bfw.make_edfs( params );
 
 end
+
+function dr = get_data_root(conf)
+
+dr = fullfile( conf.PATHS.mount, bfw_stim_task_data_root() );
+
+end
