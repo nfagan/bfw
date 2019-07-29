@@ -9,9 +9,13 @@ addcat( labs, 'region' );
 
 for i = 1:numel(I)
   session_name = C{i};
-  reg_name = map(session_name);
   
-  setcat( labs, 'region', reg_name, I{i} );
+  if ( isKey(map, session_name) )
+    reg_name = map(session_name);
+    setcat( labs, 'region', reg_name, I{i} );
+  else
+    warning( 'No region defined for "%s".', session_name );
+  end
 end
 
 end
