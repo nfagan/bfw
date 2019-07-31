@@ -51,7 +51,7 @@ end
 
 function plot_combination(bounds, t, labels, mask, fig_cats, gcats, pcats, subdir, params)
 
-fig_I = findall( labels, fig_cats, mask );
+fig_I = findall_or_one( labels, fig_cats, mask );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
@@ -63,18 +63,11 @@ for i = 1:numel(fig_I)
   axs = pl.lines( pltdat, pltlabs, gcats, pcats );
   
   if ( params.do_save )
-    save_p = get_save_p( params, 'fix_decay', subdir );
+    save_p = bfw_st.stim_summary_plot_p( params, 'fix_decay', subdir );
     shared_utils.plot.fullscreen( gcf );
     dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats] );
   end
 end
-
-end
-
-function save_p = get_save_p(params, varargin)
-
-save_p = fullfile( bfw.dataroot(params.config), 'plots', 'stim_summary' ...
-  , dsp3.datedir, params.base_subdir, varargin{:} );
 
 end
 

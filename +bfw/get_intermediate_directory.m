@@ -8,11 +8,7 @@ function p = get_intermediate_directory(kind, conf)
 %     p = get_intermediate_directory( .., conf ) uses the config file
 %     `conf` to create the full path, instead of the saved config file.
 %
-%     IN:
-%       - `kind` (char)
-%       - `conf` (struct)
-%     OUT:
-%       - `p` (cell array of strings, char)
+%     See also bfw.make.help, bfw.config.create, bfw.config.load
 
 import shared_utils.assertions.*;
 

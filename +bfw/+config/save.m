@@ -2,6 +2,11 @@
 function save(conf)
 
 %   SAVE -- Save the config file.
+%
+%     bfw.config.save( conf ), where `conf` is a valid config file, saves
+%     `conf`.
+%
+%     See also bfw.config.create, bfw.config.load
 
 bfw.util.assertions.assert__is_config( conf );
 const = bfw.config.constants();

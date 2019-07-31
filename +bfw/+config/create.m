@@ -2,11 +2,12 @@ function conf = create(do_save)
 
 %   CREATE -- Create the config file. 
 %
-%     Define editable properties of the config file here.
+%     conf = bfw.config.create(); generates and returns the default config 
+%     file `conf`, a struct.
 %
-%     IN:
-%       - `do_save` (logical) -- Indicate whether to save the created
-%         config file. Default is `false`
+%     conf = bfw.config.create( true ); additionally saves `conf`.
+%
+%     See also bfw.config.load
 
 if ( nargin < 1 ), do_save = false; end
 

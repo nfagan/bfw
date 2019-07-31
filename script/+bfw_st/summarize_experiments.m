@@ -7,14 +7,28 @@ defaults = shared_utils.struct.union( make_defaults, plot_defaults );
 defaults.config = bfw_st.default_config();
 defaults.stim_time_outs = [];
 defaults.decay_outs = [];
+defaults.fix_info_outs = [];
 
 params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
 plot_params = shared_utils.struct.intersect( params, plot_defaults );
 
+%%  fix info
+
+fix_info_outs = params.fix_info_outs;
+
+if ( isempty(fix_info_outs) )
+  fix_info_outs = bfw_st.fix_info( make_params );
+end
+
+bfw_st.plot_fix_info( fix_info_outs ...
+  , 'mask_func', @(labels) findor(labels, {'eyes_nf', 'face'}) ...
+  , plot_params ...
+);
+
 %%  amp vs vel
 
-bfw_st.stim_amp_vs_vel( make_params );
+bfw_st.stim_amp_vs_vel( plot_params );
 
 %%  isi
 stim_time_outs = params.stim_time_outs;
@@ -27,6 +41,7 @@ end
 summarize_isi( isi, isi_labels', params );
 
 %%  fixation decay
+
 decay_outs = params.decay_outs;
 
 if ( isempty(decay_outs) )
@@ -34,7 +49,6 @@ if ( isempty(decay_outs) )
 end
 
 bfw_st.plot_fixation_decay( decay_outs, plot_params );
-
 
 end
 
@@ -99,19 +113,12 @@ for i = 1:numel(fig_I)
   end
   
   if ( params.do_save )
-    save_p = get_save_p( params, 'isi' );
+    save_p = bfw_st.stim_summary_plot_p( params, 'isi' );
     shared_utils.plot.fullscreen( gcf );
     dsp3.req_savefig( gcf, save_p, pltlabs, [pcats, figs_each] );
   end
 end
 
 end
-
-end
-
-function save_p = get_save_p(params, varargin)
-
-save_p = fullfile( bfw.dataroot(params.config), 'plots', 'stim_summary' ...
-  , dsp3.datedir, params.base_subdir, varargin{:} );
 
 end

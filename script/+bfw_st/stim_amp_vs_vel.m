@@ -1,6 +1,6 @@
 function stim_amp_vs_vel(varargin)
 
-defaults = bfw.get_common_make_defaults();
+defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw.set_dataroot( bfw_st.make_data_root(defaults.config) );
 params = bfw.parsestruct( defaults, varargin );
 
@@ -41,7 +41,7 @@ prune( bfw.add_monk_labels(labs) );
 
 %%
 
-do_save = true;
+do_save = params.do_save;
 subdir = 'amp_vs_vel';
 
 pl = plotlabeled();

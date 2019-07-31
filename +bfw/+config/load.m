@@ -7,9 +7,6 @@ function out = load(cmd)
 %     out = bfw.config.load( '-clear' ) clears the cache of the config
 %     file before loading. This isn't ever necessary unless manually
 %     updating the `config.mat` file via the filesystem.
-%
-%     OUT:
-%       - `out` (struct)
 
 % cache `conf`, unless it is updated via a call to `bfw.config.save`
 persistent conf;
