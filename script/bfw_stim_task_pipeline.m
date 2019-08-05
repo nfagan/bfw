@@ -6,7 +6,7 @@ defaults.skip_existing = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
-folders = find_new_subfolders( params.config );
+folders = find_new_subfolders( params.config, params.files_containing );
 
 %%  unified
 
@@ -72,7 +72,7 @@ dr = fullfile( conf.PATHS.mount, bfw_stim_task_data_root() );
 
 end
 
-function subfolder_names = find_new_subfolders(conf)
+function subfolder_names = find_new_subfolders(conf, containing)
 
 raw_p = fullfile( bfw.dataroot(conf), 'raw' );
 subfolder_names = shared_utils.io.filenames( shared_utils.io.find(raw_p, 'folders') );
@@ -88,5 +88,7 @@ if ( shared_utils.io.dexists(unified_p) )
     subfolder_names(already_exists) = [];
   end
 end
+
+subfolder_names = shared_utils.io.filter_files( subfolder_names, containing );
 
 end

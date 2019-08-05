@@ -56,7 +56,6 @@ durations = [];
 for i = 1:numel(stim_ts)
   within_range = starts >= stim_ts(i)+look_back & starts < stim_ts(i)+look_ahead;
   
-  subset_durs = durs(within_range);
   subset_labs = event_labels(find(within_range));
   join( subset_labs, prune(stim_labels(i)), meta_labels, stim_meta_labels );
   
