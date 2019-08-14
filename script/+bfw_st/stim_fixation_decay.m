@@ -35,7 +35,6 @@ function outs = check_bounds(files, params)
 
 import shared_utils.*;
 
-un_file = general.get( files, 'unified' );
 pos_file = general.get( files, 'position' );
 t_file = general.get( files, 'time' );
 stim_file = general.get( files, 'stim' );
@@ -43,7 +42,10 @@ roi_file = general.get( files, 'rois' );
 meta_file = general.get( files, 'meta' );
 stim_meta_file = general.get( files, 'stim_meta' );
 
-stim_times = [ stim_file.stimulation_times(:); stim_file.sham_times(:) ];
+[stim_times, stim_labs] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
+bfw_st.add_per_stim_labels( stim_labs, stim_times );
+addcat( stim_labs, 'roi' );
+
 stim_start_inds = bfw_it.find_nearest_stim_time( t_file.t, stim_times );
 
 look_ahead = params.look_ahead;
@@ -59,10 +61,6 @@ roi_names = keys( rects );
 bounds = zeros( numel(stim_times) * numel(roi_names), numel(t_course) );
 
 stp = 1;
-
-stim_labs = bfw.make_stim_labels( numel(stim_file.stimulation_times), numel(stim_file.sham_times) );
-join( stim_labs, bfw.struct2fcat(meta_file), bfw.stim_meta_to_fcat(stim_meta_file) );
-addcat( stim_labs, 'roi' );
 
 labels = fcat();
 
@@ -95,9 +93,6 @@ for i = 1:numel(stim_times)
     setcat( labels, 'roi', roi_names{j}, rows(labels) );
   end
 end
-
-bfw.get_region_labels( labels );
-bfw.add_monk_labels( labels );
 
 outs = struct();
 outs.t = t_course;

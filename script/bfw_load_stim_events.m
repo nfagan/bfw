@@ -25,11 +25,12 @@ stim_file = shared_utils.general.get( files, 'stim' );
 meta_file = shared_utils.general.get( files, 'meta' );
 stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
 
-labels = bfw.make_stim_labels( numel(stim_file.stimulation_times), numel(stim_file.sham_times) );
+[stim_ts, labels] = bfw.stim_file_to_pair( stim_file );
 join( labels, bfw.struct2fcat(meta_file), bfw.stim_meta_to_fcat(stim_meta_file) );
+bfw_st.add_per_stim_labels( labels, stim_ts );
 
 outs = struct();
 outs.labels = labels;
-outs.stim_times = [ stim_file.stimulation_times(:); stim_file.sham_times(:) ];
+outs.stim_times = stim_ts;
 
 end

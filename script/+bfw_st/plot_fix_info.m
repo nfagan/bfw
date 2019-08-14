@@ -14,14 +14,41 @@ calc_each = { 'roi', 'unified_filename', 'stim_type', 'stim_id', 'looks_by' };
 
 durations = bfw.row_sum( fix_info_outs.durations, calc_I );
 counts = cellfun( @numel, calc_I );
-
 mask = params.mask_func( run_labels );
 
+[current_dur, current_dur_labels, current_dur_mask] = get_current_duration( fix_info_outs, params );
+
+plot_per_run_and_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_per_run_and_day( durations, run_labels', mask, 'durations', params );
+plot_per_run_and_day( counts, run_labels', mask, 'counts', params );
+
+plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_per_monkey( durations, run_labels', mask, 'durations', params );
 plot_per_monkey( counts, run_labels', mask, 'counts', params );
 
+plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_across_monkeys( durations, run_labels', mask, 'durations', params );
 plot_across_monkeys( counts, run_labels', mask, 'counts', params );
+
+end
+
+function [current_duration, current_dur_labels, mask] = get_current_duration(fix_info_out, params)
+
+current_duration = fix_info_out.current_durations;
+current_dur_labels = fix_info_out.current_duration_labels;
+
+mask = params.mask_func( current_dur_labels );
+
+end
+
+function plot_per_run_and_day(data, labels, mask, kind, params)
+
+fig_cats = { 'task_type', 'unified_filename' };
+xcats = { 'roi' };
+gcats = { 'stim_type' };
+pcats = { 'task_type', 'protocol_name', 'region', 'unified_filename' };
+
+plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_run', params );
 
 end
 

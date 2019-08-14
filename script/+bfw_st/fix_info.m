@@ -4,8 +4,9 @@ defaults = bfw.get_common_make_defaults();
 defaults.config = bfw_st.default_config();
 defaults.look_ahead = 5;
 defaults.look_back = 0;
+defaults.num_day_time_quantiles = 1;
 
-inputs = { 'raw_events', 'stim', 'meta', 'stim_meta' };
+inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
@@ -17,6 +18,9 @@ outputs = shared_utils.pipeline.extract_outputs_from_results( results );
 if ( isempty(outputs) )
   outs.durations = [];
   outs.labels = fcat();
+  
+  outs.current_durations = [];
+  outs.current_duration_labels = fcat();
 else
   outs = shared_utils.struct.soa( outputs );
 end
@@ -29,10 +33,14 @@ event_file = shared_utils.general.get( files, 'raw_events' );
 stim_file = shared_utils.general.get( files, 'stim' );
 meta_file = shared_utils.general.get( files, 'meta' );
 stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
+start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
 
-stim_labels = bfw.make_stim_labels( numel(stim_file.stimulation_times), numel(stim_file.sham_times) );
-meta_labels = bfw.struct2fcat( meta_file );
-stim_meta_labels = bfw.stim_meta_to_fcat( stim_meta_file );
+num_day_time_quantiles = params.num_day_time_quantiles;
+
+[stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
+bfw_st.add_per_stim_labels( stim_labels, stim_ts );
+add_day_time_quantile_labels( stim_labels, stim_ts, num_day_time_quantiles, start_time_file );
+
 event_labels = fcat.from( event_file.labels, event_file.categories );
 
 addcat( event_labels, 'stim_id' );
@@ -48,30 +56,86 @@ durs = stops - starts;
 look_ahead = params.look_ahead;
 look_back = params.look_back;
 
-stim_ts = [ stim_file.stimulation_times(:); stim_file.sham_times(:) ];
-
-all_labels = fcat();
+duration_labels = fcat();
 durations = [];
+
+current_durations = [];
+current_duration_labels = fcat();
+
+current_duration_each = { 'event_type', 'looks_by', 'roi' };
+current_duration_I = findall( event_labels, current_duration_each );
 
 for i = 1:numel(stim_ts)
   within_range = starts >= stim_ts(i)+look_back & starts < stim_ts(i)+look_ahead;
   
-  subset_labs = event_labels(find(within_range));
-  join( subset_labs, prune(stim_labels(i)), meta_labels, stim_meta_labels );
+  for j = 1:numel(current_duration_I)
+    curr_dur_ind = current_duration_I{j};
+    
+    nearest_start = find( starts(curr_dur_ind) < stim_ts(i), 1, 'last' );
   
-  if ( ~isempty(subset_labs) )
-    setcat( subset_labs, 'stim_id', stim_ids{i} );
+    if ( ~isempty(nearest_start) )
+      nearest_ind = curr_dur_ind(nearest_start);
+      
+      current_durations(end+1, 1) = durs(nearest_ind);
+      subset_current_dur_labels = ...
+        make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );
+      
+      append( current_duration_labels, subset_current_dur_labels );      
+    end
   end
   
-  append( all_labels, subset_labs );
+  subset_labs = make_labels( event_labels, stim_labels, find(within_range), i, stim_ids );
+  
+  append( duration_labels, subset_labs );
   
   durations = [ durations; durs(within_range) ];
 end
 
-assert_ispair( durations, all_labels );
+assert_ispair( durations, duration_labels );
 
 outs = struct();
 outs.durations = durations;
-outs.labels = all_labels;
+outs.labels = duration_labels;
+
+outs.current_durations = current_durations;
+outs.current_duration_labels = current_duration_labels;
+
+end
+
+function labels = add_day_time_quantile_labels(labels, stim_ts, num_quantiles, start_time_file)
+
+cat_name = 'day_time_quantile';
+addcat( labels, cat_name );
+
+start_time = start_time_file.start_time;
+session_dur = start_time_file.stop_time - start_time_file.start_time;
+
+quant_dur = session_dur / (num_quantiles + 1);
+had_match = false( size(stim_ts) );
+
+for i = 1:num_quantiles+1
+  min_dur = start_time + (i-1) * quant_dur;
+  max_dur = min_dur + quant_dur;
+  
+  within_quant = stim_ts >= min_dur & stim_ts < max_dur;
+  had_match(within_quant) = true;
+  
+  for j = 1:numel(stim_ts)
+    if ( within_quant(j) )
+      setcat( labels, cat_name, sprintf('%s__%d', cat_name, i), j );
+    end
+  end
+end
+
+end
+
+function subset_labs = make_labels(event_labels, stim_labels, event_inds, stim_ind, stim_ids)
+
+subset_labs = event_labels(event_inds);
+join( subset_labs, prune(stim_labels(stim_ind)) );
+
+if ( ~isempty(subset_labs) )
+  setcat( subset_labs, 'stim_id', stim_ids{stim_ind} );
+end
 
 end
