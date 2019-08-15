@@ -2,7 +2,7 @@ function make_plex_start_stop_times(varargin)
 
 defaults = bfw.get_common_make_defaults();
 
-inputs = { 'plex_raw_time', 'meta' };
+inputs = { 'sync', 'meta', 'plex_fp_time' };
 outputs = 'plex_start_stop_times';
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, outputs, defaults, varargin );
@@ -18,7 +18,6 @@ if ( ~isempty(session_I) )
 end
 
 for i = 1:numel(session_I)
-  
   start_time = min( outputs.start_time(session_I{i}) );
   stop_time = max( outputs.stop_time(session_I{i}) );
   
