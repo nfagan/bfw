@@ -21,24 +21,42 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-bfw_st.plot_fix_info( fix_info_outs ...
-  , 'mask_func', @(labels) findor(labels, {'eyes_nf', 'face'}) ...
-  , plot_params ...
-);
+for i = 1:2
+    if ( i == 1 )
+        mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
+        base_subdir = 'sham_and_stim';
+        gcats = {};
+    else
+        mask_func = @(labels) fcat.mask(labels ...
+            , @findor, {'eyes_nf', 'face'} ...
+            , @find, 'sham' ...
+        );
+        base_subdir = 'sham_only';
+        gcats = { 'previous_stim_type' };
+    end
 
-%%  amp vs vel
+    bfw_st.plot_fix_info( fix_info_outs ...
+      , 'mask_func', mask_func ...
+      , plot_params ...
+      , 'base_subdir', base_subdir ...
+      , 'gcats', gcats ...
+    );
+end
 
-bfw_st.stim_amp_vs_vel( plot_params );
-
-%%  isi
-stim_time_outs = params.stim_time_outs;
+% %%  amp vs vel
+% 
+% bfw_st.stim_amp_vs_vel( plot_params );
+% 
+% %%  isi
+% stim_time_outs = params.stim_time_outs;
 
 if ( isempty(stim_time_outs) )
   stim_time_outs = bfw_load_stim_events( make_params );
 end
-
+% 
 [isi, isi_labels] = make_isi( stim_time_outs );
 summarize_isi( isi, isi_labels', params );
+
 
 %%  fixation decay
 
@@ -48,10 +66,13 @@ if ( isempty(decay_outs) )
   decay_outs = bfw_st.stim_fixation_decay( make_params );
 end
 
-bfw_st.plot_fixation_decay( decay_outs, plot_params );
+bfw_st.plot_fixation_decay( decay_outs, plot_params ...
+    , 'mask', rowmask(decay_outs.labels) ...    %   'mask', find(decay_outs.labels, 'sham')
+    , 'gcats', {} ...   %   'gcats', 'previous_stim_type'
+);
 
 end
-
+% 
 function [isis, isi_labels] = make_isi(stim_time_outs)
 
 stim_labels = stim_time_outs.labels';

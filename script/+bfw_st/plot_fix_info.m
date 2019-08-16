@@ -3,6 +3,9 @@ function plot_fix_info(fix_info_outs, varargin)
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask_func = @(labels) rowmask(labels);
+defaults.gcats = {};
+defaults.xcats = {};
+defaults.pcats = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -17,18 +20,35 @@ counts = cellfun( @numel, calc_I );
 mask = params.mask_func( run_labels );
 
 [current_dur, current_dur_labels, current_dur_mask] = get_current_duration( fix_info_outs, params );
+[next_dur, next_dur_labels, next_dur_mask] = get_next_duration(fix_info_outs, params);
 
-plot_per_run_and_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+% per run for each day
+
 plot_per_run_and_day( durations, run_labels', mask, 'durations', params );
 plot_per_run_and_day( counts, run_labels', mask, 'counts', params );
+plot_per_run_and_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_per_run_and_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
-plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+% per day
+
+plot_per_day( durations, run_labels', mask, 'durations', params );
+plot_per_day( counts, run_labels', mask, 'counts', params );
+plot_per_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_per_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
+
+% per monkey (across days)
+
 plot_per_monkey( durations, run_labels', mask, 'durations', params );
 plot_per_monkey( counts, run_labels', mask, 'counts', params );
+plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_per_monkey( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
-plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+% across monkeys
+
 plot_across_monkeys( durations, run_labels', mask, 'durations', params );
 plot_across_monkeys( counts, run_labels', mask, 'counts', params );
+plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_across_monkeys( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 end
 
@@ -41,9 +61,18 @@ mask = params.mask_func( current_dur_labels );
 
 end
 
+function [next_duration, next_dur_labels, mask] = get_next_duration(fix_info_out, params)
+
+next_duration = fix_info_out.next_durations;
+next_dur_labels = fix_info_out.next_duration_labels;
+
+mask = params.mask_func( next_dur_labels );
+
+end
+
 function plot_per_run_and_day(data, labels, mask, kind, params)
 
-fig_cats = { 'task_type', 'unified_filename' };
+fig_cats = { 'task_type', 'session' };
 xcats = { 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region', 'unified_filename' };
@@ -52,14 +81,14 @@ plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_run', 
 
 end
 
-function plot_across_monkeys(data, labels, mask, kind, params)
+function plot_per_day(data, labels, mask, kind, params)
 
-fig_cats = { 'task_type' };
+fig_cats = { 'task_type', 'session' };
 xcats = { 'roi' };
 gcats = { 'stim_type' };
-pcats = { 'task_type', 'protocol_name', 'region' };
+pcats = { 'task_type', 'protocol_name', 'region', 'session' };
 
-plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'across_monkeys', params );
+plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_day', params );
 
 end
 
@@ -74,9 +103,24 @@ plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_monkey
 
 end
 
+function plot_across_monkeys(data, labels, mask, kind, params)
+
+fig_cats = { 'task_type' };
+xcats = { 'roi' };
+gcats = { 'stim_type' };
+pcats = { 'task_type', 'protocol_name', 'region' };
+
+plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'across_monkeys', params );
+
+end
+
 function plot_bars(data, labels, mask, fcats, xcats, gcats, pcats, kind, subdir, params)
 
 fig_I = findall_or_one( labels, fcats, mask );
+
+xcats = union( params.xcats, xcats );
+gcats = union( params.gcats, gcats );
+pcats = union( params.pcats, pcats );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
@@ -89,7 +133,7 @@ for i = 1:numel(fig_I)
   if ( params.do_save )
     save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
     shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats] );
+    dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats], params.prefix );
   end
 end
 

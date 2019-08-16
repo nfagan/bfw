@@ -8,5 +8,6 @@ end
 
 defaults.base_subdir = '';
 defaults.do_save = false;
+defaults.prefix = '';
 
 end

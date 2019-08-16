@@ -3,6 +3,8 @@ function plot_fixation_decay(decay_outs, varargin)
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask = rowmask( decay_outs.labels );
+defaults.gcats = {};
+defaults.pcats = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -12,21 +14,26 @@ t = decay_outs.t;
 
 mask = get_base_mask( labels, params.mask );
 
+plot_per_run_and_day (bounds, t, labels, mask, params);
 plot_per_monkey( bounds, t, labels, mask, params );
 plot_per_day( bounds, t, labels, mask, params );
 plot_across_days( bounds, t, labels, mask, params );
 
 end
 
-function plot_per_monkey(bounds, t, labels, mask, params)
+% per run for each day
 
-fig_cats = { 'task_type' };
-gcats = { 'stim_type' };
-pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'id_m1' };
+function plot_per_run_and_day (bounds, t, labels, mask, params)
 
-plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_monkey', params );
+fig_cats = { 'task_type' ,'session' };
+gcats = { 'stim_type', 'previous_stim_type' };
+pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'unified_filename' };
+
+plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_run', params );
 
 end
+
+% per day
 
 function plot_per_day(bounds, t, labels, mask, params)
 
@@ -38,6 +45,19 @@ plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_day', p
 
 end
 
+% per monkey
+
+function plot_per_monkey(bounds, t, labels, mask, params)
+
+fig_cats = { 'task_type' };
+gcats = { 'stim_type' };
+pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'id_m1' };
+
+plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_monkey', params );
+
+end
+
+% across monkeys
 
 function plot_across_days(bounds, t, labels, mask, params)
 
@@ -52,6 +72,9 @@ end
 function plot_combination(bounds, t, labels, mask, fig_cats, gcats, pcats, subdir, params)
 
 fig_I = findall_or_one( labels, fig_cats, mask );
+
+gcats = union( params.gcats, gcats );
+pcats = union( params.pcats, pcats );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
@@ -74,7 +97,7 @@ end
 function mask = get_base_mask(labels, mask)
 
 mask = fcat.mask( labels, mask ...
-  , @find, {'eyes_nf'} ...
+  , @find, {'eyes_nf','face'} ...
 );
 
 end

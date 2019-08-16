@@ -21,6 +21,10 @@ if ( isempty(outputs) )
   
   outs.current_durations = [];
   outs.current_duration_labels = fcat();
+  
+  outs.next_durations = [];
+  outs.next_duration_labels = fcat();
+  
 else
   outs = shared_utils.struct.soa( outputs );
 end
@@ -33,13 +37,13 @@ event_file = shared_utils.general.get( files, 'raw_events' );
 stim_file = shared_utils.general.get( files, 'stim' );
 meta_file = shared_utils.general.get( files, 'meta' );
 stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
-start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
+%start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
 
-num_day_time_quantiles = params.num_day_time_quantiles;
+%num_day_time_quantiles = params.num_day_time_quantiles;
 
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
 bfw_st.add_per_stim_labels( stim_labels, stim_ts );
-add_day_time_quantile_labels( stim_labels, stim_ts, num_day_time_quantiles, start_time_file );
+%add_day_time_quantile_labels( stim_labels, stim_ts, num_day_time_quantiles, start_time_file );
 
 event_labels = fcat.from( event_file.labels, event_file.categories );
 
@@ -65,6 +69,9 @@ current_duration_labels = fcat();
 current_duration_each = { 'event_type', 'looks_by', 'roi' };
 current_duration_I = findall( event_labels, current_duration_each );
 
+next_durations = [];
+next_duration_labels = fcat();
+
 for i = 1:numel(stim_ts)
   within_range = starts >= stim_ts(i)+look_back & starts < stim_ts(i)+look_ahead;
   
@@ -72,6 +79,7 @@ for i = 1:numel(stim_ts)
     curr_dur_ind = current_duration_I{j};
     
     nearest_start = find( starts(curr_dur_ind) < stim_ts(i), 1, 'last' );
+    next_start = find( starts(curr_dur_ind) > stim_ts(i) , 1 , 'first' );
   
     if ( ~isempty(nearest_start) )
       nearest_ind = curr_dur_ind(nearest_start);
@@ -81,6 +89,16 @@ for i = 1:numel(stim_ts)
         make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );
       
       append( current_duration_labels, subset_current_dur_labels );      
+    end
+    
+    if ( ~isempty(next_start) )
+      next_ind = curr_dur_ind(next_start);
+      
+      next_durations(end+1, 1) = durs(next_ind);
+      subset_next_dur_labels = ...
+        make_labels( event_labels, stim_labels, next_ind, i, stim_ids );
+      
+      append( next_duration_labels, subset_next_dur_labels );      
     end
   end
   
@@ -100,34 +118,37 @@ outs.labels = duration_labels;
 outs.current_durations = current_durations;
 outs.current_duration_labels = current_duration_labels;
 
-end
-
-function labels = add_day_time_quantile_labels(labels, stim_ts, num_quantiles, start_time_file)
-
-cat_name = 'day_time_quantile';
-addcat( labels, cat_name );
-
-start_time = start_time_file.start_time;
-session_dur = start_time_file.stop_time - start_time_file.start_time;
-
-quant_dur = session_dur / (num_quantiles + 1);
-had_match = false( size(stim_ts) );
-
-for i = 1:num_quantiles+1
-  min_dur = start_time + (i-1) * quant_dur;
-  max_dur = min_dur + quant_dur;
-  
-  within_quant = stim_ts >= min_dur & stim_ts < max_dur;
-  had_match(within_quant) = true;
-  
-  for j = 1:numel(stim_ts)
-    if ( within_quant(j) )
-      setcat( labels, cat_name, sprintf('%s__%d', cat_name, i), j );
-    end
-  end
-end
+outs.next_durations = next_durations;
+outs.next_duration_labels = next_duration_labels;
 
 end
+
+% function labels = add_day_time_quantile_labels(labels, stim_ts, num_quantiles, start_time_file)
+% 
+% cat_name = 'day_time_quantile';
+% addcat( labels, cat_name );
+% 
+% start_time = start_time_file.start_time;
+% session_dur = start_time_file.stop_time - start_time_file.start_time;
+% 
+% quant_dur = session_dur / (num_quantiles + 1);
+% had_match = false( size(stim_ts) );
+% 
+% for i = 1:num_quantiles+1
+%   min_dur = start_time + (i-1) * quant_dur;
+%   max_dur = min_dur + quant_dur;
+%   
+%   within_quant = stim_ts >= min_dur & stim_ts < max_dur;
+%   had_match(within_quant) = true;
+%   
+%   for j = 1:numel(stim_ts)
+%     if ( within_quant(j) )
+%       setcat( labels, cat_name, sprintf('%s__%d', cat_name, i), j );
+%     end
+%   end
+% end
+% 
+% end
 
 function subset_labs = make_labels(event_labels, stim_labels, event_inds, stim_ind, stim_ids)
 
