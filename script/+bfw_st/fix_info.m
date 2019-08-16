@@ -4,7 +4,7 @@ defaults = bfw.get_common_make_defaults();
 defaults.config = bfw_st.default_config();
 defaults.look_ahead = 5;
 defaults.look_back = 0;
-defaults.num_day_time_quantiles = 1;
+defaults.num_day_time_quantiles = 2;
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -131,10 +131,10 @@ addcat( labels, cat_name );
 start_time = start_time_file.first_run_start_time;
 session_dur = start_time_file.last_run_stop_time - start_time;
 
-quant_dur = session_dur / (num_quantiles + 1);
+quant_dur = session_dur / num_quantiles;
 had_match = false( size(stim_ts) );
 
-for i = 1:num_quantiles+1
+for i = 1:num_quantiles
   min_dur = start_time + (i-1) * quant_dur;
   max_dur = min_dur + quant_dur;
   
