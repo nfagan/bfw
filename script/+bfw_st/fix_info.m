@@ -107,8 +107,8 @@ function labels = add_day_time_quantile_labels(labels, stim_ts, num_quantiles, s
 cat_name = 'day_time_quantile';
 addcat( labels, cat_name );
 
-start_time = start_time_file.start_time;
-session_dur = start_time_file.stop_time - start_time_file.start_time;
+start_time = start_time_file.first_run_start_time;
+session_dur = start_time_file.last_run_stop_time - start_time;
 
 quant_dur = session_dur / (num_quantiles + 1);
 had_match = false( size(stim_ts) );
