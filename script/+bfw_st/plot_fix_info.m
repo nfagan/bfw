@@ -128,7 +128,7 @@ xcats = xcats(:)';
 gcats = gcats(:)';
 pcats = pcats(:)';
 
-spec = unique( [xcats, gcats, pcats] );
+spec = unique( [xcats, gcats, pcats, fcats] );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
