@@ -18,6 +18,8 @@ function [data, labels, freqs, t, is_ok] = load_time_frequency_measure(mats, var
 %     function receives the loaded file as an input and returns a single
 %     output. In particular:
 %
+%       'load_func' -> Handle to a function that loads the file into one
+%       struct.
 %       'get_data_func' -> Handle to a function that returns `data`.
 %       'get_labels_func' -> Handle to a function that returns `labels`.
 %       'get_time_func' -> Handle to a function that returns `t`.
@@ -56,6 +58,7 @@ defaults.get_labels_func = @(x) fcat.from(x);
 defaults.get_time_func = @(x) x.t;
 defaults.get_freqs_func = @(x) x.f;
 defaults.check_skip_func = @(x) false;
+defaults.load_func = @shared_utils.io.fload;
 defaults.uniform_output = true;
 
 params = bfw.parsestruct( defaults, varargin );
@@ -70,7 +73,7 @@ is_ok = true( size(all_data) );
 parfor i = 1:numel(mats)
   shared_utils.general.progress( i, numel(mats) );
   
-  measure_file = shared_utils.io.fload( mats{i} );
+  measure_file = params.load_func( mats{i} );
   
   if ( params.check_skip_func(measure_file) )
     is_ok(i) = false;

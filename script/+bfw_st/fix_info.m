@@ -40,12 +40,8 @@ meta_file = shared_utils.general.get( files, 'meta' );
 stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
 start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
 
-num_day_time_quantiles = params.num_day_time_quantiles;
-
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
-bfw_st.add_per_stim_labels( stim_labels, stim_ts );
-bfw_st.add_day_time_quantile_labels( stim_labels, stim_ts, num_day_time_quantiles, start_time_file );
-bfw_st.add_run_time_quantile_labels( sitm_labels, stim_ts, num_day_time_quantiles, start_time_file );
+update_labels( stim_labels, stim_ts, start_time_file, params );
 
 event_labels = fcat.from( event_file.labels, event_file.categories );
 
@@ -122,6 +118,16 @@ outs.current_duration_labels = current_duration_labels;
 
 outs.next_durations = next_durations;
 outs.next_duration_labels = next_duration_labels;
+
+end
+
+function update_labels(stim_labels, stim_ts, start_time_file, params)
+
+bfw_st.add_per_stim_labels( stim_labels, stim_ts );
+bfw_st.add_day_time_quantile_labels( stim_labels, stim_ts, params.num_day_time_quantiles, start_time_file );
+bfw_st.add_run_time_quantile_labels( stim_labels, stim_ts, params.num_run_time_quantiles, start_time_file );
+
+prune( stim_labels );
 
 end
 

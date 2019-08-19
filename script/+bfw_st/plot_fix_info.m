@@ -3,6 +3,7 @@ function plot_fix_info(fix_info_outs, varargin)
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask_func = @(labels) rowmask(labels);
+defaults.before_plot_func = @(varargin) deal(varargin{1:nargout});
 defaults.gcats = {};
 defaults.xcats = {};
 defaults.pcats = {};
@@ -127,11 +128,15 @@ xcats = xcats(:)';
 gcats = gcats(:)';
 pcats = pcats(:)';
 
+spec = unique( [xcats, gcats, pcats] );
+
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
   
   pltdat = data(fig_I{i});
   pltlabs = prune( labels(fig_I{i}) );
+  
+  [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
   
   axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
   
