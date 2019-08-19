@@ -28,6 +28,7 @@ for i = 1:4
         mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
         base_subdir = 'sham_and_stim';
         gcats = {};
+        pcats = {};
     elseif (i ==2) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
@@ -35,11 +36,13 @@ for i = 1:4
         );
         base_subdir = 'sham_only';
         gcats = { 'previous_stim_type' };
+        pcats = {};
     elseif (i==3)
          mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'});
         base_subdir = 'sham_and_stim_quantiles';
         gcats = { 'day_time_quantile' };
+        pcats = {};
     else
         mask_func = @(labels) fcat.mask(labels...
         , @findor, {'eyes_nf', 'face'}...
@@ -56,6 +59,7 @@ for i = 1:4
       , plot_params ...
       , 'base_subdir', base_subdir ...
       , 'gcats', gcats ...
+      , 'pcats', pcats ...
     );
 end
 
@@ -85,9 +89,6 @@ end
 
 for i = 1:4
     if ( i == 1 )
-        mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
-        %base_subdir = 'sham_and_stim';
-        
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
         , 'mask', rowmask(decay_outs.labels) ...    %   'mask', find(decay_outs.labels, 'sham')
         , 'gcats', {} ...   %   'gcats', 'previous_stim_type'
@@ -95,11 +96,6 @@ for i = 1:4
         );
 
     elseif (i == 2) 
-        mask_func = @(labels) fcat.mask(labels ...
-            , @findor, {'eyes_nf', 'face'} ...
-            , @find, 'sham' ...
-        );
-        %base_subdir = 'sham_only';
         
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
     , 'mask', find(decay_outs.labels, 'sham')...
@@ -108,10 +104,6 @@ for i = 1:4
     );
 
     elseif ( i == 3 )
-
-         mask_func = @(labels) fcat.mask(labels ...
-            , @findor, {'eyes_nf', 'face'});
-        %base_subdir = 'sham_and_stim_quantiles';
         
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
         , 'mask', rowmask(decay_outs.labels) ...    %   'mask', find(decay_outs.labels, 'sham')
@@ -120,11 +112,6 @@ for i = 1:4
         );
     
     else 
-        
-        mask_func = @(labels) fcat.mask(labels...
-        , @findor, {'eyes_nf', 'face'}...
-        , @find, 'sham'...
-         );
         base_subdir = 'sham_only_quantiles';
         
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...

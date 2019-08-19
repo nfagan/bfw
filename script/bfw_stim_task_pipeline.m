@@ -18,6 +18,8 @@ bfw.make_stim_meta( params );
 
 bfw.make_sync_times( params );
 bfw.make_stimulation_times( params );
+bfw.make_plex_fp_time( params );
+bfw.make_plex_start_stop_times( params );
 
 %%  edfs
 

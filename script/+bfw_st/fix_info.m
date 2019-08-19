@@ -5,6 +5,7 @@ defaults.config = bfw_st.default_config();
 defaults.look_ahead = 5;
 defaults.look_back = 0;
 defaults.num_day_time_quantiles = 2;
+defaults.num_run_time_quantiles = 2;
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -44,6 +45,7 @@ num_day_time_quantiles = params.num_day_time_quantiles;
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
 bfw_st.add_per_stim_labels( stim_labels, stim_ts );
 bfw_st.add_day_time_quantile_labels( stim_labels, stim_ts, num_day_time_quantiles, start_time_file );
+bfw_st.add_run_time_quantile_labels( sitm_labels, stim_ts, num_day_time_quantiles, start_time_file );
 
 event_labels = fcat.from( event_file.labels, event_file.categories );
 
