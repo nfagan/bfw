@@ -18,6 +18,7 @@ calc_each = { 'roi', 'unified_filename', 'stim_type', 'stim_id', 'looks_by' };
 durations = bfw.row_sum( fix_info_outs.durations, calc_I );
 counts = cellfun( @numel, calc_I );
 mask = params.mask_func( run_labels );
+%bfw_st.stim_amp_vs_vel
 
 [current_dur, current_dur_labels, current_dur_mask] = get_current_duration( fix_info_outs, params );
 [next_dur, next_dur_labels, next_dur_mask] = get_next_duration(fix_info_outs, params);
@@ -83,7 +84,7 @@ end
 
 function plot_per_day(data, labels, mask, kind, params)
 
-fig_cats = { 'task_type', 'session' };
+fig_cats = { 'session' };
 xcats = { 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region', 'session' };
@@ -94,7 +95,7 @@ end
 
 function plot_per_monkey(data, labels, mask, kind, params)
 
-fig_cats = { 'task_type', 'id_m1' };
+fig_cats = { 'id_m1' };
 xcats = { 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region', 'id_m1' };
@@ -106,7 +107,7 @@ end
 function plot_across_monkeys(data, labels, mask, kind, params)
 
 fig_cats = { 'task_type' };
-xcats = { 'roi' };
+xcats = 'roi';
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region' };
 
@@ -118,9 +119,13 @@ function plot_bars(data, labels, mask, fcats, xcats, gcats, pcats, kind, subdir,
 
 fig_I = findall_or_one( labels, fcats, mask );
 
-xcats = union( params.xcats, xcats );
-gcats = union( params.gcats, gcats );
-pcats = union( params.pcats, pcats );
+xcats = csunion( params.xcats, xcats );
+gcats = csunion( params.gcats, gcats );
+pcats = csunion( params.pcats, pcats );
+
+xcats = xcats(:)';
+gcats = gcats(:)';
+pcats = pcats(:)';
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
@@ -133,11 +138,12 @@ for i = 1:numel(fig_I)
   if ( params.do_save )
     save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
     shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats], params.prefix );
+    dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats]);
+  %dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats], params.prefix );
   end
 end
-
 end
+
 
 function labels = handle_labels(labels)
 

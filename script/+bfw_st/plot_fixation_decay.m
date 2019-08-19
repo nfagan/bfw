@@ -25,9 +25,9 @@ end
 
 function plot_per_run_and_day (bounds, t, labels, mask, params)
 
-fig_cats = { 'task_type' ,'session' };
-gcats = { 'stim_type', 'previous_stim_type' };
-pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'unified_filename' };
+fig_cats = { 'task_type' ,'roi', 'session' };
+gcats = { 'stim_type' };
+pcats = { 'task_type', 'roi', 'protocol_name',  'region', 'unified_filename' };
 
 plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_run', params );
 
@@ -37,7 +37,7 @@ end
 
 function plot_per_day(bounds, t, labels, mask, params)
 
-fig_cats = { 'task_type', 'session' };
+fig_cats = { 'task_type', 'session' ,'roi'};
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'session' };
 
@@ -49,7 +49,7 @@ end
 
 function plot_per_monkey(bounds, t, labels, mask, params)
 
-fig_cats = { 'task_type' };
+fig_cats = { 'task_type' , 'id_m1', 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'roi', 'region', 'id_m1' };
 
@@ -61,7 +61,7 @@ end
 
 function plot_across_days(bounds, t, labels, mask, params)
 
-fig_cats = { 'task_type' };
+fig_cats = { 'task_type' , 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'roi', 'region' };
 
@@ -73,8 +73,11 @@ function plot_combination(bounds, t, labels, mask, fig_cats, gcats, pcats, subdi
 
 fig_I = findall_or_one( labels, fig_cats, mask );
 
-gcats = union( params.gcats, gcats );
-pcats = union( params.pcats, pcats );
+gcats = csunion( params.gcats, gcats );
+pcats = csunion( params.pcats, pcats );
+
+gcats = gcats(:)';
+pcats = pcats(:)';
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();

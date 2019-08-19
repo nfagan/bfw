@@ -7,10 +7,11 @@ defaults.look_ahead = 1e3;
 defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
+defaults.num_day_time_quantiles = 2;
 
 inputs = { 'aligned_raw_samples/position', 'aligned_raw_samples/time' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations' ...
-  , 'unified', 'stim', 'stim_meta', 'meta', 'rois' };
+  , 'unified', 'stim', 'stim_meta', 'meta', 'rois', 'plex_start_stop_times' };
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
@@ -41,9 +42,12 @@ stim_file = general.get( files, 'stim' );
 roi_file = general.get( files, 'rois' );
 meta_file = general.get( files, 'meta' );
 stim_meta_file = general.get( files, 'stim_meta' );
+start_time_file = general.get( files, 'plex_start_stop_times' );
 
 [stim_times, stim_labs] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
 bfw_st.add_per_stim_labels( stim_labs, stim_times );
+bfw_st.add_day_time_quantile_labels( stim_labs, stim_times, params.num_day_time_quantiles, start_time_file );
+
 addcat( stim_labs, 'roi' );
 
 stim_start_inds = bfw_it.find_nearest_stim_time( t_file.t, stim_times );
