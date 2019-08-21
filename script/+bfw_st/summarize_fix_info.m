@@ -115,10 +115,6 @@ use_spec = setdiff( getcats(labels) ...
 , {'stim_id', 'stim_order', 'next_stim_type', 'previous_stim_type', 'stim_type'} );
 [d, l] = bfw_st.trial_wise_stim_type_difference( data, labels', use_spec );
 
-% mask_eyes = find( l, 'eyes_nf' );
-% d = d(mask_eyes);
-% l = l(mask_eyes);
-
 end
 
 function [data, labels] = run_level_average(data, labels, spec)
