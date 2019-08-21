@@ -21,7 +21,7 @@ end
 
 is_average_at_run_levels = [true, false];
 is_run_halves = [true, false];
-is_trial_wise_subtractions = [true, false];
+is_trial_wise_subtractions = [true];
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
  , is_trial_wise_subtractions );
@@ -67,13 +67,15 @@ for idx = 1:num_combs
             , @findor, {'eyes_nf', 'face'} ...
             , @find, 'sham' ...
         );
-        base_subdir = sprintf( '%s%s', base_subdir, 'sham_only');
+        base_subdir = sprintf( '%s%s', base_subdir, 'sham_only_previous');
         gcats{end+1} = 'previous_stim_type';
     elseif ( i == 3 )
          mask_func = @(labels) fcat.mask(labels ...
-            , @findor, {'eyes_nf', 'face'});
-        base_subdir = 'sham_and_stim_quantiles';
-        base_subdir = sprintf( '%s%s', base_subdir, 'day_time_quantile' );
+            , @findor, {'eyes_nf', 'face'}...
+            , @findnone, 'previous_undefined'...
+         );
+        gcats{end+1}='day_time_quantile' ;
+        base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles');
     elseif (i == 4 ) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
@@ -112,6 +114,10 @@ function [d, l] = trial_wise_subtraction(data, labels, spec)
 use_spec = setdiff( getcats(labels) ...
 , {'stim_id', 'stim_order', 'next_stim_type', 'previous_stim_type', 'stim_type'} );
 [d, l] = bfw_st.trial_wise_stim_type_difference( data, labels', use_spec );
+
+% mask_eyes = find( l, 'eyes_nf' );
+% d = d(mask_eyes);
+% l = l(mask_eyes);
 
 end
 
