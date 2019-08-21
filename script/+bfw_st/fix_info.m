@@ -40,20 +40,25 @@ meta_file = shared_utils.general.get( files, 'meta' );
 stim_meta_file = shared_utils.general.get( files, 'stim_meta' );
 start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
 
+% Extract the stim times and labels for each stim.
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
 update_labels( stim_labels, stim_ts, start_time_file, params );
 
+% Get start & stop times of looking events, and the duration of each event.
+starts = bfw.event_column( event_file, 'start_time' );
+stops = bfw.event_column( event_file, 'stop_time' );
+
+durs = stops - starts;
+
+% Make labels for the looking events -- including which roi and actor 
+% (m1, m2, or mutual) are associated with each event.
 event_labels = fcat.from( event_file.labels, event_file.categories );
+add_duration_quantile_labels( event_labels, durs );
 
 addcat( event_labels, 'stim_id' );
 addcat( stim_labels, 'stim_id' );
 
 stim_ids = arrayfun( @(x) sprintf('stim-%s', shared_utils.general.uuid()), 1:rows(stim_labels), 'un', 0 );
-
-starts = bfw.event_column( event_file, 'start_time' );
-stops = bfw.event_column( event_file, 'stop_time' );
-
-durs = stops - starts;
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;
@@ -64,7 +69,7 @@ durations = [];
 current_durations = [];
 current_duration_labels = fcat();
 
-current_duration_each = { 'event_type', 'looks_by', 'roi' };
+current_duration_each = event_specificity();
 current_duration_I = findall( event_labels, current_duration_each );
 
 next_durations = [];
@@ -118,6 +123,36 @@ outs.current_duration_labels = current_duration_labels;
 
 outs.next_durations = next_durations;
 outs.next_duration_labels = next_duration_labels;
+
+end
+
+function spec = event_specificity()
+
+spec = { 'event_type', 'looks_by', 'roi' };
+
+end
+
+function labels = add_duration_quantile_labels(labels, durations)
+
+each = event_specificity();
+
+[quants, each_I] = dsp3.quantiles_each( durations, labels, 2, each, {} );
+dsp3.add_quantile_labels( labels, quants, 'duration_quantile' );
+
+for i = 1:numel(each_I)  
+  src_ind = each_I{i}(1:end-1);
+  dest_ind = each_I{i}(2:end);
+  
+  quant_labels = cellstr( labels, 'duration_quantile', src_ind );
+  quant_labels = cellfun( @(x) sprintf('previous_%s', x), quant_labels, 'un', 0 );
+  
+  is_missing = isnan( quants(src_ind) );
+  quant_labels(is_missing) = [];
+  dest_ind(is_missing) = [];
+  
+  addcat( labels, 'previous_duration_quantile' );
+  setcat( labels, 'previous_duration_quantile', quant_labels, dest_ind );
+end
 
 end
 

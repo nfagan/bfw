@@ -1,6 +1,6 @@
-function [parsed, c] = parse_prefixed(labels, cat)
+function [parsed, c] = parse_prefixed(labels, cat, varargin)
 
-c = combs( labels, cat );
+c = combs( labels, cat, varargin{:} );
 parsed = fcat.parse( c, sprintf('%s__', cat) );
 
 end
