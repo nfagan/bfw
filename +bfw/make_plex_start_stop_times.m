@@ -13,7 +13,13 @@ outputs = 'plex_start_stop_times';
 runner.convert_to_non_saving_with_output();
 
 results = runner.run( @gather_starts, params.session_duration );
-outputs = soa( extract_outputs_from_results(results) );
+outputs = extract_outputs_from_results( results );
+
+if ( isempty(outputs) )
+  return
+end
+
+outputs = soa( outputs );
 
 session_I = findall( outputs.labels, 'session' );
 
