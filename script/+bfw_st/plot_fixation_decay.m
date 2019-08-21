@@ -3,6 +3,8 @@ function plot_fixation_decay(decay_outs, varargin)
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask = rowmask( decay_outs.labels );
+defaults.before_plot_func = @(varargin) deal(varargin{1:nargout});
+
 defaults.gcats = {};
 defaults.pcats = {};
 
@@ -85,6 +87,8 @@ for i = 1:numel(fig_I)
   
   pltdat = bounds(fig_I{i}, :);
   pltlabs = prune( labels(fig_I{i}) );
+  
+  [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
   
   axs = pl.lines( pltdat, pltlabs, gcats, pcats );
   
