@@ -26,10 +26,10 @@ mask = params.mask_func( run_labels );
 
 % per run for each day
 
-plot_per_run_and_day( durations, run_labels', mask, 'durations', params );
-plot_per_run_and_day( counts, run_labels', mask, 'counts', params );
-plot_per_run_and_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
-plot_per_run_and_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
+% plot_per_run_and_day( durations, run_labels', mask, 'durations', params );
+% plot_per_run_and_day( counts, run_labels', mask, 'counts', params );
+% plot_per_run_and_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+% plot_per_run_and_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 % per day
 
@@ -72,16 +72,16 @@ mask = params.mask_func( next_dur_labels );
 
 end
 
-function plot_per_run_and_day(data, labels, mask, kind, params)
-
-fig_cats = { 'task_type', 'session' };
-xcats = { 'roi' };
-gcats = { 'stim_type' };
-pcats = { 'task_type', 'protocol_name', 'region', 'unified_filename' };
-
-plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_run', params );
-
-end
+% function plot_per_run_and_day(data, labels, mask, kind, params)
+% 
+% fig_cats = { 'task_type', 'session' };
+% xcats = { 'roi' };
+% gcats = { 'stim_type' };
+% pcats = { 'task_type', 'protocol_name', 'region', 'unified_filename' };
+% 
+% plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_run', params );
+% 
+% end
 
 function plot_per_day(data, labels, mask, kind, params)
 

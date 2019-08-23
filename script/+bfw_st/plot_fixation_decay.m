@@ -16,7 +16,7 @@ t = decay_outs.t;
 
 mask = get_base_mask( labels, params.mask );
 
-plot_per_run_and_day (bounds, t, labels, mask, params);
+%plot_per_run_and_day (bounds, t, labels, mask, params);
 plot_per_monkey( bounds, t, labels, mask, params );
 plot_per_day( bounds, t, labels, mask, params );
 plot_across_days( bounds, t, labels, mask, params );
@@ -25,15 +25,15 @@ end
 
 % per run for each day
 
-function plot_per_run_and_day (bounds, t, labels, mask, params)
-
-fig_cats = { 'task_type' ,'roi', 'session' };
-gcats = { 'stim_type' };
-pcats = { 'task_type', 'roi', 'protocol_name',  'region', 'unified_filename' };
-
-plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_run', params );
-
-end
+% function plot_per_run_and_day (bounds, t, labels, mask, params)
+% 
+% fig_cats = { 'task_type' ,'roi', 'session' };
+% gcats = { 'stim_type' };
+% pcats = { 'task_type', 'roi', 'protocol_name',  'region', 'unified_filename' };
+% 
+% plot_combination( bounds, t, labels', mask, fig_cats, gcats, pcats, 'per_run', params );
+% 
+% end
 
 % per day
 

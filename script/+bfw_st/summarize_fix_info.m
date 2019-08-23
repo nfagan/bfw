@@ -19,9 +19,9 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_average_at_run_levels = [true, false];
-is_run_halves = [true, false];
-is_trial_wise_subtractions = [true];
+is_average_at_run_levels = true;
+is_run_halves = true;
+is_trial_wise_subtractions = true;
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
  , is_trial_wise_subtractions );
@@ -114,6 +114,10 @@ function [d, l] = trial_wise_subtraction(data, labels, spec)
 use_spec = setdiff( getcats(labels) ...
 , {'stim_id', 'stim_order', 'next_stim_type', 'previous_stim_type', 'stim_type'} );
 [d, l] = bfw_st.trial_wise_stim_type_difference( data, labels', use_spec );
+
+% mask_eyes = find( l, 'eyes_nf' );
+% d = d(mask_eyes);
+% l = l(mask_eyes);
 
 end
 
