@@ -93,12 +93,16 @@ for i = 1:numel(fig_I)
   
   [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
   
-  axs = pl.lines( pltdat, pltlabs, gcats, pcats );
-  
-  if ( params.do_save )
-    save_p = bfw_st.stim_summary_plot_p( params, 'fix_decay', subdir );
-    shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats] );
+  try
+    axs = pl.lines( pltdat, pltlabs, gcats, pcats );
+
+    if ( params.do_save )
+      save_p = bfw_st.stim_summary_plot_p( params, 'fix_decay', subdir );
+      shared_utils.plot.fullscreen( gcf );
+      dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats] );
+    end
+  catch err
+    warning( err.message );
   end
 end
 

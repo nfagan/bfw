@@ -23,9 +23,10 @@ end
 
 is_average_at_run_levels = [true false];
 is_run_halves = false;
+is_long_shorts = false;
 %is_trial_wise_subtractions = [true, false];
 
-cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves );
+cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves, is_long_shorts );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
@@ -33,6 +34,7 @@ for idx = 1:num_combs
   is_average_at_run_level = is_average_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
   %is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
+  is_long_short = is_long_shorts(comb(3));
   
 
   for i = 1:5
@@ -53,12 +55,18 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
     end 
 
+    if ( is_long_short )
+      base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
+      pcats{end+1} = 'preceding_stim_duration_quantile';
+    end
+
     before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
     
     if ( i == 1 )
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
         , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
         , 'gcats', {} ...   %   'gcats', 'previous_stim_type'
+        , 'pcats', pcats ...
         , 'base_subdir',sprintf( '%s%s', base_subdir, 'sham_and_stim' )...
         , 'before_plot_func', before_plot_func ...
         );
@@ -69,6 +77,7 @@ for idx = 1:num_combs
     , 'mask', find(decay_outs.labels, 'sham', mask)...
     , 'gcats', {'previous_stim_type'} ...  
     , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_only_previous')...
+    , 'pcats', pcats ...
     , 'before_plot_func', before_plot_func ...
     );
     
@@ -78,6 +87,7 @@ for idx = 1:num_combs
         , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
         , 'pcats', {'day_time_quantile'} ...   %   'gcats', 'previous_stim_type'
         , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles')...
+        , 'pcats', pcats ...
         , 'before_plot_func', before_plot_func ...
         );
     
@@ -87,6 +97,7 @@ for idx = 1:num_combs
         , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
         , 'gcats', {'previous_stim_type'} ...   %   'gcats', 'previous_stim_type'
         , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_previous' )...
+        , 'pcats', pcats ...
         , 'before_plot_func', before_plot_func ...
         );
         

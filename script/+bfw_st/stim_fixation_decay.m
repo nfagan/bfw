@@ -104,3 +104,25 @@ outs.bounds = bounds;
 outs.labels = labels;
 
 end
+
+function apply_preceding_stim_duration_quantile_labels(src_labels, dest_labels)
+
+quant_cat = 'preceding_stim_duration_quantile';
+addcat( dest_labels, quant_cat );
+[src_stim_id_I, src_stim_ids] = findall( src_labels, 'stim_id' );
+
+for i = 1:numel(src_stim_id_I)
+  dest_stim_ind = find( dest_labels, src_stim_ids{i} );
+  src_label = cellstr( src_labels, quant_cat, src_stim_id_I{i} );
+  setcat( dest_labels, quant_cat, src_label, dest_stim_ind );  
+end
+
+end
+
+function add_preceding_stim_duration_quantile_labels(durations, labels)
+
+each = day_event_specificity();
+[quants, each_I] = dsp3.quantiles_each( durations, labels, 2, each, {} );
+dsp3.add_quantile_labels( labels, quants, 'preceding_stim_duration_quantile' );
+
+end
