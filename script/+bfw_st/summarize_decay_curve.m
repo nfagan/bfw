@@ -28,7 +28,7 @@ end
 
 
 is_average_at_run_levels = true;
-is_run_halves = true;
+is_run_halves = false;
 %is_trial_wise_subtractions = [true, false];
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves );
