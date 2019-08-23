@@ -19,7 +19,7 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_average_at_run_levels = true;
+is_average_at_run_levels = [true false];
 is_run_halves = false;
 is_trial_wise_subtractions = [true false];
 

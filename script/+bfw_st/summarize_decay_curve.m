@@ -27,7 +27,7 @@ if ( isempty(decay_outs) )
 end
 
 
-is_average_at_run_levels = true;
+is_average_at_run_levels = [true false];
 is_run_halves = false;
 %is_trial_wise_subtractions = [true, false];
 
