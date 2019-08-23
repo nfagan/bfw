@@ -82,7 +82,7 @@ pcats = csunion( params.pcats, pcats );
 gcats = gcats(:)';
 pcats = pcats(:)';
 
-spec = unique( [xcats, gcats, pcats, fcats] );
+spec = unique( [gcats, pcats, fig_cats] );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
