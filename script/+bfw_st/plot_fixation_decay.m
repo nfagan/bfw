@@ -73,6 +73,7 @@ end
 
 function plot_combination(bounds, t, labels, mask, fig_cats, gcats, pcats, subdir, params)
 
+
 fig_I = findall_or_one( labels, fig_cats, mask );
 
 gcats = csunion( params.gcats, gcats );
@@ -80,6 +81,8 @@ pcats = csunion( params.pcats, pcats );
 
 gcats = gcats(:)';
 pcats = pcats(:)';
+
+spec = unique( [xcats, gcats, pcats, fcats] );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
