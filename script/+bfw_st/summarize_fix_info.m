@@ -22,9 +22,10 @@ end
 is_average_at_run_levels = [true false];
 is_run_halves = false;
 is_trial_wise_subtractions = [true false];
+is_short_longs = [true, false];
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
- , is_trial_wise_subtractions );
+ , is_trial_wise_subtractions, is_short_longs );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
@@ -32,6 +33,7 @@ for idx = 1:num_combs
   is_average_at_run_level = is_average_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
+  is_short_long = is_short_longs(comb(4));
 
   for i = 1:5
     before_plot_funcs = {};
@@ -42,10 +44,11 @@ for idx = 1:num_combs
 
     if ( is_average_at_run_level )
       before_plot_funcs{end+1} = @run_level_average;
-    end 
+    end
 
     before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
     
+    xcats = {};
     gcats = {};
     pcats = {};
     base_subdir = '';
@@ -57,6 +60,11 @@ for idx = 1:num_combs
 
     if ( is_trial_wise_subtraction )
       base_subdir = sprintf( '%s%s', base_subdir, 'trial_wise_subtraction_' );
+    end
+    
+    if ( is_short_long )
+      base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
+      pcats{end+1} = 'preceding_stim_duration_quantile';
     end
 
     if ( i == 1 )
@@ -93,7 +101,9 @@ for idx = 1:num_combs
       , 'mask_func', mask_func ...
       , plot_params ...
       , 'base_subdir', base_subdir ...
+      , 'xcats', xcats ...
       , 'gcats', gcats ...
+      , 'pcats', pcats ...
       , 'before_plot_func', before_plot_func ...
     );
   end
