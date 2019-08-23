@@ -13,11 +13,6 @@ params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
 plot_params = shared_utils.struct.intersect( params, plot_defaults );
 
-
-%%  amp vs vel
- 
-%bfw_st.stim_amp_vs_vel
-
 %%  fixation decay
 
 decay_outs = params.decay_outs;
@@ -25,7 +20,6 @@ decay_outs = params.decay_outs;
 if ( isempty(decay_outs) )
   decay_outs = bfw_st.stim_fixation_decay( make_params );
 end
-
 
 is_average_at_run_levels = [true false];
 is_run_halves = false;
@@ -41,26 +35,25 @@ for idx = 1:num_combs
   %is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   
 
-for i = 1:5
+  for i = 1:5
     before_plot_funcs={};
-    
-
-    if ( is_average_at_run_level )
-      before_plot_funcs{end+1} = @run_level_average;
-    end 
-
-    before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
     
     gcats = {};
     pcats = {};
     base_subdir = '';
     mask = findnone( decay_outs.labels, 'previous_undefined' );
       
-     if ( is_run_half )
+    if ( is_run_half )
       gcats{end+1} = 'run_time_quantile';
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
-     end
+    end
+    
+    if ( is_average_at_run_level )
+      before_plot_funcs{end+1} = @run_level_average;
+      base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
+    end 
 
+    before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
     
     if ( i == 1 )
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
@@ -109,9 +102,7 @@ for i = 1:5
         ); 
         
     end
-    
-    end
-
+  end
 end
 
 end

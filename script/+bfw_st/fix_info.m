@@ -26,9 +26,16 @@ if ( isempty(outputs) )
   outs.next_durations = [];
   outs.next_duration_labels = fcat();
   
+  outs.preceding_stim_durations = [];
+  outs.preceding_stim_labels = fcat();
 else
   outs = shared_utils.struct.soa( outputs );
 end
+
+add_preceding_stim_duration_quantile_labels( outs.preceding_stim_durations, outs.preceding_stim_labels );
+apply_preceding_stim_duration_quantile_labels( outs.preceding_stim_labels, outs.labels );
+apply_preceding_stim_duration_quantile_labels( outs.preceding_stim_labels, outs.current_duration_labels );
+apply_preceding_stim_duration_quantile_labels( outs.preceding_stim_labels, outs.next_duration_labels );
 
 end
 
@@ -53,12 +60,14 @@ durs = stops - starts;
 % Make labels for the looking events -- including which roi and actor 
 % (m1, m2, or mutual) are associated with each event.
 event_labels = fcat.from( event_file.labels, event_file.categories );
-add_duration_quantile_labels( event_labels, durs );
+% add_duration_quantile_labels( event_labels, durs );
 
-addcat( event_labels, 'stim_id' );
-addcat( stim_labels, 'stim_id' );
+addcat( event_labels, {'stim_id', 'stim_trigger'} );
+addcat( stim_labels, {'stim_id', 'stim_trigger'} );
 
 stim_ids = arrayfun( @(x) sprintf('stim-%s', shared_utils.general.uuid()), 1:rows(stim_labels), 'un', 0 );
+% event_ids = arrayfun( @(x) sprintf('event-%s', shared_utils.general.uuid()), 1:rows(event_labels), 'un', 0 );
+% setcat( event_labels, 'event_id', event_ids );
 
 look_ahead = params.look_ahead;
 look_back = params.look_back;
@@ -75,6 +84,9 @@ current_duration_I = findall( event_labels, current_duration_each );
 next_durations = [];
 next_duration_labels = fcat();
 
+[preceding_stim_durations, preceding_stim_labels] = ...
+  get_preceding_stim_durations( starts, durs, event_labels, stim_ts, stim_labels, stim_ids );
+
 for i = 1:numel(stim_ts)
   within_range = starts >= stim_ts(i)+look_back & starts < stim_ts(i)+look_ahead;
   
@@ -89,7 +101,7 @@ for i = 1:numel(stim_ts)
       
       current_durations(end+1, 1) = durs(nearest_ind);
       subset_current_dur_labels = ...
-      make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );
+        make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );      
       
       append( current_duration_labels, subset_current_dur_labels );      
     end
@@ -99,7 +111,7 @@ for i = 1:numel(stim_ts)
       
       next_durations(end+1, 1) = durs(next_ind);
       subset_next_dur_labels = ...
-      make_labels( event_labels, stim_labels, next_ind, i, stim_ids );
+        make_labels( event_labels, stim_labels, next_ind, i, stim_ids );
       
       append( next_duration_labels, subset_next_dur_labels );      
     end
@@ -124,6 +136,28 @@ outs.current_duration_labels = current_duration_labels;
 outs.next_durations = next_durations;
 outs.next_duration_labels = next_duration_labels;
 
+outs.preceding_stim_durations = preceding_stim_durations;
+outs.preceding_stim_labels = preceding_stim_labels;
+
+end
+
+function [durations, labels] = get_preceding_stim_durations(starts, durs, event_labels, stim_ts, stim_labels, stim_ids)
+
+event_mask = find( event_labels, {'eyes_nf', 'm1'} );
+
+durations = [];
+labels = fcat();
+
+for i = 1:numel(stim_ts)
+  nearest_start = find( starts(event_mask) < stim_ts(i), 2, 'last' );
+  
+  if ( numel(nearest_start) == 2 )    
+    durations(end+1, 1) = durs(nearest_start(1)); 
+    labs = make_labels( event_labels, stim_labels, nearest_start(1), i, stim_ids );
+    append( labels, labs );    
+  end
+end
+
 end
 
 function spec = event_specificity()
@@ -132,29 +166,52 @@ spec = { 'event_type', 'looks_by', 'roi' };
 
 end
 
-function labels = add_duration_quantile_labels(labels, durations)
+function spec = day_event_specificity()
 
-each = event_specificity();
+spec = union( {'session'}, event_specificity() );
 
+end
+
+function apply_preceding_stim_duration_quantile_labels(src_labels, dest_labels)
+
+quant_cat = 'preceding_stim_duration_quantile';
+addcat( dest_labels, quant_cat );
+[src_stim_id_I, src_stim_ids] = findall( src_labels, 'stim_id' );
+
+for i = 1:numel(src_stim_id_I)
+  dest_stim_ind = find( dest_labels, src_stim_ids{i} );
+  src_label = cellstr( src_labels, quant_cat, src_stim_id_I{i} );
+  setcat( dest_labels, quant_cat, src_label, dest_stim_ind );  
+end
+
+end
+
+function add_preceding_stim_duration_quantile_labels(durations, labels)
+
+each = day_event_specificity();
 [quants, each_I] = dsp3.quantiles_each( durations, labels, 2, each, {} );
-dsp3.add_quantile_labels( labels, quants, 'duration_quantile' );
-
-for i = 1:numel(each_I)  
-  src_ind = each_I{i}(1:end-1);
-  dest_ind = each_I{i}(2:end);
-  
-  quant_labels = cellstr( labels, 'duration_quantile', src_ind );
-  quant_labels = cellfun( @(x) sprintf('previous_%s', x), quant_labels, 'un', 0 );
-  
-  is_missing = isnan( quants(src_ind) );
-  quant_labels(is_missing) = [];
-  dest_ind(is_missing) = [];
-  
-  addcat( labels, 'previous_duration_quantile' );
-  setcat( labels, 'previous_duration_quantile', quant_labels, dest_ind );
-end
+dsp3.add_quantile_labels( labels, quants, 'preceding_stim_duration_quantile' );
 
 end
+
+% function labels = add_previous_duration_quantile_labels(labels, quants, each_I)
+% 
+% for i = 1:numel(each_I)  
+%   src_ind = each_I{i}(1:end-1);
+%   dest_ind = each_I{i}(2:end);
+%   
+%   quant_labels = cellstr( labels, 'duration_quantile', src_ind );
+%   quant_labels = cellfun( @(x) sprintf('previous_%s', x), quant_labels, 'un', 0 );
+%   
+%   is_missing = isnan( quants(src_ind) );
+%   quant_labels(is_missing) = [];
+%   dest_ind(is_missing) = [];
+%   
+%   addcat( labels, 'previous_duration_quantile' );
+%   setcat( labels, 'previous_duration_quantile', quant_labels, dest_ind );
+% end
+% 
+% end
 
 function update_labels(stim_labels, stim_ts, start_time_file, params)
 
