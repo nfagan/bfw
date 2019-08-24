@@ -25,7 +25,7 @@ is_trial_wise_subtractions = [true false];
 is_long_shorts = [true, false];
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
- , is_trial_wise_subtractions, is_short_longs );
+ , is_trial_wise_subtractions, is_long_shorts );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
