@@ -136,15 +136,29 @@ for i = 1:numel(fig_I)
   pltdat = data(fig_I{i});
   pltlabs = prune( labels(fig_I{i}) );
   
-  [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
+  try
+    [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
+  catch err
+    warning( 'Error in before_plot_func: \n %s', err.message );
+    continue;
+  end
   
-  axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
+  if ( isempty(pltdat) )
+    warning( 'Data were empty after call to `before_plot_func`' );
+    continue;
+  end
   
-  if ( params.do_save )
-    save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
-    shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats]);
-  %dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats], params.prefix );
+  try
+    axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
+
+    if ( params.do_save )
+      save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
+      shared_utils.plot.fullscreen( gcf );
+      dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats]);
+    %dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats], params.prefix );
+    end
+  catch err
+    warning( err.message );
   end
 end
 end
