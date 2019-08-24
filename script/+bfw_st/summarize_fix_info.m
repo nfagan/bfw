@@ -38,16 +38,6 @@ for idx = 1:num_combs
   for i = 1:5
     before_plot_funcs = {};
 
-    if ( is_trial_wise_subtraction )
-      before_plot_funcs{end+1} = @trial_wise_subtraction;
-    end
-
-    if ( is_average_at_run_level )
-      before_plot_funcs{end+1} = @run_level_average;
-    end
-
-    before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
-    
     xcats = {};
     gcats = {};
     pcats = {};
@@ -57,16 +47,27 @@ for idx = 1:num_combs
       gcats{end+1} = 'run_time_quantile';
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
-
-    if ( is_trial_wise_subtraction )
-      base_subdir = sprintf( '%s%s', base_subdir, 'trial_wise_subtraction_' );
-    end
     
-    if ( is_short_long )
+     if ( is_average_at_run_level )
+      before_plot_funcs{end+1} = @run_level_average;
+      base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
+     end 
+
+    if ( is_long_short )
       base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
       pcats{end+1} = 'preceding_stim_duration_quantile';
     end
 
+     
+    if ( is_trial_wise_subtraction )
+      before_plot_funcs{end+1} = @trial_wise_subtraction;
+      base_subdir = sprintf( '%s%s', base_subdir, 'trial_wise_subtraction_' );
+    end
+
+   
+    before_plot_func = @(varargin) apply_functions( before_plot_funcs, varargin{:} );
+    
+    
     if ( i == 1 )
         mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim' );
