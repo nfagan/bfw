@@ -22,7 +22,7 @@ end
 is_average_at_run_levels = [true false];
 is_run_halves = false;
 is_trial_wise_subtractions = [true false];
-is_short_longs = [true, false];
+is_long_shorts = [true, false];
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
  , is_trial_wise_subtractions, is_short_longs );
@@ -33,7 +33,7 @@ for idx = 1:num_combs
   is_average_at_run_level = is_average_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
-  is_short_long = is_short_longs(comb(4));
+  is_long_short = is_long_shorts(comb(4));
 
   for i = 1:5
     before_plot_funcs = {};
