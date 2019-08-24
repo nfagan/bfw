@@ -116,9 +116,9 @@ plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'across_mon
 
 end
 
-function plot_bars(data, labels, mask, fcats, xcats, gcats, pcats, kind, subdir, params)
+function plot_bars(data, labels, mask, fig_cats, xcats, gcats, pcats, kind, subdir, params)
 
-fig_I = findall_or_one( labels, fcats, mask );
+fig_I = findall_or_one( labels, fig_cats, mask );
 
 xcats = csunion( params.xcats, xcats );
 gcats = csunion( params.gcats, gcats );
@@ -128,7 +128,7 @@ xcats = xcats(:)';
 gcats = gcats(:)';
 pcats = pcats(:)';
 
-spec = unique( [xcats, gcats, pcats, fcats] );
+spec = unique( [xcats, gcats, pcats, fig_cats] );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
@@ -143,8 +143,8 @@ for i = 1:numel(fig_I)
   if ( params.do_save )
     save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
     shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats]);
-  %dsp3.req_savefig( gcf, save_p, pltlabs, [fcats, pcats], params.prefix );
+    dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats]);
+  %dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats], params.prefix );
   end
 end
 end
