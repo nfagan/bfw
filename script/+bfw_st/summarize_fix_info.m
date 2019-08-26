@@ -64,7 +64,7 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
       fcats{end+1} = 'roi';
       xcats{end+1} = 'preceding_stim_duration_quantile';
-      additional_mask_func_inputs{end+1} = {@findnone, '<preceding_stim_duration_quantile>'};
+      additional_mask_func_inputs = [additional_mask_func_inputs, {@findnone, '<preceding_stim_duration_quantile>'}];
     end
 
      
