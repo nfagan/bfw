@@ -21,7 +21,7 @@ end
 
 is_collapsed_at_run_levels = [true false];
 is_run_halves = false;
-is_trial_wise_subtractions = [true false];
+is_trial_wise_subtractions = false;
 is_long_shorts = [true false];
 collapse_funcs = { @run_level_average, @run_level_median };
 
