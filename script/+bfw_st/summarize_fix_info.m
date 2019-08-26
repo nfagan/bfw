@@ -130,6 +130,10 @@ for idx = 1:num_combs
   end
 end
 
+%  amp vs vel
+ 
+bfw_st.stim_amp_vs_vel( plot_params );
+ 
 end
 
 function [data, labels] = apply_functions(functions, data, labels, spec)
@@ -176,3 +180,6 @@ use_spec = union( use_spec, {'unified_filename'} );
 [data, labels] = bfw_st.stim_minus_sham( data, labels', use_spec );
 
 end
+
+
+

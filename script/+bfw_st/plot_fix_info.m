@@ -120,12 +120,12 @@ end
 
 function plot_bars(data, labels, mask, fig_cats, xcats, gcats, pcats, kind, subdir, params)
 
-fig_I = findall_or_one( labels, fig_cats, mask );
-
 xcats = csunion( params.xcats, xcats );
 gcats = csunion( params.gcats, gcats );
 pcats = csunion( params.pcats, pcats );
 fig_cats = csunion( params.fcats, fig_cats );
+
+fig_I = findall_or_one( labels, fig_cats, mask );
 
 xcats = xcats(:)';
 gcats = gcats(:)';
