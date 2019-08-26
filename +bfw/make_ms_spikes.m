@@ -160,12 +160,12 @@ for i = 1:numel(un_mats)
     %firings_full_file = fullfile( data_root, un0.ms_firings_directory{:}, firings_filename );
     name_info = strsplit(firings_filename,'_');
     region_info = name_info{1};
-     b = strrep(un0.plex_filename,'.pl2','.mda');    
+%      b = strrep(un0.plex_filename,'.pl2','.mda');    
     mdaout_name = strcat(region_info,'_',strrep(un0.plex_filename,'.pl2','.mda'));
-     if ismember(b(1:3),{'Kur'})
-        mdaout_name = strcat(strrep(un0.plex_filename,'.pl2',''),'_',lower(name_info{4}),'_raw_out.mda');
-     hello = 1  
-     end 
+%      if ismember(b(1:3),{'Kur'})
+%         mdaout_name = strcat(strrep(un0.plex_filename,'.pl2',''),'_',lower(name_info{4}),'_raw_out.mda');
+%      hello = 1  
+%      end 
     
     firings_full_file = fullfile(data_root,un0.ms_firings_directory{:},mdaout_name);
 %      hello = 1
@@ -189,7 +189,7 @@ for i = 1:numel(un_mats)
       xls_channel_id = firings_channels(k);
       xls_channel_ind = ms_channel_map_ids == xls_channel_id;
       xls_channel_ind = xls_channel_ind & c_day_ind;
-      
+     
       if ( ~any(xls_channel_ind) )
         fprintf( '\n Warning: No channels matched %d for "%s" in the excel file.', xls_channel_id, un_filename );
         continue;
@@ -203,7 +203,8 @@ for i = 1:numel(un_mats)
         continue;
       end
       
-      ms_channel_id = xls_channel_id - firings_channels(1) + 1;
+%       ms_channel_id = xls_channel_id - firings_channels(1) + 1;
+      ms_channel_id = find(firings_channels == xls_channel_id);
       ms_channel_id_ind = channel_ids == ms_channel_id;
       ms_unit_ids_from1 = unit_ids( ms_channel_id_ind );
       %   ms unit ids increment from 1 -> N such that each unit id is unique
@@ -229,7 +230,7 @@ for i = 1:numel(un_mats)
         ms_unit_id_ind = ms_unit_ids_from1 == unit_n_this_channel;
 
         complete_ms_index( ms_channel_id_ind ) = ms_unit_id_ind;
-        
+     
         if ( ~any(ms_unit_id_ind) )
 %           fprintf( '\n Warning: No units matched id %d for "%s".', unit_n_this_channel, un_filename );
           error( 'No units matched id %d for channel %d in "%s".' ...

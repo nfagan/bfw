@@ -1,4 +1,4 @@
-folders = {};
+folders = {'08312018'};
 file_spec = folders;
 
 input_subdir = '';

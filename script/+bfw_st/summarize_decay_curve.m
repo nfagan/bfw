@@ -21,7 +21,7 @@ if ( isempty(decay_outs) )
   decay_outs = bfw_st.stim_fixation_decay( make_params );
 end
 
-is_average_at_run_levels = [true false];
+is_average_at_run_levels = false;
 is_run_halves = false;
 is_long_shorts = false;
 %is_trial_wise_subtractions = [true false];

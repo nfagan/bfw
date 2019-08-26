@@ -144,7 +144,7 @@ end
 
 function do_save(var, filename, varargin)
 
-save( filename, 'var', varargin{:} );
+save( filename, 'var', varargin{:}, '-v7.3' );
 
 end
 

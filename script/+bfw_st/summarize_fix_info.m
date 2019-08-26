@@ -19,10 +19,10 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_average_at_run_levels = [true false];
+is_average_at_run_levels = true;
 is_run_halves = false;
-is_trial_wise_subtractions = [true false];
-is_long_shorts = [true false];
+is_trial_wise_subtractions = false;
+is_long_shorts = true;
 
 cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
  , is_trial_wise_subtractions, is_long_shorts );

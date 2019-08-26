@@ -9,7 +9,7 @@ inputs.files_containing = '';
 inputs.files_not_containing = '';
 inputs.skip_existing = true;
 
-folders = {};
+folders = {'01032019'};
 
 %%  unified
 
