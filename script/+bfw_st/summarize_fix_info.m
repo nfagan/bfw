@@ -19,21 +19,26 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_average_at_run_levels = [true false];
+is_collapsed_at_run_levels = [true false];
 is_run_halves = false;
 is_trial_wise_subtractions = [true false];
 is_long_shorts = [true false];
+collapse_funcs = { @run_level_average, @run_level_median };
 
-cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves ...
- , is_trial_wise_subtractions, is_long_shorts );
+% summary_func = @(x) nanmedian(x, 1);
+summary_func = @(x) nanmean(x, 1);
+
+cmbtns = dsp3.numel_combvec( is_collapsed_at_run_levels, is_run_halves ...
+ , is_trial_wise_subtractions, is_long_shorts, collapse_funcs );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
   comb = cmbtns(:, idx);
-  is_average_at_run_level = is_average_at_run_levels(comb(1));
+  is_collapsed_at_run_level = is_collapsed_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   is_long_short = is_long_shorts(comb(4));
+  collapse_func = collapse_funcs{comb(5)};
 
   for i = 1:5
     before_plot_funcs = {};
@@ -41,21 +46,25 @@ for idx = 1:num_combs
     xcats = {};
     gcats = {};
     pcats = {};
+    fcats = {};
     base_subdir = '';
+    additional_mask_func_inputs = {};
       
     if ( is_run_half )
       gcats{end+1} = 'run_time_quantile';
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
     
-     if ( is_average_at_run_level )
-      before_plot_funcs{end+1} = @run_level_average;
-      base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
+     if ( is_collapsed_at_run_level )
+      before_plot_funcs{end+1} = collapse_func;
+      base_subdir = sprintf( '%s%s', base_subdir, func2str(collapse_func) );
      end 
 
     if ( is_long_short )
       base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
-      pcats{end+1} = 'preceding_stim_duration_quantile';
+      fcats{end+1} = 'roi';
+      xcats{end+1} = 'preceding_stim_duration_quantile';
+      additional_mask_func_inputs{end+1} = {@findnone, '<preceding_stim_duration_quantile>'};
     end
 
      
@@ -69,12 +78,16 @@ for idx = 1:num_combs
     
     
     if ( i == 1 )
-        mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
+        mask_func = @(labels) fcat.mask(labels ...
+            , @findor, {'eyes_nf', 'face'} ...
+            , additional_mask_func_inputs{:} ... 
+        );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim' );
     elseif (i ==2 ) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
             , @find, 'sham' ...
+            , additional_mask_func_inputs{:} ... 
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_only_previous');
         gcats{end+1} = 'previous_stim_type';
@@ -82,6 +95,7 @@ for idx = 1:num_combs
          mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'}...
             , @findnone, 'previous_undefined'...
+            , additional_mask_func_inputs{:} ... 
          );
         gcats{end+1}='day_time_quantile' ;
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles');
@@ -89,11 +103,15 @@ for idx = 1:num_combs
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
             , @findnone, 'previous_undefined' ...
+            , additional_mask_func_inputs{:} ... 
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous' );
         gcats{end+1} = 'previous_stim_type';
     else
-      mask_func = @(labels) findor(labels, {'eyes_nf', 'face'});
+      mask_func = @(labels) fcat.mask(labels ...
+          , @findor, {'eyes_nf', 'face'} ...
+          , additional_mask_func_inputs{:} ... 
+      );
       before_plot_func = @stim_minus_sham;
       base_subdir = sprintf( '%s%s', base_subdir, 'stim_minus_sham' );
     end
@@ -105,7 +123,9 @@ for idx = 1:num_combs
       , 'xcats', xcats ...
       , 'gcats', gcats ...
       , 'pcats', pcats ...
+      , 'fcats', fcats ...
       , 'before_plot_func', before_plot_func ...
+      , 'summary_func', summary_func ...
     );
   end
 end
@@ -137,6 +157,14 @@ function [data, labels] = run_level_average(data, labels, spec)
 use_spec = union( spec, {'unified_filename'} );
 [labels, each_I] = keepeach( labels', use_spec );
 data = bfw.row_nanmean( data, each_I );
+
+end
+
+function [data, labels] = run_level_median(data, labels, spec)
+
+use_spec = union( spec, {'unified_filename'} );
+[labels, each_I] = keepeach( labels', use_spec );
+data = bfw.row_nanmedian( data, each_I );
 
 end
 

@@ -4,9 +4,11 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask_func = @(labels) rowmask(labels);
 defaults.before_plot_func = @(varargin) deal(varargin{1:nargout});
+defaults.summary_func = @(x) nanmean(x, 1);
 defaults.gcats = {};
 defaults.xcats = {};
 defaults.pcats = {};
+defaults.fcats = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -123,15 +125,18 @@ fig_I = findall_or_one( labels, fig_cats, mask );
 xcats = csunion( params.xcats, xcats );
 gcats = csunion( params.gcats, gcats );
 pcats = csunion( params.pcats, pcats );
+fig_cats = csunion( params.fcats, fig_cats );
 
 xcats = xcats(:)';
 gcats = gcats(:)';
 pcats = pcats(:)';
+fig_cats = fig_cats(:)';
 
 spec = unique( [xcats, gcats, pcats, fig_cats] );
 
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
+  pl.summary_func = params.summary_func;
   
   pltdat = data(fig_I{i});
   pltlabs = prune( labels(fig_I{i}) );
