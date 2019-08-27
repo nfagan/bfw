@@ -1,5 +1,7 @@
 function validatefiles(files, required_files)
 
+%   VALIDATEFILES -- Throw an error if files are missing.
+
 if ( ~shared_utils.general.is_map_like(files) )
   error( ['Expected files aggregate to be a struct, containers.Map,' ...
     , ' or Matlab object; was "%s".'], class(files) );
