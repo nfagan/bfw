@@ -7,6 +7,7 @@ defaults.bin_size = 0.05;
 defaults.is_firing_rate = true;
 defaults.event_names = { 'cs_presentation' };
 defaults.psth_func = @default_psth_func;
+defaults.include_rasters = false;
 
 inputs = { 'cs_task_events/m1', 'cs_labels/m1', 'cs_trial_data/m1' };
 output = '';
@@ -27,6 +28,7 @@ if ( isempty(results) )
   out.labels = fcat();
   out.t = [];
   out.reward_levels = [];
+  out.rasters = {};
   
 else
   outputs = [results.output];
@@ -35,6 +37,7 @@ else
   out.labels = vertcat( fcat, outputs.labels );
   out.t = outputs(1).t;
   out.reward_levels = vertcat( outputs.reward_levels );
+  out.rasters = vertcat( outputs.rasters );
 end
 
 end
@@ -65,6 +68,7 @@ meta_labels = bfw.struct2fcat( meta_file );
 psth_labels = fcat();
 
 reward_levels = [];
+rasters = {};
 
 for i = 1:numel(units)
   spike_ts = units(i).times;
@@ -84,6 +88,12 @@ for i = 1:numel(units)
     end
     
     stp = stp + 1;    
+  end  
+
+  if ( params.include_rasters )
+    tmp_rasters = ...
+      arrayfun( @(x) columnize(spike_ts(spike_ts >= x+look_back & spike_ts < x+look_ahead)) - x, event_times, 'un', 0 );
+    rasters = [ rasters; tmp_rasters ];
   end
   
   unit_labels = fcat.from( bfw.get_unit_labels(units(i)) );
@@ -103,6 +113,7 @@ out = struct();
 out.psth = psth_mat;
 out.labels = psth_labels;
 out.reward_levels = reward_levels;
+out.rasters = rasters;
 out.t = t;
 
 end
