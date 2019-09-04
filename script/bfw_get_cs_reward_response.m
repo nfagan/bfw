@@ -25,7 +25,7 @@ out = struct();
 
 if ( isempty(results) )
   out.psth = [];
-  out.labels = fcat();
+  out.labels = fcat.with( 'reward-level' );
   out.t = [];
   out.reward_levels = [];
   out.rasters = {};

@@ -27,6 +27,7 @@ common_inputs.base_gaze_mask = gaze_mask;
 common_inputs.n_iters = 100;
 common_inputs.match_trials = false;
 common_inputs.match_units = true;
+common_inputs.reward_t_window = [0.05, 0.4];
 
 is_over_time = true;
 
@@ -37,8 +38,8 @@ gr_outs = [];
 
 %%
 
-% rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-rg_outs = [];
+rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+% rg_outs = [];
 
 %%
 
@@ -47,8 +48,8 @@ gg_outs = [];
 
 %%
 
-rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
-% rr_outs = [];
+% rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
+rr_outs = [];
 
 %%
 
