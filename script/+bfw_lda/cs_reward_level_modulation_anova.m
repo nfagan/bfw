@@ -2,12 +2,14 @@ function cs_reward_level_modulation_anova(varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.reward_counts = [];
-defaults.reward_t = [0.05, 0.4];
+defaults.targ_t = [0.05, 0.4];
 defaults.base_t = [0, 0.15];
+defaults.targ_event = 'cs_presentation';
 defaults.base_event = 'fixation';
 defaults.lda_holdout = 0.25;
 defaults.lda_iters = 1e2;
 defaults.lda_rng_seed = [];
+defaults.is_normalized = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -15,7 +17,7 @@ reward_counts = params.reward_counts;
 
 if ( isempty(reward_counts) )
   reward_counts = bfw_get_cs_reward_response( ...
-      'event_names', {'cs_presentation', params.base_event} ...
+      'event_names', {params.targ_event, params.base_event} ...
     , 'look_back', -0.2 ...
     , 'look_ahead', 1 ...
     , 'is_firing_rate', false ...
@@ -23,10 +25,10 @@ if ( isempty(reward_counts) )
   );
 end
 
-compare_small_large( reward_counts, params );
-decode_small_large( reward_counts, params );
+% compare_small_large( reward_counts, params );
+% decode_small_large( reward_counts, params );
 reward_level_regression( reward_counts, params );
-compare_baseline( reward_counts, params );
+% compare_baseline( reward_counts, params );
 reward_level_anova( reward_counts, params );
 
 end
@@ -36,10 +38,10 @@ function decode_small_large(reward_counts, params)
 counts = reward_counts.psth;
 labs = reward_counts.labels';
 
-[t_ind, ~] = get_time_indices( reward_counts, params );
+[t_ind, ~] = get_time_indices( reward_counts, params, params.targ_event );
 
 mask = get_base_mask( labs );
-[targ_counts, targ_labs] = get_target_counts( counts, labs, mask, t_ind );
+[targ_counts, targ_labs] = get_target_counts( counts, labs, params.targ_event, mask, t_ind );
 
 reward_levels = fcat.parse( cellstr(targ_labs, 'reward-level'), 'reward-' );
 
@@ -111,10 +113,16 @@ function compare_small_large(reward_counts, params)
 counts = reward_counts.psth;
 labs = reward_counts.labels';
 
-[t_ind, ~] = get_time_indices( reward_counts, params );
+[t_ind, base_t_ind] = get_time_indices( reward_counts, params, params.targ_event );
 
 mask = get_base_mask( labs );
-[targ_counts, targ_labs] = get_target_counts( counts, labs, mask, t_ind );
+[targ_counts, targ_labs] = get_target_counts( counts, labs, params.targ_event, mask, t_ind );
+
+if ( params.is_normalized )
+  base_ind = find( labs, params.base_event, mask );
+  base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
+  targ_counts = targ_counts - base_counts;
+end
 
 each = { 'unit_uuid', 'channel', 'region' };
 
@@ -143,7 +151,7 @@ labs = reward_counts.labels';
 base_ind = find( labs, params.base_event );
 base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
 
-targ_ind = find( labs, 'cs_presentation' );
+targ_ind = find( labs, params.targ_event );
 targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
 
 mask = get_base_mask( labs );
@@ -154,7 +162,7 @@ counts(targ_ind) = targ_counts;
 
 each = { 'unit_uuid', 'channel', 'region' };
 
-stat_outs = dsp3.ranksum( counts, labs, each, 'cs_presentation', params.base_event ...
+stat_outs = dsp3.ranksum( counts, labs, each, params.targ_event, params.base_event ...
   , 'mask', mask ...
 );
 
@@ -173,60 +181,74 @@ end
 
 function reward_level_regression(reward_counts, params)
 
-is_normalized = true;
-
-[t_ind, base_t_ind] = get_time_indices( reward_counts, params );
-
-counts = reward_counts.psth;
-labs = reward_counts.labels';
+is_normalized = params.is_normalized;
 
 each = { 'unit_uuid', 'channel', 'region', 'event-name' };
 
-if ( is_normalized )
-  base_ind = find( labs, params.base_event );
-  base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
+[event_I, event_C] = findall( reward_counts.labels, 'event-name' ...
+  , find(reward_counts.labels, params.targ_event) );
+
+all_sig = cell( size(event_I) );
+
+for idx = 1:numel(event_I)
   
-  targ_ind = find( labs, 'cs_presentation' );
-  targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
-  targ_labs = prune( labs(targ_ind) );
+  counts = reward_counts.psth;
+  labs = reward_counts.labels';
   
-  base_I = findall( targ_labs, setdiff(each, 'event-name') );
-  base_means = bfw.row_nanmean( base_counts, base_I );
-  base_devs = rowop( base_counts, base_I, @(x) nanstd(x, [], 1) );
+  targ_ind = event_I{idx};
   
-  for i = 1:numel(base_I)
-    targ_counts(base_I{i}) = (targ_counts(base_I{i}) - base_means(i)) / base_devs(i);
+  [t_ind, base_t_ind] = get_time_indices( reward_counts, params, event_C{1, idx} );
+
+  if ( is_normalized )
+    base_ind = find( labs, params.base_event );
+    base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
+
+    targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
+    targ_labs = prune( labs(targ_ind) );
+
+    base_I = findall( targ_labs, setdiff(each, 'event-name') );
+    base_means = bfw.row_nanmean( base_counts, base_I );
+    base_devs = rowop( base_counts, base_I, @(x) nanstd(x, [], 1) );
+
+    for i = 1:numel(base_I)
+      targ_counts(base_I{i}) = (targ_counts(base_I{i}) - base_means(i)) / base_devs(i);
+    end
+
+    counts = targ_counts;
+    labs = prune( labs(targ_ind) );  
+    targ_ind = rowmask( labs );
+  end
+
+  %%
+
+  mask = get_base_mask( labs, targ_ind );
+
+  [labels, each_I] = keepeach( labs', each, mask );
+  tables = cell( size(each_I) );
+  ps = nan( size(each_I) );
+
+  parfor i = 1:numel(each_I)
+    levels = fcat.parse( cellstr(labs, 'reward-level', each_I{i}), 'reward-' );
+    subset_counts = counts(each_I{i});
+
+    model = fitglm( levels, subset_counts, 'linear' );
+    p = model.Coefficients.pValue(2);
+
+    summary_table = struct();
+    summary_table.p = p;
+
+    ps(i) = p;
+    tables{i} = struct2table( summary_table );
   end
   
-  counts = targ_counts;
-  labs = prune( labs(targ_ind) );  
+  all_sig{idx} = ps < 0.05;
 end
+
+all_sig = or_many( all_sig{:} );
 
 %%
 
-mask = get_base_mask( labs );
-
-[labels, each_I] = keepeach( labs', each, mask );
-tables = cell( size(each_I) );
-ps = nan( size(each_I) );
-
-parfor i = 1:numel(each_I)
-  levels = fcat.parse( cellstr(labs, 'reward-level', each_I{i}), 'reward-' );
-  subset_counts = counts(each_I{i});
-  
-  model = fitglm( levels, subset_counts, 'linear' );
-  p = model.Coefficients.pValue(2);
-  
-  summary_table = struct();
-  summary_table.p = p;
-  
-  ps(i) = p;
-  tables{i} = struct2table( summary_table );
-end
-
-%%
-
-[percs_tbl, counts_tbl] = make_summary_tables( ps < 0.05, labels );
+[percs_tbl, counts_tbl] = make_summary_tables( all_sig, labels );
 
 if ( params.do_save )
   save_spec = 'region';
@@ -238,37 +260,44 @@ end
 
 function reward_level_anova(reward_counts, params)
 
-is_normalized = false;
+is_normalized = params.is_normalized;
 
-[t_ind, base_t_ind] = get_time_indices( reward_counts, params );
-
-counts = reward_counts.psth;
 labs = reward_counts.labels';
+mask = get_base_mask( labs );
+[event_I, event_C] = findall( labs, 'event-name', find(labs, params.targ_event, mask) );
 
-if ( is_normalized )
-  base_ind = find( labs, params.base_event );
-  base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
+all_sig_anovas = cell( numel(event_I), 1 );
+
+for i = 1:numel(event_I)
+  counts = reward_counts.psth;
+  labs = reward_counts.labels';
   
-  targ_ind = find( labs, 'cs_presentation' );
-  targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
-  
-  counts = targ_counts - base_counts;
-  labs = prune( labs(targ_ind) );  
-else
-  counts = nanmean( counts(:, t_ind), 2 );
+  [t_ind, base_t_ind] = get_time_indices( reward_counts, params, event_C{1, i} );
+
+  if ( is_normalized )
+    base_ind = find( labs, params.base_event, mask );
+    base_counts = nanmean( counts(base_ind, base_t_ind), 2 );
+
+    targ_ind = event_I{i};
+    targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
+
+    counts = targ_counts - base_counts;
+    labs = prune( labs(targ_ind) );  
+  else
+    counts = nanmean( counts(event_I{i}, t_ind), 2 );
+    labs = prune( labs(event_I{i}) );
+  end
+
+  each = { 'unit_uuid', 'channel', 'region', 'event-name' };
+  anova_outs = dsp3.anova1( counts, labs, each, {'reward-level'} );
+
+  anova_ps = cellfun( @(x) x.Prob_F{1}, anova_outs.anova_tables );
+  sig_anovas = anova_ps < 0.05;
+
+  all_sig_anovas{i} = sig_anovas;
 end
 
-mask = get_base_mask( labs );
-
-each = { 'unit_uuid', 'channel', 'region', 'event-name' };
-
-anova_outs = dsp3.anova1( counts, labs, each, {'reward-level'} ...
-  , 'mask', mask ...
-);
-%%
-
-anova_ps = cellfun( @(x) x.Prob_F{1}, anova_outs.anova_tables );
-sig_anovas = anova_ps < 0.05;
+sig_anovas = or_many( all_sig_anovas{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( sig_anovas, anova_outs.anova_labels );
 
@@ -299,9 +328,17 @@ counts_tbl = fcat.table( sig_counts, rc{:} );
 
 end
 
-function [t_ind, base_t_ind] = get_time_indices(reward_counts, params)
+function [t_ind, base_t_ind] = get_time_indices(reward_counts, params, current_event)
 
-t_ind = reward_counts.t >= params.reward_t(1) & reward_counts.t <= params.reward_t(2);
+if ( nargin > 2 )
+  assert( shared_utils.general.is_map_like(params.targ_t) ...
+    , 'If specifying a target event, event times must be map-like object.' );
+  targ_t = shared_utils.general.get( params.targ_t, current_event );
+else
+  targ_t = params.targ_t;
+end
+
+t_ind = reward_counts.t >= targ_t(1) & reward_counts.t <= targ_t(2);
 base_t_ind = reward_counts.t >= params.base_t(1) & reward_counts.t <= params.base_t(2);
 
 end
@@ -313,20 +350,24 @@ save_p = fullfile( bfw.dataroot(params.config), 'analyses', 'cs_reward' ...
 
 end
 
-function mask = get_base_mask(labels)
+function mask = get_base_mask(labels, apply_to)
 
-mask = fcat.mask( labels ...
+if ( nargin < 2 )
+  apply_to = rowmask( labels );
+end
+
+mask = fcat.mask( labels, apply_to ...
   , @findnone, {bfw.nan_unit_uuid(), bfw.nan_reward_level()} ...
   , @find, 'no-error' ...
 );
 
 end
 
-function [targ_counts, targ_labs] = get_target_counts(counts, labs, mask, t_ind)
+function [targ_counts, targ_labs] = get_target_counts(counts, labs, targ_event, mask, t_ind)
 
 assert_ispair( counts, labs );
 
-targ_ind = find( labs, 'cs_presentation', mask );
+targ_ind = find( labs, targ_event, mask );
 targ_counts = nanmean( counts(targ_ind, t_ind), 2 );
 targ_labs = prune( labs(targ_ind) );
 

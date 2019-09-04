@@ -23,7 +23,7 @@ rasters = reward_counts.rasters;
 post_plot_func = @(varargin) post_plot(rasters, raster_fig, params, varargin);
 
 dsp3.multi_plot( @lines, reward_counts.psth, reward_counts.labels' ...
-  , 'unit_uuid', 'reward-level', {'unit_uuid', 'region'} ...
+  , {'unit_uuid', 'event-name'}, 'reward-level', {'unit_uuid', 'region', 'event-name'} ...
   , 'mask', mask ...
   , 'pl', pl ...
   , 'configure_pl_func', @(pl) configure_pl(pl, psth_fig) ...
@@ -39,6 +39,7 @@ function configure_pl(pl, fig)
 set( 0, 'currentfigure', fig );
 set( fig, 'visible', 'off' );
 pl.fig = fig;
+pl.add_errors = false;
 
 end
 
@@ -59,7 +60,8 @@ end
 region_subdir = char( combs(labs, 'region') );
 
 conf = params.config;
-save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_psth', dsp3.datedir, region_subdir );
+save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_psth', dsp3.datedir ...
+  , params.base_subdir, region_subdir );
 
 psth_p = fullfile( save_p, 'psth' );
 raster_p = fullfile( save_p, 'raster' );
