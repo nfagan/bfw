@@ -1,6 +1,7 @@
 function plot_decoding(perf, varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
+defaults.mask_func = @(labels) rowmask(labels);
 params = bfw.parsestruct( defaults, varargin );
 
 %%
@@ -60,7 +61,7 @@ xcats = { 'roi' };
 gcats = { 'event-name' };
 pcats = { 'region' };
 
-mask = rowmask( decode_outs.labels );
+mask = params.mask_func( decode_outs.labels );
 
 plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_gaze_test_reward', params );
 
@@ -72,7 +73,7 @@ xcats = { 'roi' };
 gcats = { 'event-name' };
 pcats = { 'region' };
 
-mask = rowmask( decode_outs.labels );
+mask = params.mask_func( decode_outs.labels );
 
 plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_reward_test_gaze', params );
 
@@ -86,7 +87,7 @@ xcats = { 'roi' };
 gcats = {};
 pcats = { 'region' };
 
-mask = rowmask( decode_outs.labels );
+mask = params.mask_func( decode_outs.labels );
 
 plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_gaze_test_gaze', params );
 
@@ -100,7 +101,7 @@ xcats = { 'reward-level' };
 gcats = { 'event-name' };
 pcats = { 'region' };
 
-mask = rowmask( decode_outs.labels );
+mask = params.mask_func( decode_outs.labels );
 
 plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_reward_test_reward', params );
 

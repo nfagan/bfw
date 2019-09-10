@@ -851,7 +851,7 @@ end
 
 function [roi_a, roi_b] = roi_order(roi1, roi2)
 
-order = { 'eyes_nf', 'face', 'outside1' };
+order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object' };
 tf = ismember( order, {roi1, roi2} );
 rois = order(tf);
 roi_a = rois{1};

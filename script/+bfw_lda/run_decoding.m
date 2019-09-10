@@ -2,6 +2,8 @@ function run_decoding(gaze_counts, reward_counts, varargin)
 
 defaults = bfw.get_common_make_defaults();
 defaults.base_subdir = '';
+defaults.reward_t_window = [-0.25, 0];
+defaults.is_over_time = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -27,8 +29,9 @@ common_inputs.base_gaze_mask = gaze_mask;
 common_inputs.n_iters = 100;
 common_inputs.match_trials = false;
 common_inputs.match_units = true;
+common_inputs.reward_t_window = params.reward_t_window;
 
-is_over_time = true;
+is_over_time = params.is_over_time;
 
 %%
 
@@ -42,13 +45,13 @@ rg_outs = [];
 
 %%
 
-% gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-gg_outs = [];
+gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+% gg_outs = [];
 
 %%
 
-rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
-% rr_outs = [];
+% rr_outs = train_reward_test_reward( gaze_counts, reward_counts, common_inputs, is_over_time );
+rr_outs = [];
 
 %%
 
@@ -159,7 +162,7 @@ function gaze_mask = get_gaze_mask(labels)
 
 gaze_mask = fcat.mask( labels ...
   , @find, 'm1' ...
-  , @find, {'eyes_nf', 'face', 'outside1'} ...
+  , @find, {'eyes_nf', 'face', 'nonsocial_object'} ...
 );
 
 end

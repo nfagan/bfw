@@ -1,5 +1,12 @@
 function validatefiles(files, required_files)
 
+%   VALIDATEFILES -- Throw an error if files are missing.
+%
+%     bfw.validate_files( files, required ); throw an error
+%     if not all of `required` files exist in `files`.
+%     
+%     See also bfw.make.help
+
 if ( ~shared_utils.general.is_map_like(files) )
   error( ['Expected files aggregate to be a struct, containers.Map,' ...
     , ' or Matlab object; was "%s".'], class(files) );
