@@ -3,15 +3,17 @@ function outs = stim_fixation_decay(varargin)
 defaults = bfw.get_common_make_defaults();
 defaults.config = bfw_st.default_config();
 defaults.look_back = -1e3;
-defaults.look_ahead = 1e3;
+defaults.look_ahead = 5e3;
 defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
 defaults.num_day_time_quantiles = 2;
+defaults.stim_isi_quantile_edges = [8, 11, 14, 17, 20];
 
 inputs = { 'aligned_raw_samples/position', 'aligned_raw_samples/time' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations' ...
-  , 'unified', 'stim', 'stim_meta', 'meta', 'rois', 'plex_start_stop_times' };
+  , 'unified', 'stim', 'stim_meta', 'meta', 'rois', 'plex_start_stop_times' ...
+  , 'raw_events' };
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
@@ -43,8 +45,14 @@ roi_file = general.get( files, 'rois' );
 meta_file = general.get( files, 'meta' );
 stim_meta_file = general.get( files, 'stim_meta' );
 start_time_file = general.get( files, 'plex_start_stop_times' );
+events_file = general.get( files, 'raw_events' );
+
+event_labels = fcat.from( events_file );
+event_starts = bfw.event_column( events_file, 'start_time' );
 
 [stim_times, stim_labs] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
+
+bfw_st.add_stim_isi_quantile_labels( stim_labs, stim_times, params.stim_isi_quantile_edges );
 bfw_st.add_per_stim_labels( stim_labs, stim_times );
 bfw_st.add_day_time_quantile_labels( stim_labs, stim_times, params.num_day_time_quantiles, start_time_file );
 
@@ -79,6 +87,21 @@ for i = 1:numel(stim_times)
   m1_pos = pos_file.m1(:, t_course_ind);
   
   for j = 1:numel(roi_names)  
+%     roi_event_ind = find( event_labels, {'m1', roi_names{j}} );
+%     next_start = find( event_starts(roi_event_ind) > stim_times(i) , 1 , 'first' );
+%     
+%     if ( isempty(next_start) )
+%         next_start = nan;
+%     end
+%     
+%     if ( isnan(next_start) || next_start < 1 )
+%         next_start = nan;
+%     end
+%     
+%     prev_roi_ind = next_start-1;
+%     prev_start = event_start(curr_dur_ind(prev_roi_ind));
+%     iti = next_start - prev_start;
+      
     current_rect = rects(roi_names{j});
     
     ib = bfw.bounds.rect( m1_pos(1, :), m1_pos(2, :), current_rect );
