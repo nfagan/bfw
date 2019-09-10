@@ -15,6 +15,10 @@ if ( isfield(perf, 'rr_outs') && ~isempty(perf.rr_outs) )
   plot_train_reward_test_reward( perf.rr_outs, params );
 end
 
+if ( isfield(perf, 'gg_outs') && ~isempty(perf.gg_outs) )
+  plot_train_gaze_test_gaze( perf.gg_outs, params );
+end
+
 end
 
 function plot_train_reward_test_reward(decode_outs, params)
@@ -30,13 +34,13 @@ end
 
 function plot_train_gaze_test_gaze(decode_outs, params)
 
-xcats = { 'roi' };
-gcats = {};
+fcats = {};
+gcats = { 'roi' };
 pcats = { 'region' };
 
 mask = rowmask( decode_outs.labels );
 
-plot_perf( decode_outs, xcats, gcats, pcats, mask, 'train_gaze_test_gaze', params );
+plot_perf( decode_outs, fcats, gcats, pcats, mask, 'train_gaze_test_gaze', params );
 
 end
 

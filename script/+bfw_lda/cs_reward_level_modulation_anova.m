@@ -152,11 +152,15 @@ is_sig = or_many( is_sig{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( is_sig, stat_outs.rs_labels );
 
+save_subdir = 'small_vs_large';
+
 if ( params.do_save )
   save_spec = 'region';
-  save_p = get_save_p( params, 'small_vs_large' );
+  save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, stat_outs.rs_labels, save_spec );
 end
+
+pie_plot( is_sig, stat_outs.rs_labels, params, save_subdir );
 
 end
 
@@ -190,11 +194,15 @@ is_sig = ps < 0.05;
 
 [percs_tbl, counts_tbl] = make_summary_tables( is_sig, stat_outs.rs_labels );
 
+save_subdir = 'any_reward_vs_baseline';
+
 if ( params.do_save )
   save_spec = 'region';
-  save_p = get_save_p( params, 'any_reward_vs_baseline' );
+  save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, stat_outs.rs_labels, save_spec );
 end
+
+pie_plot( is_sig, stat_outs.rs_labels, params, save_subdir );
 
 end
 
@@ -274,11 +282,15 @@ all_sig = or_many( all_sig{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( all_sig, labels );
 
+save_subdir = '3_reward_levels_glm';
+
 if ( params.do_save )
   save_spec = 'region';
-  save_p = get_save_p( params, '3_reward_levels_glm' );
+  save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, labels, save_spec );
 end
+
+pie_plot( all_sig, labels, params, save_subdir );
 
 end
 
@@ -330,10 +342,45 @@ sig_anovas = or_many( all_sig_anovas{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( sig_anovas, anova_outs.anova_labels );
 
+save_subdir = '3_reward_levels_anova';
+
 if ( params.do_save )
   save_spec = 'region';
-  save_p = get_save_p( params, '3_reward_levels_anova' );
+  save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, anova_outs.anova_labels, save_spec );
+end
+
+pie_plot( sig_anovas, anova_outs.anova_labels, params, save_subdir );
+
+end
+
+function pie_plot(is_sig, labels, params, subdir)
+
+assert_ispair( is_sig, labels );
+
+pl = plotlabeled.make_common();
+pl.pie_include_percentages = true;
+
+[perc_labs, perc_inds] = keepeach( labels', {'region', 'event-name'} );
+percs = cellfun( @(x) pnz(is_sig(x)), perc_inds ) * 100;
+num_rows = rows( perc_labs );
+
+addsetcat( perc_labs, 'is_significant', 'significant' );
+
+for i = 1:num_rows  
+  percs(end+1) = 100 - percs(i);
+  
+  append( perc_labs, perc_labs, i );
+  setcat( perc_labs, 'is_significant', 'not_significant', rows(perc_labs) );
+end
+
+axs = pl.pie( percs, perc_labs, {'is_significant'}, {'region', 'event-name'} );
+
+if ( params.do_save )
+  shared_utils.plot.fullscreen( gcf );
+  save_spec = {'region', 'event-name'};
+  save_p = get_save_p( params, subdir, 'plot' );
+  dsp3.req_savefig( gcf, save_p, perc_labs, save_spec );
 end
 
 end

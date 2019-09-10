@@ -110,6 +110,6 @@ end
 function save_p = get_save_p(params, varargin)
 
 save_p = fullfile( bfw.dataroot(params.config), 'plots', 'cs_sens_vs_lda', dsp3.datedir ...
-  , params.base_subdir, varargin{:} );
+  , varargin{:}, params.base_subdir );
 
 end

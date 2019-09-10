@@ -1,7 +1,7 @@
 function outs = population_decode_gaze_from_reward(gaze_counts, reward_counts, varargin)
 
 defaults = bfw.get_common_make_defaults();
-defaults.gaze_t_window = [ 0.1, 0.4];  % s
+defaults.gaze_t_window = [ 0.1, 0.4 ];  % s
 defaults.reward_t_window = [ 0.1, 0.4 ];  % s
 defaults.target_t_window = [ 0.1, 0.4 ];
 defaults.n_iters = 1000;
@@ -259,7 +259,7 @@ function [perf, labels] = run_train_reward_test_gaze(rwd_inputs, gaze_inputs, pa
 perf = cell( n_pairs, 1 );
 labels = cell( n_pairs, 1 );
 
-parfor i = 1:n_pairs
+for i = 1:n_pairs
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};

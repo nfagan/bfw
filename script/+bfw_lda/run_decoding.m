@@ -3,6 +3,7 @@ function run_decoding(gaze_counts, reward_counts, varargin)
 defaults = bfw.get_common_make_defaults();
 defaults.base_subdir = '';
 defaults.reward_t_window = [-0.25, 0];
+defaults.gaze_t_window = [ 0.1, 0.4 ];
 defaults.is_over_time = false;
 
 params = bfw.parsestruct( defaults, varargin );
@@ -30,6 +31,7 @@ common_inputs.n_iters = 100;
 common_inputs.match_trials = false;
 common_inputs.match_units = true;
 common_inputs.reward_t_window = params.reward_t_window;
+common_inputs.gaze_t_window = params.gaze_t_window;
 
 is_over_time = params.is_over_time;
 
@@ -162,7 +164,7 @@ function gaze_mask = get_gaze_mask(labels)
 
 gaze_mask = fcat.mask( labels ...
   , @find, 'm1' ...
-  , @find, {'eyes_nf', 'face', 'nonsocial_object'} ...
+  , @findor, {'eyes_nf', 'face', 'nonsocial_object'} ...
 );
 
 end
