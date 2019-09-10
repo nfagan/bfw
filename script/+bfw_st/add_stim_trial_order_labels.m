@@ -6,7 +6,9 @@ end
 
 assert_ispair( stim_ts(:), labels );
 [~, order] = sort( stim_ts );
-order_labels = arrayfun( @(x) sprintf('%s__%d', order_cat, x), order, 'un', 0 );
+[~, sorted_order] = sort( order );
+
+order_labels = arrayfun( @(x) sprintf('%s__%d', order_cat, x), sorted_order, 'un', 0 );
 addsetcat( labels, order_cat, order_labels );
 
 end

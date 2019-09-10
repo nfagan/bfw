@@ -6,6 +6,8 @@ defaults.look_ahead = 5;
 defaults.look_back = 0;
 defaults.num_day_time_quantiles = 2;
 defaults.num_run_time_quantiles = 2;
+defaults.stim_isi_quantile_edges = [8, 11, 14, 17, 20];
+defaults.iti_quantile_edges = [1, 2, 3, 4, 5];
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -76,12 +78,14 @@ duration_labels = fcat();
 durations = [];
 
 current_durations = [];
+current_offsets = [];
 current_duration_labels = fcat();
 
 current_duration_each = event_specificity();
 current_duration_I = findall( event_labels, current_duration_each );
 
 next_durations = [];
+next_offsets = [];
 next_duration_labels = fcat();
 
 [preceding_stim_durations, preceding_stim_labels] = ...
@@ -100,6 +104,8 @@ for i = 1:numel(stim_ts)
       nearest_ind = curr_dur_ind(nearest_start);
       
       current_durations(end+1, 1) = durs(nearest_ind);
+      current_offsets(end+1, 1) = stim_ts(i) - starts(curr_dur_ind(nearest_start));
+      
       subset_current_dur_labels = ...
         make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );      
       
@@ -107,11 +113,21 @@ for i = 1:numel(stim_ts)
     end
     
     if ( ~isempty(next_start) )
+      prev_ind = next_start-1;
       next_ind = curr_dur_ind(next_start);
       
       next_durations(end+1, 1) = durs(next_ind);
+      
+      if ( prev_ind < 1 )
+        next_offsets(end+1, 1) = nan;
+      else
+        next_offsets(end+1, 1) = starts(next_ind) - starts(prev_ind);
+      end
+      
       subset_next_dur_labels = ...
         make_labels( event_labels, stim_labels, next_ind, i, stim_ids );
+    
+      add_iti_quantile_labels( subset_next_dur_labels, next_offsets(end), params.iti_quantile_edges );
       
       append( next_duration_labels, subset_next_dur_labels );      
     end
@@ -131,9 +147,11 @@ outs.durations = durations;
 outs.labels = duration_labels;
 
 outs.current_durations = current_durations;
+outs.current_offsets = current_offsets;
 outs.current_duration_labels = current_duration_labels;
 
 outs.next_durations = next_durations;
+outs.next_offsets = next_offsets;
 outs.next_duration_labels = next_duration_labels;
 
 outs.preceding_stim_durations = preceding_stim_durations;
@@ -200,7 +218,25 @@ end
 % 
 % end
 
+function add_iti_quantile_labels(labels, iti, iti_quantile_edges)
+
+edges = [ -inf, iti_quantile_edges(:)', inf ];
+quantile_ind = find( histc(iti, edges) );
+
+if ( isempty(quantile_ind) )
+    quantile_ind = nan;
+end
+
+quantile_cat = 'iti_quantile';
+label = sprintf( '%s__%d', quantile_cat, quantile_ind );
+
+addsetcat( labels, quantile_cat, label );
+
+end
+
 function update_labels(stim_labels, stim_ts, start_time_file, params)
+
+bfw_st.add_stim_isi_quantile_labels( stim_labels, stim_ts, params.stim_isi_quantile_edges );
 
 bfw_st.add_per_stim_labels( stim_labels, stim_ts );
 bfw_st.add_day_time_quantile_labels( stim_labels, stim_ts, params.num_day_time_quantiles, start_time_file );

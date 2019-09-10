@@ -40,7 +40,7 @@ for idx = 1:num_combs
   is_long_short = is_long_shorts(comb(4));
   collapse_func = collapse_funcs{comb(5)};
 
-  for i = 1:5
+  for i = 1:4
     before_plot_funcs = {};
 
     xcats = {};
@@ -91,15 +91,17 @@ for idx = 1:num_combs
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_only_previous');
         gcats{end+1} = 'previous_stim_type';
-    elseif ( i == 3 )
-         mask_func = @(labels) fcat.mask(labels ...
-            , @findor, {'eyes_nf', 'face'}...
-            , @findnone, 'previous_undefined'...
-            , additional_mask_func_inputs{:} ... 
-         );
-        gcats{end+1}='day_time_quantile' ;
-        base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles');
-    elseif (i == 4 ) 
+        pcats{end+1}='stim_isi_quantile';
+        
+%     elseif ( i == 3 )
+%          mask_func = @(labels) fcat.mask(labels ...
+%             , @findor, {'eyes_nf', 'face'}...
+%             , @findnone, 'previous_undefined'...
+%             , additional_mask_func_inputs{:} ... 
+%          );
+%         gcats{end+1}='day_time_quantile' ;
+%         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles');
+    elseif (i == 3 ) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
             , @findnone, 'previous_undefined' ...
@@ -107,6 +109,8 @@ for idx = 1:num_combs
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous' );
         gcats{end+1} = 'previous_stim_type';
+        pcats{end+1}='stim_isi_quantile';
+%         pcats{end+1} = 'stim_isi_quantile';
     else
       mask_func = @(labels) fcat.mask(labels ...
           , @findor, {'eyes_nf', 'face'} ...
