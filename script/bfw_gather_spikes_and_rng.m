@@ -156,6 +156,10 @@ left_ind = find( labels, 'left_nonsocial_object' );
 right_ind = find( labels, 'right_nonsocial_object' );
 setcat( labels, 'roi', 'nonsocial_object', union(left_ind, right_ind) );
 
+left_ind_matched = find( labels, 'left_nonsocial_object_eyes_nf_matched' );
+right_ind_matched = find( labels, 'right_nonsocial_object_eyes_nf_matched' );
+setcat( labels, 'roi', 'nonsocial_object_eyes_nf_matched', union(left_ind_matched, right_ind_matched) );
+
 end
 
 function [counts, t] = spike_counts(spikes, t)
