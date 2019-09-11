@@ -13,9 +13,9 @@ gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'gaze_counts.mat') );
 
 %%
 
-% t_windows = { [-0.25, 0], [0, 0.25], [0.05, 0.6] };
-t_windows = { [0.05, 0.3] };
-kind = 'train_gaze_test_gaze-timecourse';
+t_windows = { [-0.25, 0], [0, 0.25], [0.05, 0.6] };
+% t_windows = { [0.05, 0.3] };
+kind = 'train_reward_test_gaze-timecourse';
 
 make_t_window_str = @(win) sprintf( 'train-on-%d-%d', win(1)*1e3, win(2)*1e3 );
 
@@ -106,11 +106,16 @@ bfw_lda.plot_decoding( perf ...
 
 %%  load timecourse
 
-datedir = '090919';
-subdirs = {datedir, 'train_gaze_test_gaze-timecourse/train-on-50-300'};
+datedir = '091019';
+subdirs = {datedir, 'train_gaze_test_gaze-timecourse-enef/train-on-50-300'};
+rest_subdirs = subdirs;
+rest_subdirs{2} = strrep( rest_subdirs{2}, '-enef', '' );
 
-perf = bfw_lda.load_performance( subdirs );
+perf = bfw_lda.load_performance_combined_eyes_non_eyes_face( subdirs, rest_subdirs );
+
 
 %%
 
-bfw_lda.plot_decoding_timecourse( perf );
+bfw_lda.plot_decoding_timecourse( perf ...
+  , 'do_save', true ...
+);

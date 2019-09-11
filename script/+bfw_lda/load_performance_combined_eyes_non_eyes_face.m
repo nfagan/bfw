@@ -23,10 +23,10 @@ for i = 1:numel(fields)
       dest_ind = findnot( rest.labels, 'eyes_nf/face' );
       
       rest_labs = prune( rest.labels(dest_ind) );
-      rest_performance = rest.performance(dest_ind);
+      rest_performance = rest.performance(dest_ind, :);
       
       enef_labs = prune( enef.labels(src_ind) );
-      enef_performance = enef.performance(src_ind);
+      enef_performance = enef.performance(src_ind, :);
       
       perf.(f) = enef;
       perf.(f).performance = [ enef_performance; rest_performance ];

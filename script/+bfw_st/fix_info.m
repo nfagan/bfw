@@ -224,7 +224,7 @@ edges = [ -inf, iti_quantile_edges(:)', inf ];
 quantile_ind = find( histc(iti, edges) );
 
 if ( isempty(quantile_ind) )
-    quantile_ind = nan;
+  quantile_ind = nan;
 end
 
 quantile_cat = 'iti_quantile';

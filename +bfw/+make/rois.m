@@ -142,6 +142,8 @@ roi_funcs('top_object1') =      @bfw.calibration.rect_top_object1;
 roi_funcs('top_object2') =      @bfw.calibration.rect_top_object2;
 roi_funcs('bottom_object1') =   @bfw.calibration.rect_bottom_object1;
 roi_funcs('bottom_object2') =   @bfw.calibration.rect_bottom_object2;
+roi_funcs('left_nonsocial_object_eyes_nf_matched') = @bfw.calibration.rect_left_nonsocial_object_eyes_nf_matched;
+roi_funcs('right_nonsocial_object_eyes_nf_matched') = @bfw.calibration.rect_right_nonsocial_object_eyes_nf_matched;
 
 try
   r = un_file.stimulation_params.radius;

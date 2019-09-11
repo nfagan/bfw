@@ -42,13 +42,13 @@ gr_outs = [];
 
 %%
 
-% rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-rg_outs = [];
+rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+% rg_outs = [];
 
 %%
 
-gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-% gg_outs = [];
+% gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+gg_outs = [];
 
 %%
 
