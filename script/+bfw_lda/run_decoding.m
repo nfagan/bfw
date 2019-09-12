@@ -5,6 +5,8 @@ defaults.base_subdir = '';
 defaults.reward_t_window = [-0.25, 0];
 defaults.gaze_t_window = [ 0.1, 0.4 ];
 defaults.is_over_time = false;
+defaults.require_fixation = true;
+defaults.gaze_mask_func = @(labels, mask) mask;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -21,7 +23,7 @@ end
 
 %%
 
-gaze_mask = get_gaze_mask( gaze_counts.labels );
+gaze_mask = get_gaze_mask( gaze_counts.labels, params.gaze_mask_func );
 reward_mask = get_reward_mask( reward_counts.labels );
 
 common_inputs = struct();
@@ -32,6 +34,7 @@ common_inputs.match_trials = false;
 common_inputs.match_units = true;
 common_inputs.reward_t_window = params.reward_t_window;
 common_inputs.gaze_t_window = params.gaze_t_window;
+common_inputs.require_fixation = params.require_fixation;
 
 is_over_time = params.is_over_time;
 
@@ -42,13 +45,13 @@ gr_outs = [];
 
 %%
 
-rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-% rg_outs = [];
+% rg_outs = train_reward_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+rg_outs = [];
 
 %%
 
-% gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
-gg_outs = [];
+gg_outs = train_gaze_test_gaze( gaze_counts, reward_counts, common_inputs, is_over_time );
+% gg_outs = [];
 
 %%
 
@@ -160,12 +163,14 @@ setcat( labels, 'reward-level', strjoin(split, '/') );
 
 end
 
-function gaze_mask = get_gaze_mask(labels)
+function gaze_mask = get_gaze_mask(labels, mask_func)
 
 gaze_mask = fcat.mask( labels ...
   , @find, 'm1' ...
-  , @findor, {'eyes_nf', 'face', 'nonsocial_object'} ...
+  , @findor, {'eyes_nf', 'face', 'nonsocial_object', 'nonsocial_object_eyes_nf_matched'} ...
 );
+
+gaze_mask = mask_func( labels, gaze_mask );
 
 end
 

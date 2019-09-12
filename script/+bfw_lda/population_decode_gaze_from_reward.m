@@ -45,6 +45,8 @@ rwd_window = params.reward_t_window;
 [gaze_window, rwd_window, t_series] = get_time_windows( gaze_window, rwd_window );
 
 all_perf = cell( 1, numel(gaze_window) );
+trial_counts = [];
+trial_count_labels = fcat();
 
 for i = 1:numel(gaze_window)
   shared_utils.general.progress( i, numel(gaze_window) );
@@ -90,7 +92,12 @@ for i = 1:numel(gaze_window)
   elseif ( strcmp(train_on, 'gaze') && strcmp(test_on, 'reward') )
     [perf, labels] = run_train_gaze_test_reward( reward_inputs, gaze_inputs, params );
   elseif ( strcmp(train_on, 'gaze') && strcmp(test_on, 'gaze') )
-    [perf, labels] = run_train_gaze_test_gaze(  gaze_inputs, params );
+    [perf, labels, tmp_counts, tmp_count_labels] = run_train_gaze_test_gaze(  gaze_inputs, params );
+      
+    if ( i == 1 )
+      trial_counts = tmp_counts;
+      trial_count_labels = tmp_count_labels;
+    end
   elseif ( strcmp(train_on, 'reward') && strcmp(test_on, 'reward') )
     [perf, labels] = run_train_reward_test_reward( reward_inputs, params );
   else
@@ -105,6 +112,8 @@ outs.performance = horzcat( all_perf{:} );
 outs.labels = labels;
 outs.t = t_series;
 outs.params = params;
+outs.trial_counts = trial_counts;
+outs.trial_count_labels = trial_count_labels;
 
 end
 
@@ -540,12 +549,15 @@ labels = vertcat( fcat(), labels{:} );
 
 end
 
-function [perf, labels] = run_train_gaze_test_gaze(gaze_inputs, params)
+function [perf, labels, counts, count_labels] = run_train_gaze_test_gaze(gaze_inputs, params)
 
 [rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels );
 
 perf = cell( n_pairs, 1 );
 labels = cell( size(perf) );
+
+counts = cell( size(perf) );
+count_labels = cell( size(perf) );
 
 parfor i = 1:n_pairs
   shared_utils.general.progress( i, n_pairs );
@@ -563,25 +575,40 @@ parfor i = 1:n_pairs
   tmp_perf = [];
   tmp_labs = fcat();
   
+  tmp_counts = [];
+  tmp_count_labs = fcat();
+  
   for k = 1:numel(region_I)
     % Switch such that a is 1, b is 0, for consistency.
-    [one_perf, one_labels] = train_x_test_x( gaze_inputs, roi_b, roi_a, region_I{k}, params );
+    [one_perf, one_labels, one_counts, one_count_labels] = ...
+      train_x_test_x( gaze_inputs, roi_b, roi_a, region_I{k}, params );
+    
     setcat( one_labels, 'roi', sprintf('%s/%s', roi_a, roi_b) );
     
     tmp_perf = [ tmp_perf; one_perf ];
     append( tmp_labs, one_labels );
+    
+    append( tmp_count_labs, one_count_labels );
+    tmp_counts = [ tmp_counts; one_counts ];
   end
   
   perf{i} = tmp_perf;
   labels{i} = tmp_labs;
+  
+  counts{i} = tmp_counts;
+  count_labels{i} = tmp_count_labs;
 end
 
 perf = vertcat( perf{:} );
-labels = vertcat( labels{:} );
+labels = vertcat( fcat, labels{:} );
+
+counts = vertcat( counts{:} );
+count_labels = vertcat( fcat, count_labels{:} );
 
 end
 
-function [performance, perf_labels] = train_x_test_x(spike_inputs, level0, level1, mask, params)
+function [performance, perf_labels, trial_counts, trial_count_labels] = ...
+  train_x_test_x(spike_inputs, level0, level1, mask, params)
 
 %%
 
@@ -623,6 +650,9 @@ train_x = nan( n_train, numel(unit_I) );
 test_x = nan( n_test, numel(unit_I) );
 ok_units = true( numel(unit_I), 1 );
 
+trial_count_labels = fcat();
+trial_counts = [];
+
 for i = 1:n_iters
   search_vec = search_vec(randperm(n_tot));
   train_condition = search_vec(1:n_train);
@@ -642,6 +672,13 @@ for i = 1:n_iters
     
     [level0_ind, level1_ind] = find_levels( spike_inputs.labels, level0, level1, unit_ind );
     [train0_ind, train1_ind] = sample_levels( level0_ind, level1_ind, nnz(train0), nnz(train1) );
+    
+    if ( i == 1 )
+      append1( trial_count_labels, spike_inputs.labels, level0_ind );
+      append1( trial_count_labels, spike_inputs.labels, level1_ind );
+      
+      trial_counts(end+1:end+2, 1) = [ numel(level0_ind), numel(level1_ind) ];
+    end
     
     test_ind = setdiff( unit_ind, [train0_ind; train1_ind] );
     ind0 = intersect( test_ind, level0_ind );
@@ -851,7 +888,7 @@ end
 
 function [roi_a, roi_b] = roi_order(roi1, roi2)
 
-order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object' };
+order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object', 'nonsocial_object_eyes_nf_matched' };
 tf = ismember( order, {roi1, roi2} );
 rois = order(tf);
 roi_a = rois{1};

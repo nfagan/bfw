@@ -4,6 +4,7 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.lda_iters = 100;
 defaults.lda_holdout = 0.25;
 defaults.rng_seed = [];
+defaults.abs_modulation_index = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -24,7 +25,7 @@ rl_pairs = reward_level_pairs();
 
 each_combs = dsp3.numel_combvec( rc_I, gc_I, gc_pairs, rl_pairs );
 
-for idx = 2:2
+for idx = 1:4
   fprintf( '\n %d of %d', idx, 2 );
   
   for i = 1:size(each_combs, 2)
@@ -35,43 +36,76 @@ for idx = 2:2
     gc_pair = gc_pairs{each_combs(3, i)};
     rl_pair = rl_pairs{each_combs(4, i)};
     
+    if ( idx == 3 && each_combs(4, i) ~= 1 )
+      % gaze <-> gaze does not depend on reward pairs.
+      continue;
+    elseif ( idx == 4 && each_combs(3, i) ~= 1 )
+      % reward <-> reward does not depend on gaze pairs.
+      continue;
+    end
+    
+    rc_aggregate = make_aggregate( rc, rc_labels, rc_ind, rl_pair );
+    gc_aggregate = make_aggregate( gc, gc_labels, gc_ind, gc_pair );
+    
     if ( idx == 1 )
-      mod_source = rc;
-      mod_labels = rc_labels;
-      mod_mask = rc_ind;
-      mod_pair = rl_pair;
-
-      decode_source = gc;
-      decode_labels = gc_labels;
-      decode_mask = gc_ind;
-      decode_pair = gc_pair;
+      [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( rc_aggregate );
+      [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( gc_aggregate );
       
       x_is = 'Reward';
       y_is = 'Gaze';
-    else
-      mod_source = gc;
-      mod_labels = gc_labels;
-      mod_mask = gc_ind;
-      mod_pair = gc_pair;
-      
-      decode_source = rc;
-      decode_labels = rc_labels;
-      decode_mask = rc_ind;
-      decode_pair = rl_pair;
+    elseif ( idx == 2 )
+      [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( gc_aggregate );
+      [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( rc_aggregate );
       
       x_is = 'Gaze';
+      y_is = 'Reward';
+      
+    elseif ( idx == 3 )
+      [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( gc_aggregate );
+      [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( gc_aggregate );
+      
+      x_is = 'Gaze';
+      y_is = 'Gaze';
+    else
+      [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( rc_aggregate );
+      [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( rc_aggregate );
+      
+      x_is = 'Reward';
       y_is = 'Reward';
     end
     
     prefix = sprintf( '%d-%d_', idx, i );
 
-    [modulation_index, decode_performance, pair_labels] = ...
-      binary_modulation_index_vs_binary_decoding( mod_source, mod_labels, mod_mask ...
-        , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, params );
+    try
+      [modulation_index, decode_performance, pair_labels] = ...
+        binary_modulation_index_vs_binary_decoding( mod_source, mod_labels, mod_mask ...
+          , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, params );
 
-    plot_scatters( modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params );
+      plot_scatters( modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params );
+    catch err
+      warning( err.message );
+    end
   end
 end
+
+end
+
+function [counts, labels, mask, pair] = destructure_aggregate(aggregate)
+
+counts = aggregate.counts;
+labels = aggregate.labels;
+mask = aggregate.mask;
+pair = aggregate.pair;
+
+end
+
+function aggregate = make_aggregate(counts, labels, mask, pair)
+
+aggregate = struct();
+aggregate.counts = counts;
+aggregate.labels = labels;
+aggregate.mask = mask;
+aggregate.pair = pair;
 
 end
 
@@ -85,7 +119,13 @@ non_nan = ~isnan( modulation_index ) & ~isnan( decode_performance );
 mod_index = modulation_index(non_nan);
 decode_perf = decode_performance(non_nan);
 
-[axs, ids] = pl.scatter( mod_index, decode_perf, pair_labels(find(non_nan)), gcats, pcats );
+if ( params.abs_modulation_index )
+  mod_index = abs( mod_index );
+end
+
+plt_labs = addcat( prune(pair_labels(find(non_nan))), pcats );
+
+[axs, ids] = pl.scatter( mod_index, decode_perf, plt_labs, gcats, pcats );
 [hs, store_stats] = pl.scatter_addcorr( ids, mod_index, decode_perf );
 
 xlabel( axs(1), sprintf('%s modulation index', x_is) );

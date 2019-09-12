@@ -41,7 +41,8 @@ gc = struct();
 gc.psth = nanmean( gaze_counts.spikes(:, gaze_counts.t >= gc_time_window(1) & gaze_counts.t <= gc_time_window(2)), 2 );
 gc.labels = gaze_counts.labels';
 
-%  time_average_subsets(data, labels, t, selector_combinations, t_windows, mask)
+bfw.unify_single_region_labels( rc.labels );
+bfw.unify_single_region_labels( gc.labels );
 
 rc_mask = find( rc.labels, target_event_names );
 gc_mask = rowmask( gc.psth );
@@ -49,4 +50,6 @@ gc_mask = rowmask( gc.psth );
 bfw_lda.modulation_index_vs_decoding_performance( rc.psth, rc.labels, rc_mask, gc.psth, gc.labels, gc_mask ...
   , 'do_save', true ...
   , 'rng_seed', 1 ...
+  , 'abs_modulation_index', true ...
+  , 'base_subdir', 'abs_modulation_index' ...
 );
