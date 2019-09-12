@@ -46,14 +46,19 @@ end
 function gaze_counts = combine_gaze_counts(enef, rest)
 
 face_ind = find( enef.labels, 'face' );
+face_ind_events = find( enef.event_labels, 'face' );
 
 setcat( enef.labels, 'roi', 'face_non_eyes', face_ind );
+setcat( enef.event_labels, 'roi', 'face_non_eyes', face_ind_events );
 
 gaze_counts = rest;
 gaze_counts.labels = rest.labels';
 
 append( gaze_counts.labels, enef.labels, face_ind );
 gaze_counts.spikes = [ gaze_counts.spikes; enef.spikes(face_ind, :) ];
+
+append( gaze_counts.event_labels, enef.event_labels, face_ind_events );
+gaze_counts.events = [ gaze_counts.events; enef.events(face_ind_events, :) ];
 
 end
 

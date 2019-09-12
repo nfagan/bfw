@@ -5,6 +5,7 @@ defaults.lda_iters = 100;
 defaults.lda_holdout = 0.25;
 defaults.rng_seed = [];
 defaults.abs_modulation_index = false;
+defaults.kinds = 'all';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -25,8 +26,10 @@ rl_pairs = reward_level_pairs();
 
 each_combs = dsp3.numel_combvec( rc_I, gc_I, gc_pairs, rl_pairs );
 
-for idx = 1:4
-  fprintf( '\n %d of %d', idx, 2 );
+kind_set = get_kind_indices( params.kinds );
+
+for idx = kind_set
+  fprintf( '\n %d of %d', idx - min(kind_set) + 1, numel(kind_set) );
   
   for i = 1:size(each_combs, 2)
     fprintf( '\n\t %d of %d', i, size(each_combs, 2) );
@@ -87,6 +90,24 @@ for idx = 1:4
     end
   end
 end
+
+end
+
+function inds = get_kind_indices(kinds)
+
+kinds = cellstr( kinds );
+
+if ( numel(kinds) == 1 && strcmp(kinds, 'all') )
+  inds = 1:4;
+  return
+end
+
+inds = [];
+
+if ( ismember('reward/gaze', kinds) ), inds(end+1) = 1; end
+if ( ismember('gaze/reward', kinds) ), inds(end+1) = 2; end
+if ( ismember('gaze/gaze', kinds) ), inds(end+1) = 3; end
+if ( ismember('reward/reward', kinds) ), inds(end+1) = 4; end
 
 end
 
