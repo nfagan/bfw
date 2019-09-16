@@ -8,7 +8,7 @@ defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
 defaults.num_day_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [8, 11, 14, 17, 20];
+defaults.stim_isi_quantile_edges = [5, 10, 15];
 
 inputs = { 'aligned_raw_samples/position', 'aligned_raw_samples/time' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations' ...

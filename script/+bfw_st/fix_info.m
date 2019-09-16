@@ -6,8 +6,9 @@ defaults.look_ahead = 5;
 defaults.look_back = 0;
 defaults.num_day_time_quantiles = 2;
 defaults.num_run_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [8, 11, 14, 17, 20];
+defaults.stim_isi_quantile_edges = [5, 10, 15];
 defaults.iti_quantile_edges = [1, 2, 3, 4, 5];
+defaults.event_mask_func = @(labels) rowmask( labels );
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -26,6 +27,7 @@ if ( isempty(outputs) )
   outs.current_duration_labels = fcat();
   
   outs.next_durations = [];
+  outs.current_itis = [];
   outs.next_duration_labels = fcat();
   
   outs.preceding_stim_durations = [];
@@ -82,10 +84,11 @@ current_offsets = [];
 current_duration_labels = fcat();
 
 current_duration_each = event_specificity();
-current_duration_I = findall( event_labels, current_duration_each );
+current_duration_I = findall( event_labels, current_duration_each, params.event_mask_func(event_labels) );
 
 next_durations = [];
 next_offsets = [];
+current_itis = [];
 next_duration_labels = fcat();
 
 [preceding_stim_durations, preceding_stim_labels] = ...
@@ -103,8 +106,16 @@ for i = 1:numel(stim_ts)
     if ( ~isempty(nearest_start) )
       nearest_ind = curr_dur_ind(nearest_start);
       
+      curr_start = starts(curr_dur_ind(nearest_start));
+      
+      if ( isempty(next_start) )
+        current_itis(end+1, 1) = nan;
+      else
+        current_itis(end+1, 1) = starts(curr_dur_ind(next_start)) - curr_start;
+      end
+      
       current_durations(end+1, 1) = durs(nearest_ind);
-      current_offsets(end+1, 1) = stim_ts(i) - starts(curr_dur_ind(nearest_start));
+      current_offsets(end+1, 1) = stim_ts(i) - curr_start;
       
       subset_current_dur_labels = ...
         make_labels( event_labels, stim_labels, nearest_ind, i, stim_ids );      
@@ -113,8 +124,13 @@ for i = 1:numel(stim_ts)
     end
     
     if ( ~isempty(next_start) )
-      prev_ind = next_start-1;
       next_ind = curr_dur_ind(next_start);
+      
+      if ( next_start <= 1 )
+        prev_ind = 0;
+      else
+        prev_ind = curr_dur_ind(next_start-1);
+      end
       
       next_durations(end+1, 1) = durs(next_ind);
       
@@ -150,6 +166,7 @@ outs.current_durations = current_durations;
 outs.current_offsets = current_offsets;
 outs.current_duration_labels = current_duration_labels;
 
+outs.current_itis = current_itis;
 outs.next_durations = next_durations;
 outs.next_offsets = next_offsets;
 outs.next_duration_labels = next_duration_labels;

@@ -19,10 +19,10 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_collapsed_at_run_levels = [true false];
+is_collapsed_at_run_levels = [false, true];
 is_run_halves = false;
 is_trial_wise_subtractions = false;
-is_long_shorts = [true false];
+is_long_shorts = [false];
 %collapse_funcs=@run_level_average;
 collapse_funcs = { @run_level_average, @run_level_median };
 
@@ -35,6 +35,8 @@ cmbtns = dsp3.numel_combvec( is_collapsed_at_run_levels, is_run_halves ...
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
+  shared_utils.general.progress( idx, num_combs );
+    
   comb = cmbtns(:, idx);
   is_collapsed_at_run_level = is_collapsed_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
@@ -43,13 +45,13 @@ for idx = 1:num_combs
   %collapse_func=collapse_funcs;
   collapse_func = collapse_funcs{comb(5)};
 
-  for i = 1:4
+  for i = 1
     before_plot_funcs = {};
 
     xcats = {};
     gcats = {};
     pcats = {};
-    fcats = {};
+    fcats = { 'region' };
     base_subdir = '';
     additional_mask_func_inputs = {};
       
@@ -60,7 +62,7 @@ for idx = 1:num_combs
     
      if ( is_collapsed_at_run_level )
       before_plot_funcs{end+1} = collapse_func;
-      base_subdir = sprintf( '%s%s', base_subdir, func2str(collapse_func) );
+      base_subdir = sprintf( '%s%s_', base_subdir, func2str(collapse_func) );
      end 
 
     if ( is_long_short )
@@ -114,12 +116,12 @@ for idx = 1:num_combs
         gcats{end+1} = 'previous_stim_type';
         pcats{end+1}='stim_isi_quantile';
     else
-      mask_func = @(labels) fcat.mask(labels ...
-          , @findor, {'eyes_nf', 'face'} ...
-          , additional_mask_func_inputs{:} ... 
-      );
-      before_plot_func = @stim_minus_sham;
-      base_subdir = sprintf( '%s%s', base_subdir, 'stim_minus_sham' );
+%       mask_func = @(labels) fcat.mask(labels ...
+%           , @findor, {'eyes_nf', 'face'} ...
+%           , additional_mask_func_inputs{:} ... 
+%       );
+%       before_plot_func = @stim_minus_sham;
+%       base_subdir = sprintf( '%s%s', base_subdir, 'stim_minus_sham' );
     end
 
     bfw_st.plot_fix_info( fix_info_outs ...
