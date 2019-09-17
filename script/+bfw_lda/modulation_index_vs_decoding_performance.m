@@ -62,7 +62,6 @@ for idx = kind_set
       
       x_is = 'Gaze';
       y_is = 'Reward';
-      
     elseif ( idx == 3 )
       [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( gc_aggregate );
       [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( gc_aggregate );

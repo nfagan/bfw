@@ -113,7 +113,7 @@ xcats = { 'roi' };
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region', 'id_m1' };
 
-plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'fix_info/per_monkey', params );
+plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'per_monkey', params );
 
 end
 
@@ -124,7 +124,7 @@ xcats = 'roi';
 gcats = { 'stim_type' };
 pcats = { 'task_type', 'protocol_name', 'region' };
 
-plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'fix_info/across_monkeys', params );
+plot_bars( data, labels', mask, fig_cats, xcats, gcats, pcats, kind, 'across_monkeys', params );
 
 end
 

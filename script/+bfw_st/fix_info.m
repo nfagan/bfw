@@ -8,7 +8,7 @@ defaults.num_day_time_quantiles = 2;
 defaults.num_run_time_quantiles = 2;
 defaults.stim_isi_quantile_edges = [5, 10, 15];
 defaults.iti_quantile_edges = [4, 6, 8];
-defaults.event_mask_func = @(labels) rowmask( labels );
+defaults.event_mask_func = @(labels) find(labels, {'m1', 'exclusive_event'});
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -266,5 +266,11 @@ end
 function subset_labs = make_labels(event_labels, stim_labels, event_inds, stim_ind, stim_ids)
 
 subset_labs = bfw_st.join_event_stim_labels( event_labels, stim_labels, event_inds, stim_ind, stim_ids );
+
+end
+
+function mask = m1_exclusive_only()
+
+
 
 end

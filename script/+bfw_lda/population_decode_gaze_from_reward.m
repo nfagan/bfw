@@ -128,7 +128,7 @@ rng( params.rng_seed );
 
 n_units = zeros( numel(region_I), 1 );
 unit_ids_per_region = {};
-all_unit_id_I= {};
+all_unit_id_I = {};
 
 for i = 1:numel(region_I)
   [unit_id_I, unit_id_C] = findall( gaze, {'unit_uuid', 'session'}, region_I{i} );
@@ -152,6 +152,16 @@ for i = 1:numel(region_I)
   
   gaze_unit_I = all_unit_id_I{i};
   
+  if ( numel(reward_unit_I) ~= n_units(i) )
+    assert( numel(reward_unit_I) > n_units(i) );
+    
+    is_missing = is_missing_unit( reward_unit_C, unit_ids_per_region{i} );
+    assert( sum(is_missing) == numel(reward_unit_I) - n_units(i) );
+    
+    reward_unit_I = reward_unit_I(~is_missing);
+    reward_unit_C = reward_unit_C(:, ~is_missing);
+  end
+  
   assert( numel(reward_unit_I) == n_units(i) );
   
   if ( n_units(i) > min_units )
@@ -171,6 +181,15 @@ gaze_mask = find( gaze_keep_ind );
 reward_mask = find( rwd_keep_ind );
 
 rng( 'shuffle' );
+
+end
+
+function is_missing = is_missing_unit(test_combs, possible_combs)
+
+test_str = fcat.strjoin( test_combs );
+possible_str = fcat.strjoin( possible_combs );
+
+is_missing = ~ismember( test_str, possible_str );
 
 end
 
@@ -888,7 +907,10 @@ end
 
 function [roi_a, roi_b] = roi_order(roi1, roi2)
 
-order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object', 'nonsocial_object_eyes_nf_matched' };
+order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object', 'nonsocial_object_eyes_nf_matched' ... 
+  , 'right_nonsocial_object_eyes_nf_matched', 'left_nonsocial_object_eyes_nf_matched'...
+};
+
 tf = ismember( order, {roi1, roi2} );
 rois = order(tf);
 roi_a = rois{1};
