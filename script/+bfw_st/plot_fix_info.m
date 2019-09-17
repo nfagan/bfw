@@ -4,17 +4,17 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw_st.default_config();
 defaults.mask_func = @(labels) rowmask(labels);
 defaults.before_plot_func = @(varargin) deal(varargin{1:nargout});
-defaults.summary_func = @(x) nanmean(x, 1);
+defaults.summary_func = @plotlabeled.nanmean;
+defaults.fcats = {};
 defaults.gcats = {};
 defaults.xcats = {};
 defaults.pcats = {};
-defaults.fcats = {};
 
 params = bfw.parsestruct( defaults, varargin );
 
 labels = fix_info_outs.labels';
 handle_labels( labels );
-
+9
 calc_each = { 'roi', 'unified_filename', 'stim_type', 'stim_id', 'looks_by' };
 [run_labels, calc_I] = keepeach( labels', calc_each );
 
@@ -120,17 +120,18 @@ end
 
 function plot_bars(data, labels, mask, fig_cats, xcats, gcats, pcats, kind, subdir, params)
 
+fig_cats = csunion( params.fcats, fig_cats );
+fig_cats = fig_cats(:)';
+
+fig_I = findall_or_one( labels, fig_cats, mask );
+
 xcats = csunion( params.xcats, xcats );
 gcats = csunion( params.gcats, gcats );
 pcats = csunion( params.pcats, pcats );
-fig_cats = csunion( params.fcats, fig_cats );
-
-fig_I = findall_or_one( labels, fig_cats, mask );
 
 xcats = xcats(:)';
 gcats = gcats(:)';
 pcats = pcats(:)';
-fig_cats = fig_cats(:)';
 
 spec = unique( [xcats, gcats, pcats, fig_cats] );
 
