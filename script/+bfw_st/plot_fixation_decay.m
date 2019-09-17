@@ -5,8 +5,10 @@ defaults.config = bfw_st.default_config();
 defaults.mask = rowmask( decay_outs.labels );
 defaults.before_plot_func = @(varargin) deal(varargin{1:nargout});
 
+defaults.xcats= {};
 defaults.gcats = {};
 defaults.pcats = {};
+defaults.fcat = {};
 
 params = bfw.parsestruct( defaults, varargin );
 

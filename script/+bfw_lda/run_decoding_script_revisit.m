@@ -1,6 +1,7 @@
 % source_dir = '09062019_eyes_v_non_eyes_face';
 % source_dir = 'revisit_09032019';
-source_dir = '091119_nsobj_eyes_matched';
+% source_dir = '091119_nsobj_eyes_matched';
+source_dir = '091219_ns_obj_non_collapsed_eyes_matched';
 
 base_load_p = fullfile( bfw.dataroot() ...
   , 'analyses/spike_lda/reward_gaze_spikes' ...
@@ -16,7 +17,7 @@ gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'gaze_counts.mat') );
 
 % t_windows = { [-0.25, 0], [0, 0.25], [0.05, 0.6] };
 t_windows = { [0.05, 0.3] };
-kind = 'train_gaze_test_gaze';
+kind = 'train_gaze_test_gaze-right-obj';
 
 make_t_window_str = @(win) sprintf( 'train-on-%d-%d', win(1)*1e3, win(2)*1e3 );
 
@@ -33,7 +34,7 @@ for i = 1:numel(t_windows)
     , 'gaze_t_window', [0.05, 0.3] ...
     , 'reward_t_window', t_window ...
     , 'require_fixation', true ...
-    , 'gaze_mask_func', @(labels, mask) findor(labels, {'eyes_nf', 'nonsocial_object_eyes_nf_matched'}, mask) ...
+    , 'gaze_mask_func', @(labels, mask) findor(labels, {'eyes_nf', 'right_nonsocial_object_eyes_nf_matched'}, mask) ...
   );
 end
 
@@ -58,7 +59,7 @@ perf = bfw_lda.load_concatenated_performance( @bfw_lda.load_performance_combined
 
 %%  load train gaze test gaze
 
-kind = 'train_gaze_test_gaze';
+kind = 'train_gaze_test_gaze-left-obj';
 t_window = [0.05, 0.3];
 datedir = '091219';
 subdirs = { datedir, kind, make_t_window_str(t_window) };
@@ -104,7 +105,7 @@ perf = bfw_lda.load_concatenated_performance( @bfw_lda.load_performance ...
 %%
 
 bfw_lda.plot_decoding( perf ...
-  , 'base_subdir', 'combined' ...
+  , 'base_subdir', 'left-obj' ...
   , 'do_save', true ...
 );
 

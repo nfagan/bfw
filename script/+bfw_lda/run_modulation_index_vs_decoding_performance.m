@@ -21,6 +21,7 @@ reward_counts = bfw_get_cs_reward_response( ...
 %%
 
 normalize_reward_counts = false;
+use_gaze_duration = true;
 
 event_names = { 'cs_target_acquire', 'cs_reward', 'cs_delay', 'iti' };
 target_event_names = setdiff( event_names, 'iti' );
@@ -38,7 +39,15 @@ end
 rc.psth = rc_psth;
 
 gc = struct();
-gc.psth = nanmean( gaze_counts.spikes(:, gaze_counts.t >= gc_time_window(1) & gaze_counts.t <= gc_time_window(2)), 2 );
+
+if ( use_gaze_duration )
+  start_times = bfw.event_column( gaze_counts, 'start_time' );
+  stop_times = bfw.event_column( gaze_counts, 'stop_time' );
+  gc.psth = stop_times - start_times;
+else
+  gc.psth = nanmean( gaze_counts.spikes(:, gaze_counts.t >= gc_time_window(1) & gaze_counts.t <= gc_time_window(2)), 2 );
+end
+
 gc.labels = gaze_counts.labels';
 
 bfw.unify_single_region_labels( rc.labels );
@@ -51,5 +60,6 @@ bfw_lda.modulation_index_vs_decoding_performance( rc.psth, rc.labels, rc_mask, g
   , 'do_save', true ...
   , 'rng_seed', 1 ...
   , 'abs_modulation_index', true ...
-  , 'base_subdir', 'abs_modulation_index' ...
+  , 'base_subdir', 'abs_modulation_index_gaze_duration' ...
+  , 'kinds', 'all' ...
 );

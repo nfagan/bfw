@@ -25,6 +25,8 @@ mask = params.mask_func( run_labels );
 
 [current_dur, current_dur_labels, current_dur_mask] = get_current_duration( fix_info_outs, params );
 [next_dur, next_dur_labels, next_dur_mask] = get_next_duration(fix_info_outs, params);
+next_offsets = fix_info_outs.next_offsets;
+current_itis = fix_info_outs.current_itis;
 
 % per run for each day
 
@@ -34,26 +36,34 @@ mask = params.mask_func( run_labels );
 % plot_per_run_and_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 % per day
+nan_sum_params = params;
+nan_sum_params.summary_func = @(x) nansum(x, 1);
 
+plot_per_day( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
 plot_per_day( durations, run_labels', mask, 'durations', params );
+plot_per_day( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_per_day( counts, run_labels', mask, 'counts', params );
 plot_per_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_per_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 % per monkey (across days)
 
-plot_per_monkey( durations, run_labels', mask, 'durations', params );
+plot_per_monkey( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
+plot_per_monkey( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_per_monkey( counts, run_labels', mask, 'counts', params );
 plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_per_monkey( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
+plot_per_monkey( next_offsets, next_dur_labels, next_dur_mask, 'iti_offsets', params );
 
 % across monkeys
 
+plot_across_monkeys( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
 plot_across_monkeys( durations, run_labels', mask, 'durations', params );
+plot_across_monkeys( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_across_monkeys( counts, run_labels', mask, 'counts', params );
 plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_across_monkeys( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
-
+plot_across_monkeys( next_offsets, next_dur_labels, next_dur_mask, 'iti_offsets', params );
 end
 
 function [current_duration, current_dur_labels, mask] = get_current_duration(fix_info_out, params)
@@ -138,6 +148,7 @@ spec = unique( [xcats, gcats, pcats, fig_cats] );
 for i = 1:numel(fig_I)
   pl = plotlabeled.make_common();
   pl.summary_func = params.summary_func;
+  pl.x_tick_rotation = 30;
   
   pltdat = data(fig_I{i});
   pltlabs = prune( labels(fig_I{i}) );

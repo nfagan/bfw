@@ -19,37 +19,39 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_collapsed_at_run_levels = [true false];
+is_collapsed_at_run_levels = false;
 is_run_halves = false;
 is_trial_wise_subtractions = false;
-is_long_shorts = [true false];
-%collapse_funcs=@run_level_average;
-collapse_funcs = { @run_level_average, @run_level_median };
+%is_long_shorts = [true false];
+collapse_funcs=@run_level_average;
+%collapse_funcs = { @run_level_average, @run_level_median };
 
 
 % summary_func = @(x) nanmedian(x, 1);
 summary_func = @(x) nanmean(x, 1);
 
 cmbtns = dsp3.numel_combvec( is_collapsed_at_run_levels, is_run_halves ...
- , is_trial_wise_subtractions, is_long_shorts, collapse_funcs );
+ , is_trial_wise_subtractions, collapse_funcs );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
+  shared_utils.general.progress( idx, num_combs );
+    
   comb = cmbtns(:, idx);
   is_collapsed_at_run_level = is_collapsed_at_run_levels(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
-  is_long_short = is_long_shorts(comb(4));
-  %collapse_func=collapse_funcs;
-  collapse_func = collapse_funcs{comb(5)};
+  %is_long_short = is_long_shorts(comb(4));
+  collapse_func=collapse_funcs;
+  %collapse_func = collapse_funcs{comb(4)};
 
-  for i = 1:4
+  for i = 1:7
     before_plot_funcs = {};
 
     xcats = {};
     gcats = {};
     pcats = {};
-    fcats = {};
+    fcats = { 'region' };
     base_subdir = '';
     additional_mask_func_inputs = {};
       
@@ -60,15 +62,15 @@ for idx = 1:num_combs
     
      if ( is_collapsed_at_run_level )
       before_plot_funcs{end+1} = collapse_func;
-      base_subdir = sprintf( '%s%s', base_subdir, func2str(collapse_func) );
+      base_subdir = sprintf( '%s%s_', base_subdir, func2str(collapse_func) );
      end 
 
-    if ( is_long_short )
-      base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
-      fcats{end+1} = 'roi';
-      xcats{end+1} = 'preceding_stim_duration_quantile';
-      additional_mask_func_inputs = [additional_mask_func_inputs, {@findnone, '<preceding_stim_duration_quantile>'}];
-    end
+%     if ( is_long_short )
+%       base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_' );
+%       fcats{end+1} = 'roi';
+%       xcats{end+1} = 'preceding_stim_duration_quantile';
+%       additional_mask_func_inputs = [additional_mask_func_inputs, {@findnone, '<preceding_stim_duration_quantile>'}];
+%     end
 
      
     if ( is_trial_wise_subtraction )
@@ -89,12 +91,23 @@ for idx = 1:num_combs
     elseif (i ==2 ) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
+            , @findnone, 'previous_undefined' ...
             , @find, 'sham' ...
             , additional_mask_func_inputs{:} ... 
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_only_previous');
         gcats{end+1} = 'previous_stim_type';
-        pcats{end+1}='stim_isi_quantile';
+        
+    elseif (i ==3 ) 
+    mask_func = @(labels) fcat.mask(labels ...
+        , @findor, {'eyes_nf', 'face'} ...
+        , @findnone, 'previous_undefined' ...
+        , @find, 'sham' ...
+        , additional_mask_func_inputs{:} ... 
+    );
+    base_subdir = sprintf( '%s%s', base_subdir, 'sham_only_previous_isicontrol');
+    gcats{end+1} = 'previous_stim_type';
+    pcats{end+1}='stim_isi_quantile';
         
 %     elseif ( i == 3 )
 %          mask_func = @(labels) fcat.mask(labels ...
@@ -104,22 +117,56 @@ for idx = 1:num_combs
 %          );
 %         gcats{end+1}='day_time_quantile' ;
 %         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles');
-    elseif (i == 3 ) 
+    elseif (i == 4 ) 
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
-            , @findnone, 'previous_undefined' ...h
+            , @findnone, 'previous_undefined' ...
             , additional_mask_func_inputs{:} ... 
         );
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous' );
         gcats{end+1} = 'previous_stim_type';
+        
+    elseif (i == 5 )
+        mask_func = @(labels) fcat.mask(labels ...
+            , @findor, {'eyes_nf', 'face'} ...
+            , @findnone, 'previous_undefined' ...
+            , additional_mask_func_inputs{:} ... 
+        );
+        base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' );
+        gcats{end+1} = 'previous_stim_type';
         pcats{end+1}='stim_isi_quantile';
+    
+%       mask_func = @(labels) fcat.mask(labels ...
+%           , @findor, {'eyes_nf', 'face'} ...
+%           , additional_mask_func_inputs{:} ... 
+%       );
+%       before_plot_func = @stim_minus_sham;
+%       base_subdir = sprintf( '%s%s', base_subdir, 'stim_minus_sham' );
+
+    elseif (i == 6) 
+         mask_func = @(labels) fcat.mask(labels ...
+            , @findor, {'eyes_nf', 'face'} ...
+            , @findnone, '<preceding_stim_duration_quantile>' ...
+            , additional_mask_func_inputs{:} ... 
+        );
+        base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding' );
+        gcats{end+1} = 'stim_type';
+        fcats{end+1} = 'roi';
+        xcats{end+1} = 'preceding_stim_duration_quantile';
+
     else
-      mask_func = @(labels) fcat.mask(labels ...
-          , @findor, {'eyes_nf', 'face'} ...
-          , additional_mask_func_inputs{:} ... 
-      );
-      before_plot_func = @stim_minus_sham;
-      base_subdir = sprintf( '%s%s', base_subdir, 'stim_minus_sham' );
+        
+         mask_func = @(labels) fcat.mask(labels ...
+            , @findor, {'eyes_nf', 'face'} ...
+            , @findnone, '<preceding_stim_duration_quantile>' ...
+            , additional_mask_func_inputs{:} ... 
+        );
+        base_subdir = sprintf( '%s%s', base_subdir, 'short_vs_long_preceding_iticontrol' );
+        gcats{end+1} = 'stim_type';
+        fcats{end+1} = 'roi';
+        xcats{end+1} = 'preceding_stim_duration_quantile';
+        pcats{end+1}='iti_quantile';
+        
     end
 
     bfw_st.plot_fix_info( fix_info_outs ...
