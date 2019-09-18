@@ -8,6 +8,7 @@ defaults.config = bfw_st.default_config();
 defaults.stim_time_outs = [];
 defaults.decay_outs = [];
 defaults.fix_info_outs = [];
+defaults.do_save = true;
 
 params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
