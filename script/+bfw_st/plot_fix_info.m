@@ -49,11 +49,12 @@ plot_per_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params 
 % per monkey (across days)
 
 plot_per_monkey( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
+plot_per_monkey( durations, run_labels', mask, 'durations', params );
 plot_per_monkey( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_per_monkey( counts, run_labels', mask, 'counts', params );
 plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_per_monkey( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
-plot_per_monkey( next_offsets, next_dur_labels, next_dur_mask, 'iti_offsets', params );
+
 
 % across monkeys
 
@@ -63,7 +64,7 @@ plot_across_monkeys( ones(size(durations)), run_labels', mask, 'frequencies', na
 plot_across_monkeys( counts, run_labels', mask, 'counts', params );
 plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_across_monkeys( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
-plot_across_monkeys( next_offsets, next_dur_labels, next_dur_mask, 'iti_offsets', params );
+
 end
 
 function [current_duration, current_dur_labels, mask] = get_current_duration(fix_info_out, params)
