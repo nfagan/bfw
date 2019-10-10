@@ -1,5 +1,9 @@
 function perf = load_concatenated_performance(load_func, load_func_inputs, mask_func)
 
+if ( nargin < 3 )
+  mask_func = @(labels, index) rowmask( labels );
+end
+
 perf = struct();
 
 for i = 1:numel(load_func_inputs)

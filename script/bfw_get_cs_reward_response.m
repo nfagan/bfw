@@ -29,6 +29,7 @@ if ( isempty(results) )
   out.t = [];
   out.reward_levels = [];
   out.rasters = {};
+  out.event_times = [];
   
 else
   outputs = [results.output];
@@ -38,6 +39,7 @@ else
   out.t = outputs(1).t;
   out.reward_levels = vertcat( outputs.reward_levels );
   out.rasters = vertcat( outputs.rasters );
+  out.event_times = vertcat( outputs.event_times );
 end
 
 end
@@ -115,6 +117,9 @@ out.labels = psth_labels;
 out.reward_levels = reward_levels;
 out.rasters = rasters;
 out.t = t;
+out.event_times = repmat( event_times(:), numel(units), 1 );
+
+assert( numel(out.event_times) == rows(out.psth), 'Events do not match psth.' );
 
 end
 

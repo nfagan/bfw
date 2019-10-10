@@ -1,12 +1,6 @@
-% source_dir = '09062019_eyes_v_non_eyes_face';
-source_dir = 'revisit_09032019';
+%%
 
-base_load_p = fullfile( bfw.dataroot() ...
-  , 'analyses/spike_lda/reward_gaze_spikes' ...
-  , source_dir ...
-);
-
-gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'gaze_counts.mat') );
+gaze_counts = bfw_lda.load_gaze_counts_all_rois();
 
 %%
 
@@ -16,50 +10,78 @@ reward_counts = bfw_get_cs_reward_response( ...
   , 'look_ahead', 1.5 ...
   , 'is_firing_rate', false ...
   , 'include_rasters', false ...
+  , 'is_parallel', true ...
 );
 
 %%
 
-normalize_reward_counts = false;
-use_gaze_duration = true;
+all_spikes = bfw_gather_spikes();
+session_times = bfw_get_plex_start_stop();
 
-event_names = { 'cs_target_acquire', 'cs_reward', 'cs_delay', 'iti' };
-target_event_names = setdiff( event_names, 'iti' );
+%%
 
-rc_time_windows = cellfun( @bfw_lda.default_time_window_for_reward_event, event_names, 'un', 0 );
-gc_time_window = [0.05, 0.3];
+window_size = 10;
 
-rc = reward_counts;
-rc_psth = bfw_lda.time_average_subsets( rc.psth, rc.labels, rc.t, event_names, rc_time_windows );
+[windows, is_empty_window, empty_window_labels] = ...
+  bfw.identify_empty_windows( all_spikes.spike_times, all_spikes.labels ...
+  , session_times.start_stops, session_times.labels, window_size );
 
-if ( normalize_reward_counts )
-  rc_psth = bfw_lda.normalize_subsets( rc_psth, rc.labels, event_names, 'iti' );
-end
+%%
 
-rc.psth = rc_psth;
+gaze_data_type = 'duration';
+use_window_criterion = true;
+median_split_duration = false;
 
-gc = struct();
-
-if ( use_gaze_duration )
-  start_times = bfw.event_column( gaze_counts, 'start_time' );
-  stop_times = bfw.event_column( gaze_counts, 'stop_time' );
-  gc.psth = stop_times - start_times;
-else
-  gc.psth = nanmean( gaze_counts.spikes(:, gaze_counts.t >= gc_time_window(1) & gaze_counts.t <= gc_time_window(2)), 2 );
-end
-
-gc.labels = gaze_counts.labels';
-
-bfw.unify_single_region_labels( rc.labels );
-bfw.unify_single_region_labels( gc.labels );
-
-rc_mask = find( rc.labels, target_event_names );
-gc_mask = rowmask( gc.psth );
-
-bfw_lda.modulation_index_vs_decoding_performance( rc.psth, rc.labels, rc_mask, gc.psth, gc.labels, gc_mask ...
-  , 'do_save', true ...
-  , 'rng_seed', 1 ...
-  , 'abs_modulation_index', true ...
-  , 'base_subdir', 'abs_modulation_index_gaze_duration' ...
-  , 'kinds', 'all' ...
+components = bfw_lda.make_gaze_reward_components( gaze_counts, gaze_data_type, reward_counts ...
+  , 'windows', windows ...
+  , 'is_empty_window', is_empty_window ...
+  , 'empty_window_labels', empty_window_labels ...
+  , 'use_empty_window_criterion', use_window_criterion ...
+  , 'median_split_duration', median_split_duration ...
 );
+
+rc = components.rc;
+rc_mask = components.rc_mask;
+gc = components.gc;
+gc_mask = components.gc_mask;
+gc_spikes = components.gc_spikes;
+gc_spike_mask = components.gc_spike_mask;
+
+%%  reward / gaze
+
+bfw_lda.modulation_index_vs_decoding_combinations( rc, rc_mask, gc, gc_mask ...
+  , 'a_is', 'reward' ...
+  , 'b_is', 'gaze' ...
+  , 'kinds', {'b/a'} ...
+  , 'plot', false ...
+  , 'permutation_test', true ...
+);
+
+%%  gaze / gaze
+
+additional_each = ternary( median_split_duration, {'duration_quantile'}, {} );
+split_subdir = ternary( median_split_duration, '-median-split', '' );
+crit_subdir = ternary( use_window_criterion, 'with_exclusion_criteria', 'no_exclusion_criteria' );
+
+base_subdir = sprintf('%s%s', crit_subdir, split_subdir );
+
+bfw_lda.modulation_index_vs_decoding_combinations( gc, gc_mask, gc_spikes, gc_spike_mask ...
+  , 'a_is', 'gaze' ...
+  , 'b_is', 'gaze' ...
+  , 'kinds', {'a/b'} ...
+  , 'additional_each', additional_each ...
+  , 'base_subdir', sprintf('%s/', base_subdir) ...
+);
+
+%%  reward / gaze, duration quantile
+
+[quant_I, quant_C] = findall( gc.labels, 'duration_quantile', gc_mask );
+
+for i = 1:numel(quant_I)
+  bfw_lda.modulation_index_vs_decoding_combinations( rc, rc_mask, gc, quant_I{i} ...
+    , 'a_is', 'reward' ...
+    , 'b_is', 'gaze' ...
+    , 'kinds', {'b/a'} ...
+    , 'base_subdir', sprintf('%s-', strjoin(quant_C(:, i), '-')) ...
+  );
+end

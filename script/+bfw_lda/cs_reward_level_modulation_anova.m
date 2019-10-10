@@ -30,8 +30,8 @@ end
 % decode_small_large( reward_counts, params );
 % compare_baseline( reward_counts, params );
 reward_level_regression( reward_counts, params );
-compare_small_large( reward_counts, params );
 reward_level_anova( reward_counts, params );
+compare_small_large( reward_counts, params );
 
 end
 
@@ -151,6 +151,7 @@ end
 is_sig = or_many( is_sig{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( is_sig, stat_outs.rs_labels );
+cc_unit_info = make_sig_cc_unit_info( is_sig, stat_outs.rs_labels );
 
 save_subdir = 'small_vs_large';
 
@@ -158,6 +159,7 @@ if ( params.do_save )
   save_spec = 'region';
   save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, stat_outs.rs_labels, save_spec );
+  save( fullfile(save_p, 'cc_sig_unit_info.mat'), 'cc_unit_info' );
 end
 
 pie_plot( is_sig, stat_outs.rs_labels, params, save_subdir );
@@ -281,6 +283,7 @@ all_sig = or_many( all_sig{:} );
 %%
 
 [percs_tbl, counts_tbl] = make_summary_tables( all_sig, labels );
+cc_unit_info = make_sig_cc_unit_info( all_sig, labels );
 
 save_subdir = '3_reward_levels_glm';
 
@@ -288,6 +291,7 @@ if ( params.do_save )
   save_spec = 'region';
   save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, labels, save_spec );
+  save( fullfile(save_p, 'cc_sig_unit_info.mat'), 'cc_unit_info' );
 end
 
 pie_plot( all_sig, labels, params, save_subdir );
@@ -341,6 +345,7 @@ end
 sig_anovas = or_many( all_sig_anovas{:} );
 
 [percs_tbl, counts_tbl] = make_summary_tables( sig_anovas, anova_outs.anova_labels );
+cc_unit_info = make_sig_cc_unit_info( sig_anovas, anova_outs.anova_labels );
 
 save_subdir = '3_reward_levels_anova';
 
@@ -348,9 +353,17 @@ if ( params.do_save )
   save_spec = 'region';
   save_p = get_save_p( params, save_subdir );
   save_summary_tables( percs_tbl, counts_tbl, save_p, anova_outs.anova_labels, save_spec );
+  save( fullfile(save_p, 'cc_sig_unit_info.mat'), 'cc_unit_info' );
 end
 
 pie_plot( sig_anovas, anova_outs.anova_labels, params, save_subdir );
+
+end
+
+function unit_info = make_sig_cc_unit_info(is_sig, labels)
+
+assert_ispair( is_sig, labels );
+unit_info = bfw_ct.make_cc_unit_info( labels, find(is_sig) );
 
 end
 

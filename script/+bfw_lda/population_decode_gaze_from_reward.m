@@ -19,6 +19,10 @@ defaults.fixation_duration = 0.4;
 defaults.reward_level0 = 1;
 defaults.reward_level1 = 3;
 defaults.is_train_x_test_x_timecourse = false;
+defaults.roi_pairs = 'all';
+defaults.flip_roi_order = false;
+defaults.permutation_test = false;
+defaults.permutation_test_iters = 1e2;
 
 params = bfw.parsestruct( defaults, varargin );
 train_on = validatestring( params.train_on, {'reward', 'gaze'} );
@@ -246,20 +250,50 @@ levels(~orig_ind) = nan;
 
 end
 
-function [rois, roi_pair_inds, n_pairs] = get_roi_combinations(gaze_labels)
+function [rois, roi_pair_inds, n_pairs] = get_roi_combinations(gaze_labels, possible_pairs)
+
+%%
+
+if ( nargin < 2 )
+  possible_pairs = 'all';
+end
+
+is_all = ischar( possible_pairs ) && strcmp( possible_pairs, 'all' );
 
 rois = sort( combs(gaze_labels, 'roi') );
 roi_pair_inds = nchoosek( 1:numel(rois), 2 );
+
+if ( ~is_all )
+  potential_pairs = rois(roi_pair_inds);
+  joined_pairs = cell( size(potential_pairs, 1), 1 );
+  
+  for i = 1:size(potential_pairs, 1)
+    joined_pairs{i} = strjoin( sort(potential_pairs(i, :)), '' );
+  end
+  
+  to_keep = false( numel(joined_pairs), 1 );
+  
+  for i = 1:numel(possible_pairs)
+    desired_pair = strjoin( sort(possible_pairs{i}), '' );
+    
+    to_keep = to_keep | strcmp( joined_pairs, desired_pair );
+  end
+  
+  roi_pair_inds = roi_pair_inds(to_keep, :);
+end
+
 n_pairs = size( roi_pair_inds, 1 );
 
 end
 
 function [perf, labels] = run_train_gaze_test_reward(rwd_inputs, gaze_inputs, params)
 
-[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels );
+[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels, params.roi_pairs );
 
 perf = cell( n_pairs, 1 );
 labels = cell( n_pairs, 1 );
+
+flip_roi_order = params.flip_roi_order;
 
 parfor i = 1:n_pairs
   pair_ind = roi_pair_inds(i, :);
@@ -267,7 +301,7 @@ parfor i = 1:n_pairs
   roi_a = rois{pair_ind(1)};
   roi_b = rois{pair_ind(2)};
   
-  [roi_a, roi_b] = roi_order( roi_a, roi_b );
+  [roi_a, roi_b] = roi_order( roi_a, roi_b, flip_roi_order );
   
   [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs, roi_a, roi_b, params );
   
@@ -282,7 +316,7 @@ end
 
 function [perf, labels] = run_train_reward_test_gaze(rwd_inputs, gaze_inputs, params)
 
-[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels );
+[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels, params.roi_pairs );
 
 perf = cell( n_pairs, 1 );
 labels = cell( n_pairs, 1 );
@@ -293,7 +327,7 @@ for i = 1:n_pairs
   roi_a = rois{pair_ind(1)};
   roi_b = rois{pair_ind(2)};
   
-  [roi_a, roi_b] = roi_order( roi_a, roi_b );
+  [roi_a, roi_b] = roi_order( roi_a, roi_b, params.flip_roi_order );
   
   [one_perf, one_labels] = train_reward_test_gaze( rwd_inputs, gaze_inputs, roi_a, roi_b, params );
   
@@ -394,19 +428,30 @@ for i = 1:numel(reward_I)
       train_data(:, k) = ( train_dat - mean_train ) ./ dev_train;
     end
     
-    reward_model = fitcdiscr( train_data(:, keep_units), train_cond, 'discrimtype', 'pseudoLinear' );
+    model_success = true;
+    
+    try
+      reward_model = fitcdiscr( train_data(:, keep_units), train_cond, 'discrimtype', 'pseudoLinear' );
+    catch err
+      warning( err.message );
+      model_success = false;
+    end
     
     %%
     
-    kept_unit_ids = unit_ids(keep_units);
-    kept_stats = train_stats(keep_units, :);
+    if ( model_success )
+      kept_unit_ids = unit_ids(keep_units);
+      kept_stats = train_stats(keep_units, :);
+
+      [gaze_x, class_label] = get_other_distribution( gaze, gaze_ind, kept_unit_ids, kept_stats, roi_a, roi_b ); 
+
+      classified = predict( reward_model, gaze_x );
+      performance(stp) = sum( classified == class_label ) / numel( class_label );
+    else
+      performance(stp) = nan;
+    end
     
-    [gaze_x, class_label] = get_other_distribution( gaze, gaze_ind, kept_unit_ids, kept_stats, roi_a, roi_b ); 
-    
-    classified = predict( reward_model, gaze_x );
-    performance(stp) = sum( classified == class_label ) / numel( class_label );
-    
-    stp = stp + 1;    
+    stp = stp + 1;
   end
   
   reward_labs = reward.labels';
@@ -415,7 +460,7 @@ for i = 1:numel(reward_I)
   join( reward_labs, gaze_labs );
   setcat( reward_labs, 'roi', sprintf('%s/%s', roi_a, roi_b) );
   
-  append1( perf_labels, reward_labs, unit_I{i}, n_iters );
+  append1( perf_labels, reward_labs, reward_I{i}, n_iters );
 end
 
 end
@@ -552,15 +597,35 @@ region_I = findall( reward_inputs.labels, {'region', 'event-name'}, mask );
 perf = cell( numel(region_I), 1 );
 labels = cell( size(perf) );
 
-for i = 1:numel(region_I)
+parfor i = 1:numel(region_I)
   rwd0 = 'reward-0';
   rwd1 = 'reward-1';
   
-  [one_perf, one_labels] = train_x_test_x( reward_inputs, rwd0, rwd1, region_I{i}, params );
+  do_shuffle = false;
+  
+  tmp_perf = {};
+  tmp_labels = fcat();
+  
+  [one_perf, one_labels] = train_x_test_x( reward_inputs, rwd0, rwd1, region_I{i}, do_shuffle, params );
   setcat( one_labels, rwd_cat, sprintf('%s/%s', rwd0, rwd1) );
+  addsetcat( one_labels, 'is_permuted', 'is_permuted__false' );
+  
+  tmp_perf{end+1, 1} = one_perf;
+  append( tmp_labels, one_labels );
+  
+  if ( params.permutation_test )
+    for j = 1:params.permutation_test_iters
+      [shuff_perf, shuff_labels] = train_x_test_x( reward_inputs, rwd0, rwd1, region_I{i}, true, params );
+      setcat( shuff_labels, rwd_cat, sprintf('%s/%s', rwd0, rwd1) );
+      addsetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
+      
+      tmp_perf{end+1, 1} = shuff_perf;
+      append( tmp_labels, shuff_labels );
+    end
+  end
 
-  perf{i} = one_perf;
-  labels{i} = one_labels;
+  perf{i} = vertcat( tmp_perf{:} );
+  labels{i} = tmp_labels;
 end
 
 perf = vertcat( perf{:} );
@@ -570,7 +635,7 @@ end
 
 function [perf, labels, counts, count_labels] = run_train_gaze_test_gaze(gaze_inputs, params)
 
-[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels );
+[rois, roi_pair_inds, n_pairs] = get_roi_combinations( gaze_inputs.labels, params.roi_pairs );
 
 perf = cell( n_pairs, 1 );
 labels = cell( size(perf) );
@@ -586,32 +651,53 @@ parfor i = 1:n_pairs
   roi_a = rois{pair_ind(1)};
   roi_b = rois{pair_ind(2)};
   
-  [roi_a, roi_b] = roi_order( roi_a, roi_b );
+  [roi_a, roi_b] = roi_order( roi_a, roi_b, params.flip_roi_order );
   mask = find( gaze_inputs.labels, {roi_a, roi_b} );
   
   region_I = findall( gaze_inputs.labels, {'region'}, mask );
   
-  tmp_perf = [];
+  tmp_perf = cell( numel(region_I), 1 );
   tmp_labs = fcat();
   
   tmp_counts = [];
   tmp_count_labs = fcat();
   
   for k = 1:numel(region_I)
+    fprintf( '\n\t\t %d of %d', k, numel(region_I) );
+    
+    do_shuffle = false;
+    region_ind = region_I{k};
+    
     % Switch such that a is 1, b is 0, for consistency.
     [one_perf, one_labels, one_counts, one_count_labels] = ...
-      train_x_test_x( gaze_inputs, roi_b, roi_a, region_I{k}, params );
+      train_x_test_x( gaze_inputs, roi_b, roi_a, region_ind, do_shuffle, params );
     
     setcat( one_labels, 'roi', sprintf('%s/%s', roi_a, roi_b) );
+    addsetcat( one_labels, 'is_permuted', 'is_permuted__false' );
     
-    tmp_perf = [ tmp_perf; one_perf ];
+    tmp_perf{k} = one_perf;
     append( tmp_labs, one_labels );
     
     append( tmp_count_labs, one_count_labels );
     tmp_counts = [ tmp_counts; one_counts ];
+    
+    if ( params.permutation_test )      
+      for j = 1:params.permutation_test_iters 
+        fprintf( '\n\t\t %d of %d', j, params.permutation_test_iters );
+        
+        [shuff_perf, shuff_labels] = ...
+          train_x_test_x( gaze_inputs, roi_b, roi_a, region_ind, true, params );
+        
+        setcat( shuff_labels, 'roi', sprintf('%s/%s', roi_a, roi_b) );
+        addsetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
+        
+        tmp_perf{k} = [ tmp_perf{k}; shuff_perf ];
+        append( tmp_labs, shuff_labels );
+      end
+    end
   end
   
-  perf{i} = tmp_perf;
+  perf{i} = vertcat( tmp_perf{:} );
   labels{i} = tmp_labs;
   
   counts{i} = tmp_counts;
@@ -627,7 +713,7 @@ count_labels = vertcat( fcat, count_labels{:} );
 end
 
 function [performance, perf_labels, trial_counts, trial_count_labels] = ...
-  train_x_test_x(spike_inputs, level0, level1, mask, params)
+  train_x_test_x(spike_inputs, level0, level1, mask, do_shuffle, params)
 
 %%
 
@@ -640,8 +726,7 @@ n_iters = params.n_iters;
 min_zero = min_combination( spike_inputs.labels, level0, unit_I );
 min_one = min_combination( spike_inputs.labels, level1, unit_I );
 
-assert( min_zero >= params.condition_threshold && ...
-  min_one >= params.condition_threshold, 'Too few.' );
+assert( min_zero >= params.condition_threshold && min_one >= params.condition_threshold, 'Too few.' );
 
 if ( params.match_trials )
   abs_min = min( min_zero, min_one );
@@ -699,6 +784,12 @@ for i = 1:n_iters
       trial_counts(end+1:end+2, 1) = [ numel(level0_ind), numel(level1_ind) ];
     end
     
+    if ( do_shuffle )
+      [train0_ind, train1_ind] = shuffle_arrays( train0_ind, train1_ind );
+      train0_ind = sort( train0_ind );
+      train1_ind = sort( train1_ind );
+    end
+    
     test_ind = setdiff( unit_ind, [train0_ind; train1_ind] );
     ind0 = intersect( test_ind, level0_ind );
     ind1 = intersect( test_ind, level1_ind );
@@ -740,6 +831,16 @@ for i = 1:n_iters
   
   performance(i) = sum( predicted == test_condition ) / numel( test_condition );
 end
+
+end
+
+function [a, b] = shuffle_arrays(a, b)
+
+num_a = numel( a );
+tmp = [ a; b ];
+tmp = tmp(randperm(numel(tmp)));
+a = tmp(1:num_a);
+b = tmp(num_a+1:end);
 
 end
 
@@ -905,11 +1006,16 @@ shared_ids = intersect( ids_a, ids_b );
 
 end
 
-function [roi_a, roi_b] = roi_order(roi1, roi2)
+function [roi_a, roi_b] = roi_order(roi1, roi2, invert)
 
-order = { 'eyes_nf', 'face', 'outside1', 'nonsocial_object', 'nonsocial_object_eyes_nf_matched' ... 
+order = { 'eyes_nf', 'face', 'face_non_eyes', 'outside1' ...
+  , 'nonsocial_object', 'nonsocial_object_eyes_nf_matched' ... 
   , 'right_nonsocial_object_eyes_nf_matched', 'left_nonsocial_object_eyes_nf_matched'...
 };
+
+if ( invert )
+  order = fliplr( order );
+end
 
 tf = ismember( order, {roi1, roi2} );
 rois = order(tf);

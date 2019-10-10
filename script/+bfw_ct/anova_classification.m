@@ -4,7 +4,10 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.post_hoc_test_func = @ranksum;
 defaults.post_hoc_denominator_significant_cells = true;
 defaults.post_hoc_require_main_effect_significant = true;
+defaults.post_hoc_significant_factor = 'social';
 defaults.mask_func = @(labels) rowmask( labels );
+defaults.factors = { 'roi', 'social' };
+defaults.is_nested = true;
 defaults.alpha = 0.05;
 params = bfw.parsestruct( defaults, varargin );
 
@@ -28,7 +31,7 @@ end
 
 function plot_all_post_hoc_group_ordering(anova_outs, params)
 
-social_ps = anova_outs.ps(:, ismember(anova_outs.factors, 'social'));
+social_ps = anova_outs.ps(:, ismember(anova_outs.factors, params.post_hoc_significant_factor));
 sig_cell_mask = find( social_ps < params.alpha );
 
 plot_post_hoc_group_ordering( anova_outs, rowmask(anova_outs.labels), 'all_cells', params );
@@ -43,6 +46,15 @@ labels = anova_outs.labels';
 addsetcat( labels, 'group_ordering', anova_outs.group_ordering_ids );
 
 [props, prop_labels] = proportions_of( labels, 'region', 'group_ordering', prop_mask );
+
+unique_ordering_ids = unique( anova_outs.group_ordering_ids );
+for i = 1:numel(unique_ordering_ids)
+  if ( count(prop_labels, unique_ordering_ids{i}) == 0 )
+    props(end+1, 1) = 0;
+    append1( prop_labels, labels );
+    setcat( prop_labels, 'group_ordering', unique_ordering_ids{i}, rows(prop_labels) );
+  end
+end
 
 axs = pl.bar( props, prop_labels, 'group_ordering', {}, 'region' );
 title_obj = get( axs(1), 'title' );
@@ -74,7 +86,7 @@ for i = 1:numel(group_kinds)
 
   post_hoc_ps = subset_flat_info.p;
   post_hoc_labels = subset_flat_info.labels';
-  anova_ps = anova_outs.ps(:, ismember(anova_outs.factors, 'social'));
+  anova_ps = anova_outs.ps(:, ismember(anova_outs.factors, params.post_hoc_significant_factor));
   anova_inds = subset_flat_info.to_post_hoc_inds;
   
   % Denominator as significant cells from anova
@@ -86,9 +98,11 @@ for i = 1:numel(group_kinds)
     , anova_ps, anova_inds, is_out_of_sig, require_social_main_effect, alpha );
   
   unit_info = get_significant_post_hoc_unit_info( post_hoc_labels, sig_inds );
+  all_unit_info = get_all_post_hoc_unit_info( post_hoc_labels, sig_inds );
   
   if ( params.do_save )
-    save_post_hoc_unit_info( unit_info, group_kinds{i}, params );
+    save_post_hoc_unit_info( unit_info, 'significant', group_kinds{i}, params );
+    save_post_hoc_unit_info( all_unit_info, 'all', group_kinds{i}, params );
   end
 
   summarize_post_hoc_performance( p_sig, labels, params );
@@ -96,7 +110,7 @@ end
 
 end
 
-function save_post_hoc_unit_info(unit_info, subdir, params)
+function save_post_hoc_unit_info(unit_info, prefix, subdir, params)
 
 id_strs = keys( unit_info );
 
@@ -105,7 +119,30 @@ for i = 1:numel(id_strs)
   
   save_p = get_analysis_p( params, subdir, id_strs{i} );  
   shared_utils.io.require_dir( save_p );
-  save( fullfile(save_p, 'significant_social_cell_ids.mat'), 'subset_unit_info' );
+  save( fullfile(save_p, sprintf('%s_social_cell_ids.mat', prefix)), 'subset_unit_info' );
+end
+
+end
+
+function all_unit_info = get_all_post_hoc_unit_info(labels, sig_ind)
+
+[comparison_I, comparison_C] = findall( labels, 'roi' );
+
+all_unit_info = containers.Map();
+
+for i = 1:numel(comparison_I)
+  unit_info = make_unit_info( labels, comparison_I{i} );  
+  sig_units = intersect( comparison_I{i}, sig_ind );
+  is_sig = false( size(comparison_I{i}) );
+  is_sig(sig_units) = true;
+  [unit_info.is_significant] = deal( false );
+  
+  for j = 1:numel(unit_info)
+    unit_info(j).is_significant = is_sig(j);
+  end
+  
+  id_str = strjoin( fcat.strjoin(comparison_C(:, i)), '_' );
+  all_unit_info(id_str) = unit_info;
 end
 
 end
@@ -221,6 +258,7 @@ function outs = anova_classify(spikes, labels, mask, params)
 
 anova_each = { 'unit_uuid', 'session', 'region' };
 anova_factors = { 'roi' };
+specified_factors = cellstr( params.factors );
 
 [anova_labs, anova_I] = keepeach( labels', anova_each, mask );
 social_group = make_social_group( labels, mask );
@@ -234,24 +272,38 @@ all_roi_combs = cell( size(ps) );
 post_hoc_func = params.post_hoc_test_func;
 
 parfor i = 1:numel(anova_I)
+  shared_utils.general.progress( i, numel(anova_I) );
+  
   anova_ind = anova_I{i}; 
   
   subset_spikes = spikes(anova_ind);
   subset_social_group = social_group(anova_ind);
   
   groups = cellfun( @(x) categorical(labels, x, anova_ind), anova_factors, 'un', 0 );
-  groups{end+1} = subset_social_group;
   
-  nesting = zeros( numel(anova_factors)+1 );
-  roi_ind = find( strcmp(anova_factors, 'roi') );
-  % Nest rois in social
-  nesting(roi_ind, numel(groups)) = 1;
+  if ( ismember('social', specified_factors) )
+    groups{end+1} = subset_social_group;
+  end
   
-  [p, tbl, stats] = anovan( subset_spikes, groups ...
-    , 'nested', nesting ...
-    , 'varnames', [anova_factors, {'social'}] ...
-    , 'display', 'off' ...
-  );
+  if ( params.is_nested )
+    nesting = zeros( numel(anova_factors)+1 );
+    roi_ind = find( strcmp(anova_factors, 'roi') );
+    % Nest rois in social
+    nesting(roi_ind, numel(groups)) = 1;
+
+    [p, tbl, stats] = anovan( subset_spikes, groups ...
+      , 'nested', nesting ...
+      , 'varnames', [anova_factors, {'social'}] ...
+      , 'display', 'off' ...
+    );
+  elseif ( numel(groups) == 1 )
+    [p, tbl, stats] = anova1( subset_spikes, groups{1}, 'off' );
+  else
+    [p, tbl, stats] = anovan( subset_spikes, groups ...
+      , 'varnames', specified_factors ...
+      , 'display', 'off' ...
+    );
+  end
 
   ps{i} = p(:)';
   stat_tables{i} = stats;
@@ -263,8 +315,14 @@ parfor i = 1:numel(anova_I)
   [all_rois, sort_ind] = sort( roi_combs );
   roi_I = roi_I(sort_ind);
   
-  post_hoc_groups = { social_rois, nonsocial_rois, all_rois };
-  post_hoc_group_names = { 'social', 'nonsocial', 'all' };
+  if ( ismember('social', specified_factors) )
+    post_hoc_groups = { social_rois, nonsocial_rois, all_rois };
+    post_hoc_group_names = { 'social', 'nonsocial', 'all' };
+  else
+    post_hoc_groups = { all_rois };
+    post_hoc_group_names = { 'all' };
+  end
+  
   post_hoc_info = struct();
   
   for j = 1:numel(post_hoc_groups)
@@ -291,14 +349,14 @@ post_hoc_info = gather_post_hoc_info( all_post_hoc_info );
 
 outs = struct();
 outs.ps = ps;
-outs.factors = [ anova_factors, {'social'} ];
+outs.factors = specified_factors;
 outs.stat_tables = stat_tables;
 outs.labels = anova_labs;
 outs.post_hoc_info = all_post_hoc_info;
 outs.group_ordering_ids = group_ordering_ids;
 outs.group_ordering_rois = group_ordering_rois;
 
-[outs.is_sig, outs.summary_labels] = make_summary_info( ps, anova_labs', params.alpha );
+[outs.is_sig, outs.summary_labels] = make_summary_info( ps, anova_labs', params.alpha, specified_factors );
 outs.flat_post_hoc_info = make_flat_post_hoc_info( post_hoc_info, anova_labs );
 
 end
@@ -386,22 +444,21 @@ inds(inds(:, 1) == inds(:, 2), :) = [];
 
 end
 
-function [is_sig, summary_labels] = make_summary_info(ps, labels, alpha)
+function [all_sig, summary_labels] = make_summary_info(ps, labels, alpha, factors)
 
 is_sig = ps < alpha;
-
-roi_sig = is_sig(:, 1);
-social_sig = is_sig(:, 2);
-
-summary_labels = fcat();
+all_sig = cell( numel(factors), 1 );
 
 addcat( labels, 'main_effect' );
-setcat( labels, 'main_effect', 'roi' );
-append( summary_labels, labels );
-setcat( labels, 'main_effect', 'social' );
-append( summary_labels, labels );
+summary_labels = fcat();
 
-is_sig = [ roi_sig; social_sig ];
+for i = 1:numel(factors)
+  all_sig{i} = is_sig(:, i);
+  setcat( labels, 'main_effect', factors{i} );
+  append( summary_labels, labels );
+end
+
+all_sig = vertcat( all_sig{:} );
 
 end
 
@@ -467,14 +524,20 @@ end
 
 function unit_info = make_unit_info(labels, mask)
 
-labels = copy( labels );
-replace( labels, 'acc', 'accg' );
+unit_info = bfw_ct.make_cc_unit_info( labels, mask );
 
-unit_combs = combs( labels, {'unit_uuid', 'region', 'session'}, mask )';
-unit_id_numbers = fcat.parse( unit_combs(:, 1), 'unit_uuid__' );
+end
 
-unit_info = arrayfun( @(u, r, s) struct('unit', {u}, 'region', {r}, 'session', {s}) ...
-  , unit_id_numbers, unit_combs(:, 2), unit_combs(:, 3) );
+function unit_info = make_unit_info_with_sig(labels, is_sig)
+
+assert_ispair( is_sig, labels );
+
+unit_info = bfw_ct.make_cc_unit_info( labels );
+[unit_info.is_significant] = deal( false );
+
+for i = 1:numel(unit_info)
+  unit_info(i).is_significant = is_sig(i);
+end
 
 end
 
@@ -485,10 +548,12 @@ is_sig_social = anova_outs.is_sig(social_ind);
 social_labels = prune( anova_outs.summary_labels(social_ind) );
 
 sig_social_cell_info = make_unit_info( social_labels, find(is_sig_social) );
+all_social_cell_info = make_unit_info_with_sig( social_labels, is_sig_social );
 
 save_p = get_analysis_p( params );
 shared_utils.io.require_dir( save_p );
 
 save( fullfile(save_p, 'significant_social_cell_ids.mat'), 'sig_social_cell_info' );
+save( fullfile(save_p, 'all_social_cell_ids.mat'), 'all_social_cell_info' );
 
 end

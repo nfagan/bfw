@@ -6,25 +6,37 @@ defaults.lda_holdout = 0.25;
 defaults.rng_seed = [];
 defaults.abs_modulation_index = false;
 defaults.kinds = 'all';
+defaults.a_is = 'reward';
+defaults.b_is = 'gaze';
+defaults.a_type = 'spikes';
+defaults.b_type = 'spikes';
+defaults.additional_each = {};
+defaults.permutation_test = false;
+defaults.permutation_test_iters = 1;
+defaults.plot = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
 assert_ispair( rc, rc_labels );
 assert_ispair( gc, gc_labels );
 
-rc_mask = get_base_reward_mask( rc_labels, get_base_mask(rc_labels, rc_mask) );
-gc_mask = get_base_gaze_mask( gc_labels, get_base_mask(gc_labels, gc_mask) );
+rc_mask = get_mask_a( rc_labels, rc_mask, params );
+gc_mask = get_mask_b( gc_labels, gc_mask, params );
 
-rc_each = { 'event-name' };
-gc_each = {};
+rc_each = ternary( strcmp(params.a_is, 'reward'), {'event-name'}, {} );
+gc_each = ternary( strcmp(params.b_is, 'gaze'), {}, {'event-name'} );
 
 rc_I = findall_or_one( rc_labels, rc_each, rc_mask );
 gc_I = findall_or_one( gc_labels, gc_each, gc_mask );
 
-gc_pairs = gaze_roi_pairs();
-rl_pairs = reward_level_pairs();
+rl_pairs = ternary( strcmp(params.a_is, 'reward'), reward_level_pairs(), gaze_roi_pairs() );
+gc_pairs = ternary( strcmp(params.b_is, 'gaze'), gaze_roi_pairs(), reward_level_pairs() );
 
-each_combs = dsp3.numel_combvec( rc_I, gc_I, gc_pairs, rl_pairs );
+if ( ~strcmp(params.a_is, params.b_is) )
+  each_combs = dsp3.numel_combvec( rc_I, gc_I, gc_pairs, rl_pairs );
+else
+  each_combs = dsp3.numel_combvec( rc_I, gc_I, rl_pairs );
+end
 
 kind_set = get_kind_indices( params.kinds );
 
@@ -37,7 +49,12 @@ for idx = kind_set
     rc_ind = rc_I{each_combs(1, i)};
     gc_ind = gc_I{each_combs(2, i)};
     gc_pair = gc_pairs{each_combs(3, i)};
-    rl_pair = rl_pairs{each_combs(4, i)};
+    
+    if ( ~strcmp(params.a_is, params.b_is) )
+      rl_pair = rl_pairs{each_combs(4, i)};
+    else
+      rl_pair = gc_pair;
+    end
     
     if ( idx == 3 && each_combs(4, i) ~= 1 )
       % gaze <-> gaze does not depend on reward pairs.
@@ -47,47 +64,203 @@ for idx = kind_set
       continue;
     end
     
+    if ( strcmp(params.a_is, params.b_is) && ~all(strcmp(gc_pair, rl_pair)) )
+      fprintf( '\n Skipping unlike pair: (%s), (%s)', strjoin(gc_pair, ','), strjoin(rl_pair, ',') );
+      continue;
+    end
+    
     rc_aggregate = make_aggregate( rc, rc_labels, rc_ind, rl_pair );
     gc_aggregate = make_aggregate( gc, gc_labels, gc_ind, gc_pair );
+    
+    make_axis_str = @(kind, type) sprintf( '%s %s', kind, type );
     
     if ( idx == 1 )
       [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( rc_aggregate );
       [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( gc_aggregate );
       
-      x_is = 'Reward';
-      y_is = 'Gaze';
+      x_is = make_axis_str( params.a_is, params.a_type );
+      y_is = make_axis_str( params.b_is, params.b_type );
     elseif ( idx == 2 )
       [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( gc_aggregate );
       [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( rc_aggregate );
       
-      x_is = 'Gaze';
-      y_is = 'Reward';
+      x_is = make_axis_str( params.b_is, params.b_type );
+      y_is = make_axis_str( params.a_is, params.a_type );
     elseif ( idx == 3 )
       [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( gc_aggregate );
       [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( gc_aggregate );
       
-      x_is = 'Gaze';
-      y_is = 'Gaze';
+      x_is = make_axis_str( params.b_is, params.b_type );
+      y_is = make_axis_str( params.b_is, params.b_type );
     else
       [mod_source, mod_labels, mod_mask, mod_pair] = destructure_aggregate( rc_aggregate );
       [decode_source, decode_labels, decode_mask, decode_pair] = destructure_aggregate( rc_aggregate );
       
-      x_is = 'Reward';
-      y_is = 'Reward';
+      x_is = make_axis_str( params.a_is, params.a_type );
+      y_is = make_axis_str( params.a_is, params.a_type );
     end
     
     prefix = sprintf( '%d-%d_', idx, i );
 
     try
+      do_shuffle = false;
+      
       [modulation_index, decode_performance, pair_labels] = ...
         binary_modulation_index_vs_binary_decoding( mod_source, mod_labels, mod_mask ...
-          , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, params );
+          , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, do_shuffle, params );
 
-      plot_scatters( modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params );
+      if ( params.plot )
+        plot_summary_bars( modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params );
+        plot_scatters( modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params );
+      end
+      
+      if ( params.permutation_test )
+        real_results = struct();
+        real_results.modulation_index = modulation_index;
+        real_results.decode_performance = decode_performance;
+        real_results.pair_labels = pair_labels';
+        
+        permutation_test( real_results, mod_source, mod_labels, mod_mask ...
+          , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, prefix, x_is, y_is, params );
+      end
     catch err
       warning( err.message );
     end
   end
+end
+
+end
+
+function permutation_test(real_results, mod_source, mod_labels, mod_mask ...
+  , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, prefix ...
+  , x_is, y_is, params)
+
+corr_each = union( {'roi', 'event-name', 'region'}, params.additional_each );
+
+real_corr_results = correlate_mod_index_decode_performance( ...
+  real_results.modulation_index, real_results.decode_performance, real_results.pair_labels', corr_each ...
+);
+
+real_corr_stats = extract_correlation_stats( real_corr_results );
+
+shuffled_indices = cell( params.permutation_test_iters, 1 );
+shuffled_perf = cell( size(shuffled_indices) );
+shuffled_labels = cell( size(shuffled_indices) );
+shuffled_corr_stats = cell( size(shuffled_indices) );
+shuffled_corr_labels = cell( size(shuffled_indices) );
+shuffled_is_sig = cell( size(shuffled_indices) );
+
+for i = 1:params.permutation_test_iters
+  [modulation_index, decode_performance, pair_labels] = ...
+    binary_modulation_index_vs_binary_decoding( mod_source, mod_labels, mod_mask ...
+          , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, true, params );
+        
+  assert( pair_labels == real_results.pair_labels, 'Shuffled + real labels mismatch.' );
+        
+  perm_cat = 'permutation_iteration';
+  addsetcat( pair_labels, perm_cat, sprintf('%s__%d', perm_cat, i) );
+  
+  shuffled_indices{i} = modulation_index;
+  shuffled_perf{i} = decode_performance;
+  shuffled_labels{i} = pair_labels;
+  
+  shuffled_corr_results = correlate_mod_index_decode_performance( ...
+    modulation_index, decode_performance, pair_labels', corr_each ...
+  );
+
+  tmp_shuffled_stats = extract_correlation_stats( shuffled_corr_results );
+
+  shuffled_corr_stats{i} = tmp_shuffled_stats;
+  shuffled_corr_labels{i} = shuffled_corr_results.corr_labels;
+  shuffled_is_sig{i} = check_shuffled_correlations_are_significant( real_corr_stats, tmp_shuffled_stats );
+end
+
+shuffled_indices = vertcat( shuffled_indices{:} );
+shuffled_perf = vertcat( shuffled_perf{:} );
+shuffled_labels = vertcat( fcat(), shuffled_labels{:} );
+shuffled_corr_stats = vertcat( shuffled_corr_stats{:} );
+shuffled_corr_labels = vertcat( fcat(), shuffled_corr_labels{:} );
+shuffled_is_sig = sum_many( shuffled_is_sig{:} );
+
+p_real = shuffled_is_sig / params.permutation_test_iters;
+p_real(any(isnan(real_corr_stats), 2)) = nan;
+
+if ( params.do_save )
+  save_permutation_test_results( p_real, real_corr_results.labels, prefix, x_is, y_is, params );
+end
+
+end
+
+function save_permutation_test_results(p_real, labels, prefix, x_is, y_is, params)
+
+prefix = sprintf( '%s%s', prefix, params.prefix );
+
+if ( isempty(params.additional_each) )
+  save_p = get_plot_p( params, 'scatters', sprintf('%s_%s', x_is, y_is), 'stats' );
+  use_prefix = prefix;
+else
+  save_p = get_plot_p( params, 'scatters', sprintf('%s_%s', x_is, y_is), prefix, 'stats' );
+  use_prefix = '';
+end
+
+req_writetable(tbl, p, labs, cats, use_prefix, ext)
+
+end
+
+function is_sig = check_shuffled_correlations_are_significant(real_stats, shuffled_stats)
+
+is_sig = zeros( size(real_stats, 1), 1 );
+
+for i = 1:size(real_stats, 1)
+  real_r = real_stats(i, 1);
+  shuff_r = shuffled_stats(i, 1);
+  
+  if ( isnan(real_r) || isnan(shuff_r) )
+    continue;
+  end
+  
+  sign_real = sign( real_r );
+  
+  if ( sign_real == -1 )
+    is_sig(i) = double( shuff_r < real_r );
+  else
+    is_sig(i) = double( shuff_r > real_r );
+  end
+end
+
+end
+
+function stats = extract_correlation_stats(corr_results)
+
+stats = eachcell( @(x) [x.rho, x.p], corr_results.corr_tables );
+stats = vertcat( stats{:} );
+
+end
+
+function results = correlate_mod_index_decode_performance(modulation_index, decode_performance, labels, each)
+
+results = dsp3.corr( modulation_index, decode_performance, labels, each ...
+  , 'corr_inputs', {'rows', 'complete'} ...
+);
+
+end
+
+function rc_mask = get_mask_a(rc_labels, rc_mask, params)
+
+if ( strcmp(params.a_is, 'reward') )
+  rc_mask = get_base_reward_mask( rc_labels, get_base_mask(rc_labels, rc_mask) );
+else
+  rc_mask = get_base_gaze_mask( rc_labels, get_base_mask(rc_labels, rc_mask) );
+end
+
+end
+
+function gc_mask = get_mask_b(gc_labels, gc_mask, params)
+
+if ( strcmp(params.b_is, 'gaze') )
+  gc_mask = get_base_gaze_mask( gc_labels, get_base_mask(gc_labels, gc_mask) );
+else
+  gc_mask = get_base_reward_mask( gc_labels, get_base_mask(gc_labels, gc_mask) );
 end
 
 end
@@ -103,10 +276,10 @@ end
 
 inds = [];
 
-if ( ismember('reward/gaze', kinds) ), inds(end+1) = 1; end
-if ( ismember('gaze/reward', kinds) ), inds(end+1) = 2; end
-if ( ismember('gaze/gaze', kinds) ), inds(end+1) = 3; end
-if ( ismember('reward/reward', kinds) ), inds(end+1) = 4; end
+if ( ismember('a/b', kinds) ), inds(end+1) = 1; end
+if ( ismember('b/a', kinds) ), inds(end+1) = 2; end
+if ( ismember('b/b', kinds) ), inds(end+1) = 3; end
+if ( ismember('a/a', kinds) ), inds(end+1) = 4; end
 
 end
 
@@ -129,44 +302,114 @@ aggregate.pair = pair;
 
 end
 
-function plot_scatters(modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params)
-
-pl = plotlabeled.make_common();
-gcats = {};
-pcats = { 'roi', 'event-name', 'region' };
+function plot_summary_bars(modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params)
 
 non_nan = ~isnan( modulation_index ) & ~isnan( decode_performance );
-mod_index = modulation_index(non_nan);
-decode_perf = decode_performance(non_nan);
+fig_I = findall_or_one( pair_labels, {}, find(non_nan) );
 
-if ( params.abs_modulation_index )
-  mod_index = abs( mod_index );
+xcats = params.additional_each;
+gcats = {'region'};
+pcats = {'roi', 'event-name'};
+
+for i = 1:numel(fig_I)
+  pl = plotlabeled.make_common();
+  pl.y_lims = [0, 1];
+
+  decode_perf = decode_performance(fig_I{i});
+  plt_labs = addcat( prune(pair_labels(fig_I{i})), [pcats, gcats, xcats] );
+
+  axs = pl.bar( decode_perf, plt_labs, xcats, gcats, pcats );
+  ylabel( axs(1), sprintf('%s decoding performance', y_is) );
+
+  if ( params.do_save )
+    prefix = sprintf( '%s%s', prefix, params.prefix );
+    shared_utils.plot.fullscreen( gcf );
+    
+    if ( isempty(params.additional_each) )
+      save_p = get_plot_p( params, 'bars', sprintf('%s_%s', x_is, y_is) );
+      dsp3.req_savefig( gcf, save_p, plt_labs, [gcats, pcats], prefix );
+    else
+      save_p = get_plot_p( params, 'bars', sprintf('%s_%s', x_is, y_is), prefix );
+      dsp3.req_savefig( gcf, save_p, plt_labs, [gcats, pcats] );
+    end
+  end
 end
 
-plt_labs = addcat( prune(pair_labels(find(non_nan))), pcats );
-
-[axs, ids] = pl.scatter( mod_index, decode_perf, plt_labs, gcats, pcats );
-[hs, store_stats] = pl.scatter_addcorr( ids, mod_index, decode_perf );
-
-xlabel( axs(1), sprintf('%s modulation index', x_is) );
-ylabel( axs(1), sprintf('%s decoding performance', y_is) );
-
-if ( params.do_save )
-  prefix = sprintf( '%s%s', prefix, params.prefix );
-  shared_utils.plot.fullscreen( gcf );
-  save_p = get_plot_p( params, 'scatters' );
-  dsp3.req_savefig( gcf, save_p, pair_labels, [gcats, pcats], prefix );
 end
+
+function plot_scatters(modulation_index, decode_performance, pair_labels, x_is, y_is, prefix, params)
+
+non_nan = ~isnan( modulation_index ) & ~isnan( decode_performance );
+fig_I = findall_or_one( pair_labels, params.additional_each, find(non_nan) );
+
+for i = 1:numel(fig_I)
+  pl = plotlabeled.make_common();
+  pl.y_lims = [0, 1];
+
+  gcats = {};
+  pcats = union( {'roi', 'event-name', 'region'}, params.additional_each );
+
+  mod_index = modulation_index(fig_I{i});
+  decode_perf = decode_performance(fig_I{i});
+
+  if ( params.abs_modulation_index )
+    mod_index = abs( mod_index );
+  end
+
+  plt_labs = addcat( prune(pair_labels(fig_I{i})), pcats );
+
+  [axs, ids] = pl.scatter( mod_index, decode_perf, plt_labs, gcats, pcats );
+  darken_scatters( axs );
+  [hs, store_stats] = pl.scatter_addcorr( ids, mod_index, decode_perf );
+
+  xlabel( axs(1), sprintf('%s modulation index', x_is) );
+  ylabel( axs(1), sprintf('%s decoding performance', y_is) );
+
+  if ( params.abs_modulation_index )
+    shared_utils.plot.set_xlims( axs, [0, 1] );
+  else
+    shared_utils.plot.set_xlims( axs, [-1, 1] );
+  end
+
+  if ( params.do_save )
+    prefix = sprintf( '%s%s', prefix, params.prefix );
+    shared_utils.plot.fullscreen( gcf );
+    
+    if ( isempty(params.additional_each) )
+      save_p = get_plot_p( params, 'scatters', sprintf('%s_%s', x_is, y_is) );
+      dsp3.req_savefig( gcf, save_p, plt_labs, [gcats, pcats], prefix );
+    else
+      save_p = get_plot_p( params, 'scatters', sprintf('%s_%s', x_is, y_is), prefix );
+      dsp3.req_savefig( gcf, save_p, plt_labs, [gcats, pcats] );
+    end
+  end
+end
+
+end
+
+function darken_scatters(axs)
+
+scatters = findobj( axs, 'type', 'scatter' );
+new_color = [0, 0, 0.9];
+new_size = 4;
+
+for i = 1:numel(scatters)
+  c_data = repmat( new_color, rows(scatters(i).CData), 1 );
+  set( scatters(i), 'CData', c_data );
+end
+
+set( scatters, 'LineWidth', new_size );
 
 end
 
 function [mod_indices, decode_perf, pair_labels] = binary_modulation_index_vs_binary_decoding(mod_source, mod_labels, mod_mask ...
-  , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, params)
+  , decode_source, decode_labels, decode_mask, mod_pair, decode_pair, shuffle, params)
 
 assert_ispair( mod_source, mod_labels );
 assert_ispair( decode_source, decode_labels );
 
-[mod_unit_I, mod_unit_ids] = findall( mod_labels, {'unit_uuid', 'channel', 'region'}, mod_mask );
+mod_each = union( {'unit_uuid', 'channel', 'region'}, params.additional_each );
+[mod_unit_I, mod_unit_ids] = findall( mod_labels, mod_each, mod_mask );
 
 mod_indices = nan( size(mod_unit_I) );
 decode_perf = nan( size(mod_unit_I) );
@@ -188,12 +431,20 @@ parfor i = 1:numel(mod_unit_I)
   decode_ind = find( decode_labels, [decode_pair, mod_unit_ids(:, i)'], decode_mask );  
   
   if ( ~isempty(decode_ind) && ~isempty(mod_ind_a) && ~isempty(mod_ind_b) )
+    if ( shuffle )
+      [mod_ind_a, mod_ind_b] = shuffle_modulation_indices( mod_ind_a, mod_ind_b );
+    end
+    
     mean_a = nanmean( mod_source(mod_ind_a) );
     mean_b = nanmean( mod_source(mod_ind_b) );
-    mod_indices(i) = (mean_a - mean_b) ./ (mean_a + mean_b);
+    mod_indices(i) = (mean_b - mean_a) ./ (mean_a + mean_b);
 
     subset_decode = decode_source(decode_ind);
     subset_levels = decode_levels(decode_ind);
+    
+    if ( shuffle )
+      subset_levels = array_shuffle( subset_levels );
+    end
 
     decode_perf(i) = lda( subset_decode, subset_levels, params );
   end
@@ -224,6 +475,24 @@ end
 
 end
 
+function out = array_shuffle(a)
+
+out = a(randperm(numel(a)));
+
+end
+
+function [out_a, out_b] = shuffle_modulation_indices(a, b)
+
+num_a = numel( a );
+
+tot = [ a; b ];
+tot = array_shuffle( tot );
+
+out_a = tot(1:num_a);
+out_b = tot(num_a+1:end);
+
+end
+
 function try_set_pair_category(source_labels, dest_labels, pair)
 
 if ( ~ischar(pair{1}) || ~ischar(pair{2}) || ~all(haslab(source_labels, pair)) )
@@ -243,7 +512,13 @@ function p_corr = lda(subset_counts, subset_levels, params)
 
 num_trials = numel( subset_counts );
   
-partition = cvpartition( num_trials, 'HoldOut', params.lda_holdout );
+try
+  partition = cvpartition( num_trials, 'HoldOut', params.lda_holdout );
+catch err
+  warning( err.message );
+  p_corr = nan;
+  return;
+end
 
 train_levels = subset_levels(partition.training);
 test_levels = subset_levels(partition.test);
@@ -260,8 +535,11 @@ end
 
 function mask = get_base_gaze_mask(labels, mask)
 
+rois = { 'nonsocial_object', 'face', 'eyes_nf', 'face_non_eyes' ...
+  , 'nonsocial_object_eyes_nf_matched' };
+
 mask = fcat.mask( labels, mask ...
-  , @findor, {'nonsocial_object', 'face', 'eyes_nf'} ...
+  , @findor, rois ...
 );
 
 end
@@ -293,10 +571,18 @@ end
 
 function rois = gaze_roi_pairs()
 
+% rois = { ...
+%     {'face_non_eyes', 'eyes_nf'} ...
+%   , {'nonsocial_object', 'face_non_eyes'} ...
+%   , {'nonsocial_object', 'eyes_nf'} ...
+%   , {'nonsocial_object_eyes_nf_matched', 'eyes_nf'} ...
+%   , {'nonsocial_object', 'face'} ...
+% };
+
 rois = { ...
-  {'face', 'eyes_nf'} ...
+    {'face_non_eyes', 'eyes_nf'} ...
+  , {'nonsocial_object_eyes_nf_matched', 'eyes_nf'} ...
   , {'nonsocial_object', 'face'} ...
-  , {'nonsocial_object', 'eyes_nf'} ...
 };
 
 end

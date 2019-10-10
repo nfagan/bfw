@@ -1,4 +1,4 @@
-function out_data = time_average_subsets(data, labels, t, selector_combinations, t_windows, mask, find_func)
+function [out_data, label_inds] = time_average_subsets(data, labels, t, selector_combinations, t_windows, mask, find_func)
 
 assert_ispair( data, labels );
 assert( iscell(selector_combinations) && iscell(t_windows) && ...
@@ -15,11 +15,13 @@ if ( nargin < 7 )
 end
 
 out_data = nan( rows(data), 1 );
+label_inds = cell( numel(selector_combinations), 1 );
 
 for i = 1:numel(selector_combinations)
   label_ind = find_func( labels, selector_combinations{i}, mask );
   t_ind = t >= t_windows{i}(1) & t <= t_windows{i}(2);
   out_data(label_ind) = nanmean( data(label_ind, t_ind), 2 );
+  label_inds{i} = label_ind;
 end
 
 end
