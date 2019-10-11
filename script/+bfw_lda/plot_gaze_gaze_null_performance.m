@@ -1,4 +1,4 @@
-function plot_gaze_gaze_null_performance(perf, varargin)
+function plot_gaze_gaze_null_performance(perf, kind, varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 params = bfw.parsestruct( defaults, varargin );

@@ -301,12 +301,32 @@ parfor i = 1:n_pairs
   roi_a = rois{pair_ind(1)};
   roi_b = rois{pair_ind(2)};
   
+  do_shuffle = false;
   [roi_a, roi_b] = roi_order( roi_a, roi_b, flip_roi_order );
   
-  [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs, roi_a, roi_b, params );
+  tmp_perf = {};
+  tmp_labels = fcat();
   
-  perf{i} = one_perf;
-  labels{i} = one_labels;
+  [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
+    , roi_a, roi_b, do_shuffle, params );
+  assetcat( one_labels, 'is_permuted', 'is_permuted__false' );
+  
+  tmp_perf{end+1, 1} = one_perf;
+  append( tmp_labels, one_labels );
+  
+  if ( params.permutation_test )
+    for j = 1:params.permutation_test_iters
+      [shuff_perf, shuff_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
+        , roi_a, roi_b, true, params );
+      assetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
+
+      tmp_perf{end+1, 1} = shuff_perf;
+      append( tmp_labels, shuff_labels );
+    end
+  end
+  
+  perf{i} = vertcat( tmp_perf{:} );
+  labels{i} = tmp_labels;
 end
 
 perf = vertcat( perf{:} );
@@ -321,18 +341,36 @@ function [perf, labels] = run_train_reward_test_gaze(rwd_inputs, gaze_inputs, pa
 perf = cell( n_pairs, 1 );
 labels = cell( n_pairs, 1 );
 
-for i = 1:n_pairs
+parfor i = 1:n_pairs
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};
   roi_b = rois{pair_ind(2)};
   
+  do_shuffle = false;
   [roi_a, roi_b] = roi_order( roi_a, roi_b, params.flip_roi_order );
   
-  [one_perf, one_labels] = train_reward_test_gaze( rwd_inputs, gaze_inputs, roi_a, roi_b, params );
+  tmp_perf = {};
+  tmp_labels = fcat();
   
-  perf{i} = one_perf;
-  labels{i} = one_labels;
+  [one_perf, one_labels] = train_reward_test_gaze( rwd_inputs, gaze_inputs, roi_a, roi_b, do_shuffle, params );
+  addsetcat( one_labels, 'is_permuted', 'is_permuted__false' );
+  
+  tmp_perf{end+1, 1} = one_perf;
+  append( tmp_labels, one_labels );
+  
+  if ( params.permutation_test )
+    for j = 1:params.permutation_test_iters
+      [shuff_perf, shuff_labels] = train_reward_test_gaze( rwd_inputs, gaze_inputs, roi_a, roi_b, true, params );
+      addsetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
+      
+      tmp_perf{end+1, 1} = shuff_perf;
+      append( tmp_labels, shuff_labels );
+    end
+  end
+  
+  perf{i} = vertcat( tmp_perf{:} );
+  labels{i} = tmp_labels;
 end
 
 perf = vertcat( perf{:} );
@@ -340,7 +378,7 @@ labels = vertcat( fcat(), labels{:} );
 
 end
 
-function [performance, perf_labels] = train_reward_test_gaze(reward, gaze, roi_a, roi_b, params)
+function [performance, perf_labels] = train_reward_test_gaze(reward, gaze, roi_a, roi_b, do_shuffle, params)
 
 % rng( params.rng_seed );
 
@@ -409,6 +447,10 @@ for i = 1:numel(reward_I)
       full_ind_one = unit_ind(use_ones);
       full_ind_zero = unit_ind(use_zeros);
       
+      if ( do_shuffle )
+        [full_ind_one, full_ind_zero] = shuffle_arrays( full_ind_one, full_ind_zero );
+      end
+      
       train_one = reward.spikes(full_ind_one);
       train_zero = reward.spikes(full_ind_zero);
       
@@ -465,7 +507,7 @@ end
 
 end
 
-function [performance, perf_labels] = train_gaze_test_reward(reward, gaze, roi_a, roi_b, params)
+function [performance, perf_labels] = train_gaze_test_reward(reward, gaze, roi_a, roi_b, do_shuffle, params)
 
 %%
 
@@ -527,6 +569,10 @@ for i = 1:numel(region_I)
       
       use_ones = ones_this_unit(randperm(numel(ones_this_unit), n_one));
       use_zeros = zeros_this_unit(randperm(numel(zeros_this_unit), n_zero));
+      
+      if ( do_shuffle )
+        [use_ones, use_zeros] = shuffle_arrays( use_ones, use_zeros );
+      end
       
       train_one = gaze.spikes(use_ones);
       train_zero = gaze.spikes(use_zeros);

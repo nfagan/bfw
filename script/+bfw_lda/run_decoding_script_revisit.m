@@ -18,13 +18,12 @@ gaze_counts = bfw_lda.load_gaze_counts_all_rois();
 
 %%
 
-% kinds = { 'train_gaze_test_gaze', 'train_gaze_test_reward', 'train_reward_test_gaze' };
-% invert_roi_pair_order = [ true, false ];
+kinds = { 'train_gaze_test_reward', 'train_reward_test_gaze' };
+invert_roi_pair_order = [ true, false ];
 
 % kinds = { 'train_gaze_test_gaze' };
-
-kinds = { 'train_reward_test_reward' };
-invert_roi_pair_order = false;
+% kinds = { 'train_reward_test_reward' };
+% invert_roi_pair_order = false;
 
 cmbs = dsp3.numel_combvec( kinds, invert_roi_pair_order );
 
