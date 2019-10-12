@@ -306,7 +306,7 @@ for i = 1:n_pairs
   
   [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
     , roi_a, roi_b, do_shuffle, params );
-  assetcat( one_labels, 'is_permuted', 'is_permuted__false' );
+  addsetcat( one_labels, 'is_permuted', 'is_permuted__false' );
   
   if ( params.permutation_test )
     all_shuff_perf = cell( params.permutation_test_iters, 1 );
@@ -315,7 +315,7 @@ for i = 1:n_pairs
     parfor j = 1:params.permutation_test_iters      
       [shuff_perf, shuff_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
         , roi_a, roi_b, true, params );
-      assetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
+      addsetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
 
       all_shuff_perf{j} = shuff_perf;
       all_shuff_labels{j} = shuff_labels;
