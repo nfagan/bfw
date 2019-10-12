@@ -296,6 +296,8 @@ labels = cell( n_pairs, 1 );
 flip_roi_order = params.flip_roi_order;
 
 for i = 1:n_pairs
+  fprintf( '\n\t %d of %d', i, n_pairs );
+  
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};
@@ -346,6 +348,8 @@ perf = cell( n_pairs, 1 );
 labels = cell( n_pairs, 1 );
 
 for i = 1:n_pairs
+  fprintf( '\n\t %d of %d', i, n_pairs );
+  
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};
