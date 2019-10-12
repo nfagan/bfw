@@ -295,7 +295,7 @@ labels = cell( n_pairs, 1 );
 
 flip_roi_order = params.flip_roi_order;
 
-parfor i = 1:n_pairs
+for i = 1:n_pairs
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};
@@ -304,29 +304,29 @@ parfor i = 1:n_pairs
   do_shuffle = false;
   [roi_a, roi_b] = roi_order( roi_a, roi_b, flip_roi_order );
   
-  tmp_perf = {};
-  tmp_labels = fcat();
-  
   [one_perf, one_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
     , roi_a, roi_b, do_shuffle, params );
   assetcat( one_labels, 'is_permuted', 'is_permuted__false' );
   
-  tmp_perf{end+1, 1} = one_perf;
-  append( tmp_labels, one_labels );
-  
   if ( params.permutation_test )
-    for j = 1:params.permutation_test_iters
+    all_shuff_perf = cell( params.permutation_test_iters, 1 );
+    all_shuff_labels = cell( size(all_shuff_perf) );
+    
+    parfor j = 1:params.permutation_test_iters      
       [shuff_perf, shuff_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
         , roi_a, roi_b, true, params );
       assetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
 
-      tmp_perf{end+1, 1} = shuff_perf;
-      append( tmp_labels, shuff_labels );
+      all_shuff_perf{j} = shuff_perf;
+      all_shuff_labels{j} = shuff_labels;
     end
+  else
+    all_shuff_perf = {};
+    all_shuff_labels = {};
   end
   
-  perf{i} = vertcat( tmp_perf{:} );
-  labels{i} = tmp_labels;
+  perf{i} = vertcat( one_perf, all_shuff_perf{:} );
+  labels{i} = vertcat( fcat(), one_labels, all_shuff_labels{:} );
 end
 
 perf = vertcat( perf{:} );
