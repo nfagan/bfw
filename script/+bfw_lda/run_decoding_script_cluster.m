@@ -30,6 +30,11 @@ for idx = 1:size(cmbs, 2)
   flip_roi_pair_order = invert_roi_pair_order(cmbs(2, idx));
   is_sig_reward = require_sig_reward(cmbs(3, idx));
   is_sig_gaze = require_sig_gaze(cmbs(4, idx));
+  
+  if ( ~is_sig_reward && ~is_sig_gaze )
+    % Already did this one.
+    continue;
+  end
 
   switch ( kind )
     case 'train_gaze_test_gaze'
