@@ -25,7 +25,7 @@ perf = bfw_lda.load_concatenated_performance( load_func, load_func_inputs );
 %%  gaze/reward, reward/gaze
 
 datedir = '101219';
-kind = 'train_gaze_test_reward';
+kind = 'train_reward_test_gaze';
 flip_roi_pair_order = true;
 
 flip_str = ternary( flip_roi_pair_order, '-flipped-roi-order', '' );

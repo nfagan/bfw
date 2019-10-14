@@ -108,16 +108,42 @@ labels = eachcell( @(x) strsplit(x, ' | '), labels );
 selectors = eachcell( @(x) strrep(x, ' ', '_'), labels );  
 end
 
+function [x_ticks, x_tick_labs] = get_boxplot_xtick(ax)
+
+boxplot = findobj( ax, 'tag', 'boxplot' );
+assert( ~isempty(boxplot), 'no boxplot found.' );
+text_labs = findobj( boxplot, 'type', 'text' );
+set( text_labs, 'units', 'normalized' );
+pos = arrayfun( @(x) get(x, 'position'), text_labs, 'un', 0 );
+text = arrayfun( @(x) get(x, 'string'), text_labs, 'un', 0 );
+xs = arrayfun( @(x) x{1}(1), pos );
+[~, ~, ind] = unique( xs );
+x_ticks = unique( ind );
+x_tick_labs = cell( size(x_ticks) );
+
+for i = 1:numel(x_ticks)
+  tick_ind = ind == x_ticks(i);
+  x_tick_labs{i} = strjoin( text(tick_ind), ' | ' );
+end
+
+end
+
 function overlay_null_means_and_ps(axs, data, labels, expect_num, ps, p_labels)
 
 for i = 1:numel(axs)
   ax = axs(i);
   
-  x_selectors = labels_to_selectors( get(ax, 'xticklabels') );
+  x_tick_labs = get( ax, 'xticklabels' );
+  
+  if ( isempty(x_tick_labs) )
+    [x_ticks, x_tick_labs] = get_boxplot_xtick( ax );
+  else
+    x_ticks = get( ax, 'xtick' );
+  end
+  
+  x_selectors = labels_to_selectors( x_tick_labs );
   title_selectors = labels_to_selectors( get(get(ax, 'title'), 'string') );
   title_selectors = title_selectors{1};
-  
-  x_ticks = get( ax, 'xtick' );
   
   for j = 1:numel(x_selectors)
     perm_selectors = [ x_selectors{j}, title_selectors, {'is_permuted__true'} ];

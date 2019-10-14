@@ -11,7 +11,7 @@ reward_counts = shared_utils.io.fload( fullfile(base_load_p, 'reward_counts.mat'
 gaze_counts = bfw_lda.load_gaze_counts_all_rois();
 
 kinds = { 'train_gaze_test_reward', 'train_reward_test_gaze' };
-invert_roi_pair_order = [ true ];
+invert_roi_pair_order = [ false ];
 require_sig_reward = [ true, false ];
 require_sig_gaze = [ true, false ];
 
