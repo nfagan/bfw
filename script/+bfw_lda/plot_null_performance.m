@@ -39,9 +39,10 @@ mask = fcat.mask( labels ...
 expect_num_null = perm_iters;
 % plot_func = @violinalt;
 plot_func = @boxplot;
+func_subdir = func2str( plot_func );
 
 post_plot_func = @(varargin) post_plot_violin(varargin, performance, labels, expect_num_null, ps, p_labels);
-save_p = get_save_p( params, sprintf('%s-null', kind), 'violin' );
+save_p = get_save_p( params, sprintf('%s-null', kind), func_subdir );
 plot_figs( pl, plot_func, post_plot_func, fcats, performance, labels', mask ...
   , {gcats, pcats}, save_p, params );
 
@@ -243,7 +244,10 @@ end
 
 function save_p = get_save_p(params, varargin)
 
+figs_per_event_subdir = ternary( params.separate_figures_for_event_name ...
+  , 'separate-figs-per-event', 'separate-panels-per-event' );
+
 save_p = fullfile( bfw.dataroot(params.config), 'plots', 'cs_sens_vs_lda', dsp3.datedir ...
-  , varargin{:}, params.base_subdir );
+  , varargin{:}, params.base_subdir, figs_per_event_subdir );
 
 end
