@@ -295,7 +295,8 @@ labels = cell( n_pairs, 1 );
 
 flip_roi_order = params.flip_roi_order;
 
-parfor i = 1:n_pairs
+for i = 1:n_pairs
+  fprintf( '\n\t %d of %d pairs', i, n_pairs );
   pair_ind = roi_pair_inds(i, :);
   
   roi_a = rois{pair_ind(1)};
@@ -316,6 +317,7 @@ parfor i = 1:n_pairs
   
   if ( params.permutation_test )
     for j = 1:params.permutation_test_iters
+      fprintf( '\n\t\t %d of %d', j, params.permutation_test_iters );
       [shuff_perf, shuff_labels] = train_gaze_test_reward( rwd_inputs, gaze_inputs ...
         , roi_a, roi_b, true, params );
       addsetcat( shuff_labels, 'is_permuted', 'is_permuted__true' );
