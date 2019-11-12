@@ -1,35 +1,49 @@
 function plot_null_performance(perf, kind, varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
+defaults.separate_figures_for_event_name = true;
 params = bfw.parsestruct( defaults, varargin );
 
-plot_bars( perf.performance, perf.labels', perf.params.permutation_test_iters, kind, params );
-plot_violins( perf.performance, perf.labels', perf.params.permutation_test_iters, kind, params );
+pop_iters = perf.params.n_iters;
+
+% plot_bars( perf.performance, perf.labels', perf.params.permutation_test_iters, kind, params );
+plot_violins( perf.performance, perf.labels', pop_iters, perf.params.permutation_test_iters, kind, params );
 
 end
 
-function plot_violins(performance, labels, perm_iters, kind, params)
+function plot_violins(performance, labels, pop_iters, perm_iters, kind, params)
 
-fcats = keep_specifiers_for_kind( {'region', 'reward-level'}, kind );
-gcats = keep_specifiers_for_kind( {'is_permuted'}, kind );
-pcats = keep_specifiers_for_kind( {'region', 'event-name', 'reward-level', 'roi'}, kind );
-null_each = keep_specifiers_for_kind( {'region', 'roi', 'reward-level'}, kind );
+fcats = keep_specifiers_for_kind( {'region', 'event-name'}, kind );
+gcats = keep_specifiers_for_kind( {'roi', 'reward-level'}, kind );
+pcats = keep_specifiers_for_kind( {'region', 'event-name'}, kind );
+null_each = keep_specifiers_for_kind( {'region', 'roi', 'reward-level', 'event-name'}, kind );
+
+if ( ~params.separate_figures_for_event_name )
+  fcats = setdiff( fcats, 'event-name' );
+end
 
 spec = [ gcats, pcats, fcats, null_each ];
 addcat( labels, spec );
 
-% [ps, p_labels] = ranksum_null_significance( performance, labels, perm_iters, null_each );
+[ps, p_labels] = ranksum_null_significance( performance, labels, perm_iters, null_each );
 
 pl = plotlabeled.make_common();
-pl.y_lims = [0, 1];
+pl.y_lims = [];
 
 addcat( labels, [gcats, pcats, fcats] );
 
-mask = fcat.mask( labels );
+mask = fcat.mask( labels ...
+  , @find, 'is_permuted__false' ...
+);
 
-post_plot_func = @post_plot_violin;
-save_p = get_save_p( params, sprintf('%s-null', kind), 'violin' );
-plot_figs( pl, @violinplot, post_plot_func, fcats, performance, labels', mask ...
+expect_num_null = perm_iters;
+% plot_func = @violinalt;
+plot_func = @boxplot;
+func_subdir = func2str( plot_func );
+
+post_plot_func = @(varargin) post_plot_violin(varargin, performance, labels, expect_num_null, ps, p_labels);
+save_p = get_save_p( params, sprintf('%s-null', kind), func_subdir );
+plot_figs( pl, plot_func, post_plot_func, fcats, performance, labels', mask ...
   , {gcats, pcats}, save_p, params );
 
 end
@@ -80,9 +94,84 @@ end
 
 end
 
-function post_plot_violin(pl, figs, axs, inds, data, labels)
+function post_plot_violin(plot_inputs, data, labels, expect_num, ps, p_labels)
+
+axs = plot_inputs{3};
 
 xtickangle( axs, 30 );
+shared_utils.plot.match_ylims( axs );
+overlay_null_means_and_ps( axs, data, labels, expect_num, ps, p_labels );
+
+end
+
+function selectors = labels_to_selectors(labels)
+labels = eachcell( @(x) strsplit(x, ' | '), labels );
+selectors = eachcell( @(x) strrep(x, ' ', '_'), labels );  
+end
+
+function [x_ticks, x_tick_labs] = get_boxplot_xtick(ax)
+
+boxplot = findobj( ax, 'tag', 'boxplot' );
+assert( ~isempty(boxplot), 'no boxplot found.' );
+text_labs = findobj( boxplot, 'type', 'text' );
+set( text_labs, 'units', 'normalized' );
+pos = arrayfun( @(x) get(x, 'position'), text_labs, 'un', 0 );
+text = arrayfun( @(x) get(x, 'string'), text_labs, 'un', 0 );
+xs = arrayfun( @(x) x{1}(1), pos );
+[~, ~, ind] = unique( xs );
+x_ticks = unique( ind );
+x_tick_labs = cell( size(x_ticks) );
+
+for i = 1:numel(x_ticks)
+  tick_ind = ind == x_ticks(i);
+  x_tick_labs{i} = strjoin( text(tick_ind), ' | ' );
+end
+
+end
+
+function overlay_null_means_and_ps(axs, data, labels, expect_num, ps, p_labels)
+
+for i = 1:numel(axs)
+  ax = axs(i);
+  
+  x_tick_labs = get( ax, 'xticklabels' );
+  
+  if ( isempty(x_tick_labs) )
+    [x_ticks, x_tick_labs] = get_boxplot_xtick( ax );
+  else
+    x_ticks = get( ax, 'xtick' );
+  end
+  
+  x_selectors = labels_to_selectors( x_tick_labs );
+  title_selectors = labels_to_selectors( get(get(ax, 'title'), 'string') );
+  title_selectors = title_selectors{1};
+  
+  for j = 1:numel(x_selectors)
+    perm_selectors = [ x_selectors{j}, title_selectors, {'is_permuted__true'} ];
+    real_selectors = perm_selectors;
+    real_selectors{end} = 'is_permuted__false';
+    
+    data_ind = find( labels, perm_selectors );
+    real_ind = find( labels, real_selectors );
+    
+    if ( numel(data_ind) / numel(real_ind) ~= expect_num )
+      error( 'Expected %d matches for "%s"; got %d', expect_num, strjoin(perm_selectors), numel(data_ind) );
+    end
+    
+    p_ind = find( p_labels, real_selectors(1:end-1) );
+    if ( numel(p_ind) ~= 1 )
+      error( 'Expected 1 match for "%s".', strjoin(real_selectors(1:end-1)) );
+    end
+    
+    mean_null = mean( data(data_ind) );
+    hold( ax, 'on' );
+    plot( ax, x_ticks(j), mean_null, 'ko' );
+    
+    if ( ps(p_ind) < 0.05 )
+      plot( ax, x_ticks(j), max(get(ax, 'ylim')), 'k*' );
+    end
+  end
+end
 
 end
 
@@ -155,7 +244,10 @@ end
 
 function save_p = get_save_p(params, varargin)
 
+figs_per_event_subdir = ternary( params.separate_figures_for_event_name ...
+  , 'separate-figs-per-event', 'separate-panels-per-event' );
+
 save_p = fullfile( bfw.dataroot(params.config), 'plots', 'cs_sens_vs_lda', dsp3.datedir ...
-  , varargin{:}, params.base_subdir );
+  , varargin{:}, params.base_subdir, figs_per_event_subdir );
 
 end

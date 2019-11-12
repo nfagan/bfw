@@ -14,6 +14,7 @@ defaults.additional_each = {};
 defaults.permutation_test = false;
 defaults.permutation_test_iters = 1;
 defaults.plot = true;
+defaults.use_multi_regression = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -360,8 +361,7 @@ for i = 1:numel(fig_I)
 
   [axs, ids] = pl.scatter( mod_index, decode_perf, plt_labs, gcats, pcats );
   darken_scatters( axs );
-  [hs, store_stats] = pl.scatter_addcorr( ids, mod_index, decode_perf );
-
+  
   xlabel( axs(1), sprintf('%s modulation index', x_is) );
   ylabel( axs(1), sprintf('%s decoding performance', y_is) );
 
@@ -369,6 +369,12 @@ for i = 1:numel(fig_I)
     shared_utils.plot.set_xlims( axs, [0, 1] );
   else
     shared_utils.plot.set_xlims( axs, [-1, 1] );
+  end
+  
+  if ( ~params.use_multi_regression )
+    [hs, store_stats] = pl.scatter_addcorr( ids, mod_index, decode_perf );
+  else
+    multi_regress( ids, mod_index, decode_perf );
   end
 
   if ( params.do_save )
@@ -383,6 +389,67 @@ for i = 1:numel(fig_I)
       dsp3.req_savefig( gcf, save_p, plt_labs, [gcats, pcats] );
     end
   end
+end
+
+end
+
+function multi_regress(ids, mod_index, decode_perf)
+
+subset_pre0 = find( mod_index < 0 );
+subset_post0 = find( mod_index >= 0 );
+
+for i = 1:numel(ids)
+  ind0 = intersect( ids(i).index, subset_pre0 );
+  ind1 = intersect( ids(i).index, subset_post0 );
+  
+  if ( isempty(ind0) )
+    lm0 = [];
+  else
+    lm0 = fitlm( mod_index(ind0), decode_perf(ind0) );
+  end
+  
+  if ( isempty(ind1) )
+    lm1 = [];
+  else
+    lm1 = fitlm( mod_index(ind1), decode_perf(ind1) );
+  end
+  
+  [beta0, intercept0, p0] = linear_model_coeffs( lm0 );
+  [beta1, intercept1, p1] = linear_model_coeffs( lm1 );
+  
+  ax = ids(i).axes;
+  xtick = get( ax, 'xtick' );
+  hold( ax, 'on' );
+  
+  if ( ~isnan(beta0) )
+    tick0 = xtick(xtick < 0);
+    y0 = polyval( [beta0, intercept0], tick0 );
+    
+    plot( ax, tick0, y0 );
+    text( ax, max(tick0), min(y0), sprintf('B = %0.2f; p = %0.2f', beta0, p0) );
+  end
+  
+  if ( ~isnan(beta1) )
+    tick1 = xtick(xtick >= 0);
+    y1 = polyval( [beta1, intercept1], tick1 );
+    
+    plot( ax, tick1, y1 );
+    text( ax, max(tick1), max(y1), sprintf('B = %0.2f; p = %0.2f', beta1, p1) );
+  end
+end
+
+end
+
+function [beta, intercept, p] = linear_model_coeffs(model)
+
+if ( isempty(model) )
+  beta = nan;
+  p = nan;
+  intercept = nan;
+else
+  beta = model.Coefficients.Estimate(2);
+  p = model.Coefficients.pValue(2);
+  intercept = model.Coefficients.Estimate(1);
 end
 
 end

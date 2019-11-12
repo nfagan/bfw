@@ -10,6 +10,7 @@ defaults.additional_each = {};
 defaults.base_subdir = '';
 defaults.plot = true;
 defaults.permutation_test = false;
+defaults.use_multi_regression = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -43,6 +44,7 @@ for i = 1:size(condition_combs, 2)
     , 'additional_each', params.additional_each ...
     , 'plot', params.plot ...
     , 'permutation_test', params.permutation_test ...
+    , 'use_multi_regression', params.use_multi_regression ...
   );
 end
 
