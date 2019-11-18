@@ -21,18 +21,19 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_collapsed_over_trials_cmbtns = true;
+is_collapsed_over_day_or_run_cmbtns = true;
 is_run_halves = false;
 is_trial_wise_subtractions = false;
 %is_long_shorts = [true false];
 collapse_funcs={ @day_level_average };
+% collapse_funcs={ @run_level_average };  % average at run level.
 %collapse_funcs = { @run_level_average, @run_level_median };
 
 
 % summary_func = @(x) nanmedian(x, 1);
 summary_func = @(x) nanmean(x, 1);
 
-cmbtns = dsp3.numel_combvec( is_collapsed_over_trials_cmbtns, is_run_halves ...
+cmbtns = dsp3.numel_combvec( is_collapsed_over_day_or_run_cmbtns, is_run_halves ...
  , is_trial_wise_subtractions, collapse_funcs );
 num_combs = size( cmbtns, 2 );
 
@@ -40,7 +41,7 @@ for idx = 1:num_combs
   shared_utils.general.progress( idx, num_combs );
     
   comb = cmbtns(:, idx);
-  is_collapsed_over_trials = is_collapsed_over_trials_cmbtns(comb(1));
+  is_collapsed_over_day_or_run = is_collapsed_over_day_or_run_cmbtns(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   %is_long_short = is_long_shorts(comb(4));
@@ -61,7 +62,7 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
     
-     if ( is_collapsed_over_trials )
+     if ( is_collapsed_over_day_or_run )
       before_plot_funcs{end+1} = collapse_func;
       base_subdir = sprintf( '%s%s_', base_subdir, func2str(collapse_func) );
      end 

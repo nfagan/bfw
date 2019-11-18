@@ -40,12 +40,12 @@ current_itis = fix_info_outs.current_itis;
 nan_sum_params = params;
 nan_sum_params.summary_func = @(x) nansum(x, 1);
 
-% plot_per_day( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
-% plot_per_day( durations, run_labels', mask, 'durations', params );
-% plot_per_day( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
-% plot_per_day( counts, run_labels', mask, 'counts', params );
-% plot_per_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
-% plot_per_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
+plot_per_day( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
+plot_per_day( durations, run_labels', mask, 'durations', params );
+plot_per_day( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
+plot_per_day( counts, run_labels', mask, 'counts', params );
+plot_per_day( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+plot_per_day( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 % per monkey (across days)
 
