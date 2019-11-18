@@ -21,17 +21,20 @@ if ( isempty(decay_outs) )
   decay_outs = bfw_st.stim_fixation_decay( make_params );
 end
 
-is_average_at_run_levels = false;
+is_average_at_day_or_run_level_cmbtns = true;
 is_run_halves = false;
 %is_long_shorts = true;
 %is_trial_wise_subtractions = [true false];
 
-cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves );
+% collapse_func = @run_level_average;
+collapse_func = @day_level_average;
+
+cmbtns = dsp3.numel_combvec( is_average_at_day_or_run_level_cmbtns, is_run_halves );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
   comb = cmbtns(:, idx);
-  is_average_at_run_level = is_average_at_run_levels(comb(1));
+  is_average_at_day_or_run_level = is_average_at_day_or_run_level_cmbtns(comb(1));
   is_run_half = is_run_halves(comb(2));
   %is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   %is_long_short = is_long_shorts(comb(3));
@@ -52,8 +55,8 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
     
-    if ( is_average_at_run_level )
-      before_plot_funcs{end+1} = @run_level_average;
+    if ( is_average_at_day_or_run_level )
+      before_plot_funcs{end+1} = collapse_func;
       base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
     end 
 
@@ -175,6 +178,17 @@ end
 function [data, labels] = run_level_average(data, labels, spec)
 
 use_spec = union( spec, {'unified_filename'} );
+[labels, each_I] = keepeach( labels', use_spec );
+data = bfw.row_nanmean( data, each_I );
+
+end
+
+function [data, labels] = day_level_average(data, labels, spec)
+
+use_spec = spec;
+use_spec = setdiff( use_spec, {'unified_filename'} );
+use_spec = union( use_spec, {'session'} );
+
 [labels, each_I] = keepeach( labels', use_spec );
 data = bfw.row_nanmean( data, each_I );
 
