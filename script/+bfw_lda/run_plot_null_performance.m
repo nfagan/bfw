@@ -28,9 +28,15 @@ datedir = '101419';
 kinds = {'train_reward_test_gaze', 'train_gaze_test_reward'};
 % kinds = {'train_gaze_test_reward'};
 
-flip_roi_pair_orders = [ false ];
-is_sig_gazes = [ true, false ];
-is_sig_rewards = [ true, false ];
+% flip_roi_pair_orders = [ false ];
+% is_sig_gazes = [ true, false ];
+% is_sig_rewards = [ true, false ];
+% use_sig_for_train_only = false;
+
+flip_roi_pair_orders = [ true ];
+is_sig_gazes = [ true ];
+is_sig_rewards = [ true ];
+use_sig_for_train_only = true;
 
 do_save = true;
 
@@ -48,6 +54,9 @@ for idx = 1:size(perf_combs, 2)
   flip_str = ternary( flip_roi_pair_order, '-flipped-roi-order', '' );
   sig_str = '';
   
+  if ( use_sig_for_train_only )
+    sig_str = sprintf( '%s-train', sig_str );
+  end
   if ( is_sig_reward )
     sig_str = sprintf( '%s-sig-reward', sig_str );
   end

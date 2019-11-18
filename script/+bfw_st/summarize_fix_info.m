@@ -9,6 +9,7 @@ defaults.stim_time_outs = [];
 defaults.decay_outs = [];
 defaults.fix_info_outs = [];
 defaults.do_save = true;
+defaults.overlay_points = false;
 
 params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
@@ -20,18 +21,18 @@ if ( isempty(fix_info_outs) )
   fix_info_outs = bfw_st.fix_info( make_params );
 end
 
-is_collapsed_at_run_levels = false;
+is_collapsed_over_trials_cmbtns = true;
 is_run_halves = false;
 is_trial_wise_subtractions = false;
 %is_long_shorts = [true false];
-collapse_funcs=@run_level_average;
+collapse_funcs={ @day_level_average };
 %collapse_funcs = { @run_level_average, @run_level_median };
 
 
 % summary_func = @(x) nanmedian(x, 1);
 summary_func = @(x) nanmean(x, 1);
 
-cmbtns = dsp3.numel_combvec( is_collapsed_at_run_levels, is_run_halves ...
+cmbtns = dsp3.numel_combvec( is_collapsed_over_trials_cmbtns, is_run_halves ...
  , is_trial_wise_subtractions, collapse_funcs );
 num_combs = size( cmbtns, 2 );
 
@@ -39,12 +40,11 @@ for idx = 1:num_combs
   shared_utils.general.progress( idx, num_combs );
     
   comb = cmbtns(:, idx);
-  is_collapsed_at_run_level = is_collapsed_at_run_levels(comb(1));
+  is_collapsed_over_trials = is_collapsed_over_trials_cmbtns(comb(1));
   is_run_half = is_run_halves(comb(2));
   is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   %is_long_short = is_long_shorts(comb(4));
-  collapse_func=collapse_funcs;
-  %collapse_func = collapse_funcs{comb(4)};
+  collapse_func = collapse_funcs{comb(4)};
 
   for i = 1:5
     before_plot_funcs = {};
@@ -61,7 +61,7 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
     
-     if ( is_collapsed_at_run_level )
+     if ( is_collapsed_over_trials )
       before_plot_funcs{end+1} = collapse_func;
       base_subdir = sprintf( '%s%s_', base_subdir, func2str(collapse_func) );
      end 
@@ -172,6 +172,7 @@ for idx = 1:num_combs
       , 'fcats', fcats ...
       , 'before_plot_func', before_plot_func ...
       , 'summary_func', summary_func ...
+      , 'overlay_points', params.overlay_points ...
     );
   end
 end
@@ -205,6 +206,17 @@ end
 function [data, labels] = run_level_average(data, labels, spec)
 
 use_spec = union( spec, {'unified_filename'} );
+[labels, each_I] = keepeach( labels', use_spec );
+data = bfw.row_nanmean( data, each_I );
+
+end
+
+function [data, labels] = day_level_average(data, labels, spec)
+
+use_spec = spec;
+use_spec = setdiff( use_spec, {'unified_filename'} );
+use_spec = union( use_spec, {'session'} );
+
 [labels, each_I] = keepeach( labels', use_spec );
 data = bfw.row_nanmean( data, each_I );
 
