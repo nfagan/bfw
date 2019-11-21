@@ -58,7 +58,7 @@ for idx = 1:num_combs
     
     if ( is_average_at_day_or_run_level )
       before_plot_funcs{end+1} = collapse_func;
-      base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
+      base_subdir = sprintf( '%s%s', base_subdir, 'day_level_average_' );
     end 
 
 %     if ( is_long_short )
