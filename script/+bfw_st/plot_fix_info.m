@@ -136,6 +136,7 @@ function plot_bars(data, labels, mask, fig_cats, xcats, gcats, pcats, kind, subd
 fig_cats = csunion( params.fcats, fig_cats );
 fig_cats = fig_cats(:)';
 
+mask = intersect( mask, find(~isnan(data)) );
 fig_I = findall_or_one( labels, fig_cats, mask );
 
 xcats = csunion( params.xcats, xcats );
@@ -183,7 +184,7 @@ for i = 1:numel(fig_I)
   
   anovas_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1' };
   anova_factors = { 'stim_isi_quantile', 'stim_type' };
-%   run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
+  run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
   
   try    
     axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );

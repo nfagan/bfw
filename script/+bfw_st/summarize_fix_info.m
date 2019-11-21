@@ -133,11 +133,12 @@ for idx = 1:num_combs
 %                   , @find, {'m1_lynch', 'accg', 'free_viewing'} ...
       
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' );
-        gcats{end+1} = 'previous_stim_type';
-        pcats = setdiff( pcats, 'task_type' );
-%         pcats = union( pcats, 'previous_stim_type' );
-%         fcats = union( fcats, {'task_type', 'previous_stim_type'} );
-        fcats = union( fcats, {'task_type'} );
+%         gcats{end+1} = 'previous_stim_type';
+%         pcats = setdiff( pcats, 'task_type' );
+%         fcats = union( fcats, {'task_type'} );
+        
+        pcats = union( pcats, {'previous_stim_type', 'stim_isi_quantile'} );
+        fcats = union( fcats, {'task_type', 'previous_stim_type'} );
     
 %       mask_func = @(labels) fcat.mask(labels ...
 %           , @findor, {'eyes_nf', 'face'} ...
