@@ -40,7 +40,8 @@ for idx = 1:num_combs
   %is_long_short = is_long_shorts(comb(3));
   
 
-  for i = 1:7
+%   for i = 1:7
+  for i = 6
     before_plot_funcs={};
     
     xcats = {};

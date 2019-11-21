@@ -20,8 +20,8 @@ mask = get_base_mask( labels, params.mask );
 
 %plot_per_run_and_day (bounds, t, labels, mask, params);
 plot_per_monkey( bounds, t, labels, mask, params );
-plot_per_day( bounds, t, labels, mask, params );
-plot_across_days( bounds, t, labels, mask, params );
+% plot_per_day( bounds, t, labels, mask, params );
+% plot_across_days( bounds, t, labels, mask, params );
 
 end
 

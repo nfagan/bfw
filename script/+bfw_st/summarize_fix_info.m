@@ -10,6 +10,7 @@ defaults.decay_outs = [];
 defaults.fix_info_outs = [];
 defaults.do_save = true;
 defaults.overlay_points = false;
+defaults.separate_figs = false;
 
 params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
@@ -47,7 +48,8 @@ for idx = 1:num_combs
   %is_long_short = is_long_shorts(comb(4));
   collapse_func = collapse_funcs{comb(4)};
 
-  for i = 1:7
+%   for i = 1:7
+  for i = 5
     before_plot_funcs = {};
 
     xcats = {};
@@ -124,11 +126,18 @@ for idx = 1:num_combs
         mask_func = @(labels) fcat.mask(labels ...
             , @findor, {'eyes_nf', 'face'} ...
             , @findnone, 'previous_undefined' ...
+            , @findnone, {'stim_isi_quantile__3', 'stim_isi_quantile__4', 'm1_cron'} ...
             , additional_mask_func_inputs{:} ... 
         );
+      
+%                   , @find, {'m1_lynch', 'accg', 'free_viewing'} ...
+      
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' );
         gcats{end+1} = 'previous_stim_type';
-        pcats{end+1}='stim_isi_quantile';
+        pcats = setdiff( pcats, 'task_type' );
+%         pcats = union( pcats, 'previous_stim_type' );
+%         fcats = union( fcats, {'task_type', 'previous_stim_type'} );
+        fcats = union( fcats, {'task_type'} );
     
 %       mask_func = @(labels) fcat.mask(labels ...
 %           , @findor, {'eyes_nf', 'face'} ...
@@ -174,13 +183,14 @@ for idx = 1:num_combs
       , 'before_plot_func', before_plot_func ...
       , 'summary_func', summary_func ...
       , 'overlay_points', params.overlay_points ...
+      , 'separate_figs', params.separate_figs ...
     );
   end
 end
 
 %  amp vs vel
  
-bfw_st.stim_amp_vs_vel( plot_params );
+% bfw_st.stim_amp_vs_vel( plot_params );
  
 end
 

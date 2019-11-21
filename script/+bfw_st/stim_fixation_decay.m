@@ -144,7 +144,7 @@ end
 
 function add_preceding_stim_duration_quantile_labels(durations, labels)
 
-each = day_event_specificity();
+each = bfw_st.day_event_specificity();
 [quants, each_I] = dsp3.quantiles_each( durations, labels, 2, each, {} );
 dsp3.add_quantile_labels( labels, quants, 'preceding_stim_duration_quantile' );
 
