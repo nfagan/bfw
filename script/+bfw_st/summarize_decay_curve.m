@@ -21,23 +21,27 @@ if ( isempty(decay_outs) )
   decay_outs = bfw_st.stim_fixation_decay( make_params );
 end
 
-is_average_at_run_levels = false;
+is_average_at_day_or_run_level_cmbtns = true;
 is_run_halves = false;
 %is_long_shorts = true;
 %is_trial_wise_subtractions = [true false];
 
-cmbtns = dsp3.numel_combvec( is_average_at_run_levels, is_run_halves );
+% collapse_func = @run_level_average;
+collapse_func = @day_level_average;
+
+cmbtns = dsp3.numel_combvec( is_average_at_day_or_run_level_cmbtns, is_run_halves );
 num_combs = size( cmbtns, 2 );
 
 for idx = 1:num_combs
   comb = cmbtns(:, idx);
-  is_average_at_run_level = is_average_at_run_levels(comb(1));
+  is_average_at_day_or_run_level = is_average_at_day_or_run_level_cmbtns(comb(1));
   is_run_half = is_run_halves(comb(2));
   %is_trial_wise_subtraction = is_trial_wise_subtractions(comb(3));
   %is_long_short = is_long_shorts(comb(3));
   
 
-  for i = 1:5
+%   for i = 1:7
+  for i = 6
     before_plot_funcs={};
     
     xcats = {};
@@ -52,9 +56,9 @@ for idx = 1:num_combs
       base_subdir = sprintf( '%s%s', base_subdir, 'run_half_' );
     end
     
-    if ( is_average_at_run_level )
-      before_plot_funcs{end+1} = @run_level_average;
-      base_subdir = sprintf( '%s%s', base_subdir, 'run_level_average_' );
+    if ( is_average_at_day_or_run_level )
+      before_plot_funcs{end+1} = collapse_func;
+      base_subdir = sprintf( '%s%s', base_subdir, 'day_level_average_' );
     end 
 
 %     if ( is_long_short )
@@ -73,36 +77,36 @@ for idx = 1:num_combs
         , 'before_plot_func', before_plot_func ...
         );
 
-%     elseif (i == 2) 
-%         
-%         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
-%     , 'mask', find(decay_outs.labels, 'sham', mask)...
-%     , 'gcats', {'previous_stim_type'} ...  
-%     , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_only_previous')...
-%     , 'before_plot_func', before_plot_func ...
-%     );
-%     
-%     elseif (i ==3 ) 
-%         
-%         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
-%     , 'mask', find(decay_outs.labels, 'sham', mask)...
-%     , 'gcats', {'previous_stim_type'} ...  
-%     , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_only_previous_isicontrol')...
-%     , 'pcats', {'stim_isi_quantile'}  ...
-%     , 'before_plot_func', before_plot_func ...
-%     );
-
-%     elseif ( i == 3 )
-%         
-%         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
-%         , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
-%         , 'pcats', {'day_time_quantile'} ...   %   'gcats', 'previous_stim_type'
-%         , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles')...
-%         , 'pcats', pcats ...
-%         , 'before_plot_func', before_plot_func ...
-%         );
+    elseif (i == 2) 
+        
+        bfw_st.plot_fixation_decay( decay_outs, plot_params ...
+    , 'mask', find(decay_outs.labels, 'sham', mask)...
+    , 'gcats', {'previous_stim_type'} ...  
+    , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_only_previous')...
+    , 'before_plot_func', before_plot_func ...
+    );
     
-    elseif (i == 2)
+    elseif (i ==3 ) 
+        
+        bfw_st.plot_fixation_decay( decay_outs, plot_params ...
+    , 'mask', find(decay_outs.labels, 'sham', mask)...
+    , 'gcats', {'previous_stim_type'} ...  
+    , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_only_previous_isicontrol')...
+    , 'pcats', {'stim_isi_quantile'}  ...
+    , 'before_plot_func', before_plot_func ...
+    );
+
+    elseif ( i == 4 )
+        
+        bfw_st.plot_fixation_decay( decay_outs, plot_params ...
+        , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
+        , 'pcats', {'day_time_quantile'} ...   %   'gcats', 'previous_stim_type'
+        , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_day_quantiles')...
+        , 'pcats', pcats ...
+        , 'before_plot_func', before_plot_func ...
+        );
+    
+    elseif (i == 5)
         
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
         , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
@@ -111,18 +115,18 @@ for idx = 1:num_combs
         , 'before_plot_func', before_plot_func ...
         );
         
-     elseif (i == 3)
+     elseif (i == 6)
         
         bfw_st.plot_fixation_decay( decay_outs, plot_params ...
-        , 'mask', mask ...    %   'mask', find(decay_outs.labels, 'sham')
-        , 'gcats', {'previous_stim_type'} ...   %   'gcats', 'previous_stim_type'
-        , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' )...
-        , 'pcats', {'stim_isi_quantile'} ...
-        , 'fcat',{'region';'task_type'}...
-        , 'before_plot_func', before_plot_func ...
+          , 'mask', findnone(decay_outs.labels, {'m1_cron', 'stim_isi_quantile__3'}, mask) ... 
+          , 'gcats', {'previous_stim_type'} ...   %   'gcats', 'previous_stim_type'
+          , 'base_subdir', sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' )...
+          , 'pcats', {'stim_isi_quantile', 'previous_stim_type'} ...
+          , 'fcat',{'region';'task_type'; 'previous_stim_type'}...
+          , 'before_plot_func', before_plot_func ...
         );
     
-    elseif (i == 4 )
+    elseif (i == 7 )
         
          bfw_st.plot_fixation_decay( decay_outs, plot_params ...
         , 'mask', findnone(decay_outs.labels, '<preceding_stim_duration_quantile>', mask)...
@@ -175,6 +179,17 @@ end
 function [data, labels] = run_level_average(data, labels, spec)
 
 use_spec = union( spec, {'unified_filename'} );
+[labels, each_I] = keepeach( labels', use_spec );
+data = bfw.row_nanmean( data, each_I );
+
+end
+
+function [data, labels] = day_level_average(data, labels, spec)
+
+use_spec = spec;
+use_spec = setdiff( use_spec, {'unified_filename'} );
+use_spec = union( use_spec, {'session'} );
+
 [labels, each_I] = keepeach( labels', use_spec );
 data = bfw.row_nanmean( data, each_I );
 

@@ -10,6 +10,7 @@ defaults.gcats = {};
 defaults.xcats = {};
 defaults.pcats = {};
 defaults.overlay_points = false;
+defaults.separate_figs = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -49,22 +50,22 @@ nan_sum_params.summary_func = @(x) nansum(x, 1);
 
 % per monkey (across days)
 
-plot_per_monkey( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
-plot_per_monkey( durations, run_labels', mask, 'durations', params );
-plot_per_monkey( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_per_monkey( counts, run_labels', mask, 'counts', params );
+% plot_per_monkey( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
+plot_per_monkey( durations, run_labels', mask, 'durations', params );
+% plot_per_monkey( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
 plot_per_monkey( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
 plot_per_monkey( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
-
-
-% across monkeys
-
-plot_across_monkeys( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
-plot_across_monkeys( durations, run_labels', mask, 'durations', params );
-plot_across_monkeys( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
-plot_across_monkeys( counts, run_labels', mask, 'counts', params );
-plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
-plot_across_monkeys( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
+% 
+% 
+% % across monkeys
+% 
+% plot_across_monkeys( current_itis, current_dur_labels, current_dur_mask, 'iti_offsets', params );
+% plot_across_monkeys( durations, run_labels', mask, 'durations', params );
+% plot_across_monkeys( ones(size(durations)), run_labels', mask, 'frequencies', nan_sum_params );
+% plot_across_monkeys( counts, run_labels', mask, 'counts', params );
+% plot_across_monkeys( current_dur, current_dur_labels, current_dur_mask, 'current_duration', params );
+% plot_across_monkeys( next_dur, next_dur_labels, next_dur_mask, 'next_duration', params );
 
 end
 
@@ -135,6 +136,7 @@ function plot_bars(data, labels, mask, fig_cats, xcats, gcats, pcats, kind, subd
 fig_cats = csunion( params.fcats, fig_cats );
 fig_cats = fig_cats(:)';
 
+mask = intersect( mask, find(~isnan(data)) );
 fig_I = findall_or_one( labels, fig_cats, mask );
 
 xcats = csunion( params.xcats, xcats );
@@ -147,12 +149,23 @@ pcats = pcats(:)';
 
 spec = unique( [xcats, gcats, pcats, fig_cats] );
 
-for i = 1:numel(fig_I)
+figs = cell( size(fig_I) );
+store_plot_labels = cell( size(figs) );
+all_axs = cell( size(figs) );
+
+save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
+
+for i = 1:numel(fig_I)  
   pl = plotlabeled.make_common();
   pl.summary_func = params.summary_func;
   pl.x_tick_rotation = 30;
   pl.add_points = params.overlay_points;
   pl.marker_size = 2;
+  pl.marker_type = 'ko';
+  
+  if ( params.separate_figs )
+    pl.fig = figure(i);
+  end
   
   pltdat = data(fig_I{i});
   pltlabs = prune( labels(fig_I{i}) );
@@ -169,21 +182,63 @@ for i = 1:numel(fig_I)
     continue;
   end
   
+  anovas_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1' };
+  anova_factors = { 'stim_isi_quantile', 'stim_type' };
+  run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
+  
   try    
     axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
+    set( findobj(axs, 'type', 'line'), 'color', zeros(1, 3) );
 
-    if ( params.do_save )
-      save_p = bfw_st.stim_summary_plot_p( params, kind, subdir );
+    if ( params.do_save && ~params.separate_figs )
       shared_utils.plot.fullscreen( gcf );
       dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats]);
-    %dsp3.req_savefig( gcf, save_p, pltlabs, [fig_cats, pcats], params.prefix );
+    end
+    
+    if ( params.separate_figs )
+      figs{i} = pl.fig;
+      store_plot_labels{i} = pltlabs;
+      all_axs{i} = axs;
     end
   catch err
     warning( err.message );
   end
 end
+
+all_axs = vertcat( all_axs{:} );
+
+if ( params.separate_figs && params.do_save )
+  shared_utils.plot.match_ylims( all_axs );
+  
+  for i = 1:numel(figs)
+    if ( isempty(figs{i}) )
+      continue;
+    end
+    shared_utils.plot.fullscreen( figs{i} );
+    dsp3.req_savefig( figs{i}, save_p, store_plot_labels{i}, [fig_cats, pcats]);
+  end
 end
 
+end
+
+function run_anovas(pltdat, pltlabs, anovas_each, anova_factors, mask, params, save_p)
+
+if ( nargin < 5 )
+  mask = rowmask( pltlabs );
+end
+
+anova_outs = dsp3.anovan( pltdat, pltlabs', anovas_each, anova_factors ...
+  , 'mask', mask ...
+  , 'remove_nonsignificant_comparisons', false ...
+  , 'dimension', 2 ...
+);
+
+if ( params.do_save )
+  stats_p = fullfile( save_p, 'stats' );
+  dsp3.save_anova_outputs( anova_outs, stats_p, anovas_each );
+end
+
+end
 
 function labels = handle_labels(labels)
 

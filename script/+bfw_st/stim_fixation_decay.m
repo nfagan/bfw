@@ -8,7 +8,7 @@ defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
 defaults.num_day_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [5, 10, 15];
+defaults.stim_isi_quantile_edges = [15, 25];
 
 inputs = { 'raw_events', 'aligned_raw_samples/position', 'aligned_raw_samples/time' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations' ...
@@ -143,7 +143,7 @@ end
 
 function add_preceding_stim_duration_quantile_labels(durations, labels)
 
-each = day_event_specificity();
+each = bfw_st.day_event_specificity();
 [quants, each_I] = dsp3.quantiles_each( durations, labels, 2, each, {} );
 dsp3.add_quantile_labels( labels, quants, 'preceding_stim_duration_quantile' );
 
