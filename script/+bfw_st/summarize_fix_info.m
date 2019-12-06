@@ -137,11 +137,11 @@ for idx = 1:num_combs
       
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' );
         gcats{end+1} = 'previous_stim_type';
-        pcats = setdiff( pcats, 'task_type' );
-        fcats = union( fcats, {'task_type'} );
+%         pcats = setdiff( pcats, 'task_type' );
+%         fcats = union( fcats, {'task_type'} );
         
-%         pcats = union( pcats, {'previous_stim_type', 'stim_isi_quantile'} );
-%         fcats = union( fcats, {'task_type', 'previous_stim_type'} );
+        pcats = union( pcats, {'previous_stim_type', 'stim_isi_quantile', 'task_type'} );
+        fcats = union( fcats, {'previous_stim_type', 'roi'} );
     
 %       mask_func = @(labels) fcat.mask(labels ...
 %           , @findor, {'eyes_nf', 'face'} ...
@@ -196,7 +196,7 @@ end
 
 %  amp vs vel
  
-% bfw_st.stim_amp_vs_vel( plot_params );
+bfw_st.stim_amp_vs_vel( plot_params );
  
 end
 

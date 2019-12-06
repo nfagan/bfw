@@ -176,6 +176,7 @@ for i = 1:numel(fig_I)
   pltlabs = prune( labels(fig_I{i}) );
   
   try
+    [trial_counts, count_labels] = count_num_trials( pltdat, pltlabs, spec );
     [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
   catch err
     warning( 'Error in before_plot_func: \n %s', err.message );
@@ -191,14 +192,20 @@ for i = 1:numel(fig_I)
     anovas_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1' };
     anova_factors = { 'stim_isi_quantile', 'stim_type' };
     run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
+    
+    ttests_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1', 'stim_isi_quantile' };
+    ttest_factors = { 'stim_type' };
+    
+    run_paired_ttests( pltdat, pltlabs', ttests_each, ttest_factors, rowmask(pltlabs), params, save_p );
+    
+    if ( params.do_save )
+      save_trial_counts( trial_counts, count_labels', spec, save_p, params );
+    end
   end
   
   try    
     axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
-    
-    if ( isempty(params.points_are) )
-      set( findall(axs, 'type', 'line'), 'color', zeros(1, 3) );
-    end
+%     set( findall(axs, 'type', 'line'), 'color', zeros(1, 3) );
 
     if ( params.do_save && ~params.separate_figs )
       shared_utils.plot.fullscreen( gcf );
@@ -227,6 +234,51 @@ if ( params.separate_figs && params.do_save )
     shared_utils.plot.fullscreen( figs{i} );
     dsp3.req_savefig( figs{i}, save_p, store_plot_labels{i}, [fig_cats, pcats]);
   end
+end
+
+end
+
+function [counts, count_labels] = count_num_trials(pltdat, pltlabs, spec)
+
+[count_labels, I] = keepeach( pltlabs', spec );
+counts = cellfun( @numel, I );
+
+end
+
+function save_trial_counts(trial_counts, count_labels, row_cats, save_p, params)
+
+stats_p = fullfile( save_p, 'stats', 'counts' );
+
+row_labels = fcat.strjoin( cellstr(count_labels, row_cats)', ' | ' );
+col_labels = 'counts';
+
+tbl = fcat.table( trial_counts, row_labels, col_labels );
+dsp3.req_writetable( tbl, stats_p, count_labels, row_cats );
+
+end
+
+function run_paired_ttests(pltdat, pltlabs, ttests_each, ttest_factors, mask, params, save_p)
+
+if ( nargin < 5 )
+  mask = rowmask( pltlabs );
+end
+
+factor_labels = combs( pltlabs, ttest_factors, mask );
+
+if ( numel(factor_labels) == 2 )
+  label_a = factor_labels{1};
+  label_b = factor_labels{2};
+
+  ttest_outs = dsp3.ttest2( pltdat, pltlabs', ttests_each, label_a, label_b ...
+    , 'mask', mask ...
+  );
+
+  if ( params.do_save )
+    stats_p = fullfile( save_p, 'stats' );
+    dsp3.save_ttest2_outputs( ttest_outs, stats_p, ttests_each );
+  end
+else
+  warning( 'Expected 2 factor labels for ttests; got %d', numel(factor_labels) );
 end
 
 end
