@@ -9,8 +9,10 @@ defaults.fcats = {};
 defaults.gcats = {};
 defaults.xcats = {};
 defaults.pcats = {};
+defaults.points_are = {};
 defaults.overlay_points = false;
 defaults.separate_figs = false;
+defaults.run_stats = true;
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -160,8 +162,11 @@ for i = 1:numel(fig_I)
   pl.summary_func = params.summary_func;
   pl.x_tick_rotation = 30;
   pl.add_points = params.overlay_points;
-  pl.marker_size = 2;
+  pl.marker_size = 4;
   pl.marker_type = 'ko';
+  pl.points_are = params.points_are;
+  pl.connect_points = ~isempty( params.points_are );
+  pl.main_line_width = 2;
   
   if ( params.separate_figs )
     pl.fig = figure(i);
@@ -182,13 +187,18 @@ for i = 1:numel(fig_I)
     continue;
   end
   
-  anovas_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1' };
-  anova_factors = { 'stim_isi_quantile', 'stim_type' };
-  run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
+  if ( params.run_stats )
+    anovas_each = { 'task_type', 'region', 'roi', 'previous_stim_type', 'id_m1' };
+    anova_factors = { 'stim_isi_quantile', 'stim_type' };
+    run_anovas( pltdat, pltlabs', anovas_each, anova_factors, rowmask(pltlabs), params, save_p );
+  end
   
   try    
     axs = pl.bar( pltdat, pltlabs, xcats, gcats, pcats );
-    set( findobj(axs, 'type', 'line'), 'color', zeros(1, 3) );
+    
+    if ( isempty(params.points_are) )
+      set( findall(axs, 'type', 'line'), 'color', zeros(1, 3) );
+    end
 
     if ( params.do_save && ~params.separate_figs )
       shared_utils.plot.fullscreen( gcf );

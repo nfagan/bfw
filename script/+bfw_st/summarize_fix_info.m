@@ -11,6 +11,9 @@ defaults.fix_info_outs = [];
 defaults.do_save = true;
 defaults.overlay_points = false;
 defaults.separate_figs = false;
+defaults.run_stats = true;
+defaults.base_mask_func = @(labels, mask) mask;
+defaults.points_are = {};
 
 params = bfw.parsestruct( defaults, varargin );
 make_params = shared_utils.struct.intersect( params, make_defaults );
@@ -133,12 +136,12 @@ for idx = 1:num_combs
 %                   , @find, {'m1_lynch', 'accg', 'free_viewing'} ...
       
         base_subdir = sprintf( '%s%s', base_subdir, 'sham_and_stim_previous_isicontrol' );
-%         gcats{end+1} = 'previous_stim_type';
-%         pcats = setdiff( pcats, 'task_type' );
-%         fcats = union( fcats, {'task_type'} );
+        gcats{end+1} = 'previous_stim_type';
+        pcats = setdiff( pcats, 'task_type' );
+        fcats = union( fcats, {'task_type'} );
         
-        pcats = union( pcats, {'previous_stim_type', 'stim_isi_quantile'} );
-        fcats = union( fcats, {'task_type', 'previous_stim_type'} );
+%         pcats = union( pcats, {'previous_stim_type', 'stim_isi_quantile'} );
+%         fcats = union( fcats, {'task_type', 'previous_stim_type'} );
     
 %       mask_func = @(labels) fcat.mask(labels ...
 %           , @findor, {'eyes_nf', 'face'} ...
@@ -174,7 +177,7 @@ for idx = 1:num_combs
     end
 
     bfw_st.plot_fix_info( fix_info_outs ...
-      , 'mask_func', mask_func ...
+      , 'mask_func', wrap_mask_func(mask_func, params.base_mask_func) ...
       , plot_params...
       , 'base_subdir', base_subdir ...
       , 'xcats', xcats ...
@@ -185,6 +188,8 @@ for idx = 1:num_combs
       , 'summary_func', summary_func ...
       , 'overlay_points', params.overlay_points ...
       , 'separate_figs', params.separate_figs ...
+      , 'run_stats', params.run_stats ...
+      , 'points_are', params.points_are ...
     );
   end
 end
@@ -193,6 +198,12 @@ end
  
 % bfw_st.stim_amp_vs_vel( plot_params );
  
+end
+
+function wrapped_mask_func = wrap_mask_func(mask_func, base_mask_func)
+
+wrapped_mask_func = @(labels) base_mask_func(labels, mask_func(labels));
+
 end
 
 function [data, labels] = apply_functions(functions, data, labels, spec)
