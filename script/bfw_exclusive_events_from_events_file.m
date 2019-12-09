@@ -1,4 +1,4 @@
-function non_overlapping = bfw_exclusive_events_from_events_file(events_file, pairs, exclusive_each, mask)
+function [non_overlapping, I] = bfw_exclusive_events_from_events_file(events_file, pairs, exclusive_each, mask)
 
 if ( nargin < 2 )
   pairs = bfw_get_non_overlapping_pairs();

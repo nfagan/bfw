@@ -9,6 +9,9 @@ defaults.num_run_time_quantiles = 2;
 defaults.stim_isi_quantile_edges = [10, 15];
 defaults.iti_quantile_edges = [4, 6, 8];
 defaults.event_mask_func = @(labels) find(labels, {'m1', 'exclusive_event'});
+defaults.rois = {'eyes_nf', 'face'};
+defaults.non_overlapping_pairs = {{'eyes_nf', 'face'}};
+defaults.non_overlapping_each = { 'looks_by', 'event_type' };
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta', 'plex_start_stop_times' };
 
@@ -54,6 +57,8 @@ start_time_file = shared_utils.general.get( files, 'plex_start_stop_times' );
 % Extract the stim times and labels for each stim.
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
 update_labels( stim_labels, stim_ts, start_time_file, params );
+
+event_file = handle_rois_and_non_overlapping_events( event_file, params );
 
 % Get start & stop times of looking events, and the duration of each event.
 starts = bfw.event_column( event_file, 'start_time' );
@@ -173,6 +178,16 @@ outs.next_duration_labels = next_duration_labels;
 
 outs.preceding_stim_durations = preceding_stim_durations;
 outs.preceding_stim_labels = preceding_stim_labels;
+
+end
+
+function events_file = handle_rois_and_non_overlapping_events(events_file, params)
+
+rois = params.rois;
+non_overlapping_pairs = params.non_overlapping_pairs;
+each = params.non_overlapping_each;
+
+events_file = bfw_st.make_non_overlapping_events_file( events_file, rois, non_overlapping_pairs, each );
 
 end
 
