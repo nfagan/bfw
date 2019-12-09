@@ -6,7 +6,7 @@ defaults.look_ahead = 5;
 defaults.look_back = 0;
 defaults.num_day_time_quantiles = 2;
 defaults.num_run_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [15, 25];
+defaults.stim_isi_quantile_edges = [10, 15];
 defaults.iti_quantile_edges = [4, 6, 8];
 defaults.event_mask_func = @(labels) find(labels, {'m1', 'exclusive_event'});
 
