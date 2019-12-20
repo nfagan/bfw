@@ -8,7 +8,10 @@ defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
 defaults.num_day_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [15, 25];
+defaults.stim_isi_quantile_edges = [10, 15];
+defaults.rois = {'eyes_nf', 'face'};
+defaults.non_overlapping_pairs = {{'eyes_nf', 'face'}};
+defaults.non_overlapping_each = { 'looks_by', 'event_type' };
 
 inputs = { 'raw_events', 'aligned_raw_samples/position', 'aligned_raw_samples/time' ...
   , 'aligned_raw_samples/raw_eye_mmv_fixations' ...
@@ -45,6 +48,8 @@ meta_file = general.get( files, 'meta' );
 stim_meta_file = general.get( files, 'stim_meta' );
 start_time_file = general.get( files, 'plex_start_stop_times' );
 events_file = general.get( files, 'raw_events' );
+
+events_file = handle_rois_and_non_overlapping_events( events_file, params );
 
 event_labels = fcat.from( events_file );
 event_starts = bfw.event_column( events_file, 'start_time' );
@@ -124,6 +129,16 @@ outs = struct();
 outs.t = t_course;
 outs.bounds = bounds;
 outs.labels = labels;
+
+end
+
+function events_file = handle_rois_and_non_overlapping_events(events_file, params)
+
+rois = params.rois;
+non_overlapping_pairs = params.non_overlapping_pairs;
+each = params.non_overlapping_each;
+
+events_file = bfw_st.make_non_overlapping_events_file( events_file, rois, non_overlapping_pairs, each );
 
 end
 
