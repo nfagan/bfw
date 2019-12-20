@@ -191,7 +191,7 @@ end
 
 %  amp vs vel
  
-% bfw_st.stim_amp_vs_vel( plot_params );
+bfw_st.stim_amp_vs_vel( plot_params );
  
 end
 
@@ -253,3 +253,4 @@ end
 
 
 
+ 
