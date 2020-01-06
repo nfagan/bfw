@@ -60,7 +60,7 @@ for idx = 1:num_combs
     gcats = {};
     pcats = {};
     fcats = { 'region' };
-    base_subdir = '';
+    base_subdir = params.base_subdir;
     additional_mask_func_inputs = {};
       
     if ( is_run_half )

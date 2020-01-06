@@ -20,13 +20,26 @@ handle_events( params, sessions );
 
 end
 
+function sessions = intersect_sessions(in_files_containing, required_sessions)
+
+if ( isempty(in_files_containing) )
+  sessions = required_sessions;
+else
+  sessions = intersect( in_files_containing, required_sessions );
+end
+
+end
+
 function handle_events(params, sessions)
 
 stim_sessions = union( sessions.m1_exclusive_sessions, sessions.m1_radius_sessions );
 no_stim_sessions = sessions.no_stim_sessions;
 
-bfw_make_raw_stimulation_events( params, 'files_containing', stim_sessions );
-bfw_make_raw_recording_events( params, 'files_containing', no_stim_sessions );
+stim_session_files = intersect_sessions( params.files_containing, stim_sessions );
+no_stim_session_files = intersect_sessions( params.files_containing, no_stim_sessions );
+
+bfw_make_raw_stimulation_events( params, 'files_containing', stim_session_files );
+bfw_make_raw_recording_events( params, 'files_containing', no_stim_session_files );
 
 end
 
