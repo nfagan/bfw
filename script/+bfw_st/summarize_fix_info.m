@@ -61,7 +61,11 @@ for idx = 1:num_combs
     pcats = {};
     fcats = { 'region' };
     base_subdir = params.base_subdir;
-    additional_mask_func_inputs = {};
+    
+    % Subset of explicitly included sessions
+    additional_mask_func_inputs = { ...
+      @findor, bfw_st.included_sessions() ...
+    };
       
     if ( is_run_half )
       gcats{end+1} = 'run_time_quantile';
