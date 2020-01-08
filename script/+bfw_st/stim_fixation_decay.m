@@ -72,7 +72,7 @@ t_course = shared_utils.vector.slidebin( look_back:look_ahead, bin_amt, bin_amt,
 t_course = cellfun( @(x) x(1), t_course );
 
 rects = roi_file.m1.rects;
-roi_names = keys( rects );
+roi_names = intersect( keys(rects), params.rois );
 
 bounds = zeros( numel(stim_times) * numel(roi_names), numel(t_course) );
 

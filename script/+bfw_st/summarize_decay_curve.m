@@ -48,7 +48,7 @@ for idx = 1:num_combs
     gcats = {};
     pcats = {};
     fcat = {};
-    base_subdir = '';
+    base_subdir = params.base_subdir;
     mask = findnone( decay_outs.labels, 'previous_undefined' );
       
     if ( is_run_half )
