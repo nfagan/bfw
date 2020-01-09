@@ -8,10 +8,14 @@ defaults.source_rois = 'all';
 defaults.target_rois = 'all';
 defaults.non_overlapping_pairs = {{'eyes_nf', 'face'}};
 defaults.non_overlapping_each = { 'looks_by', 'event_type' };
+defaults.use_events = true;
+defaults.event_duration_criterion = 1;
 
 inputs = { 'raw_events', 'stim', 'meta', 'stim_meta' ...
   , 'plex_start_stop_times', 'rois' ...
-  , 'aligned_binned_raw_samples/position', 'aligned_binned_raw_samples/time' };
+  , 'aligned_binned_raw_samples/position', 'aligned_binned_raw_samples/time' ...
+  , 'aligned_binned_raw_samples/raw_eye_mmv_fixations' ...
+};
 
 [params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
@@ -32,11 +36,16 @@ end
 
 function outs = main(files, params)
 
-[event_file, stim_file, meta_file, stim_meta_file, start_time_file, roi_file, pos_file, t_file] = ...
+[event_file, stim_file, meta_file, stim_meta_file, start_time_file, roi_file, pos_file, t_file, fix_file] = ...
   get_files( files, 'raw_events', 'stim', 'meta', 'stim_meta' ...
-  , 'plex_start_stop_times', 'rois', 'position', 'time' );
+  , 'plex_start_stop_times', 'rois', 'position', 'time', 'raw_eye_mmv_fixations' );
 
-event_file = handle_rois_and_non_overlapping_events( event_file, params );
+if ( params.use_events )
+  event_file = handle_rois_and_non_overlapping_events( event_file, params );
+else
+  dur_crit = params.event_duration_criterion;
+  event_file = make_dummy_event_file_from_fix_file( fix_file, t_file, event_file, dur_crit );
+end
 
 % Extract the stim times and labels for each stim.
 [stim_ts, stim_labels] = bfw_st.files_to_pair( stim_file, stim_meta_file, meta_file );
@@ -158,6 +167,46 @@ roi_centers = cell( size(roi_names) );
 
 for i = 1:numel(roi_names)
   roi_centers{i} = shared_utils.rect.center( rects(roi_names{i}) );
+end
+
+end
+
+function event_file = make_dummy_event_file_from_fix_file(fix_file, t_file, in_event_file, event_duration_criterion)
+
+event_file = bfw.keep_events( in_event_file, [] );
+event_file.event_key = containers.Map();
+event_file.event_key('start_time') = 1;
+event_file.event_key('stop_time') = 2;
+
+fs = intersect( {'m1', 'm2'}, fieldnames(fix_file) );
+
+for i = 1:numel(fs)
+  [dummy_events, durs] = shared_utils.logical.find_islands( fix_file.(fs{i}) );
+  meets_crit = durs >= event_duration_criterion;
+
+  dummy_events = dummy_events(meets_crit);
+  dummy_event_t_starts = t_file.t(dummy_events);
+  dummy_event_t_stops = t_file.t(dummy_events + durs(meets_crit)-1);
+
+  is_non_nan = ~isnan( dummy_event_t_starts ) & ~isnan( dummy_event_t_stops );
+  starts = dummy_event_t_starts(is_non_nan);
+  stops = dummy_event_t_stops(is_non_nan);
+
+  looks_by = repmat( fs(i), numel(starts), 1 );
+  initiator = repmat( {sprintf('%s_initiated', fs{i})}, size(looks_by) );
+  term = repmat( {sprintf('%s_terminated', fs{i})}, size(looks_by) );
+  event_type = repmat( {'exclusive_event'}, size(looks_by) );
+  roi = repmat( {'anywhere'}, size(looks_by) );
+
+  start_stop = [starts(:), stops(:)];
+  
+  if ( isempty(event_file.events) )
+    event_file.events = start_stop;
+  else
+    event_file.events = [ event_file.events; start_stop ];
+  end
+
+  event_file.labels = [ event_file.labels; [looks_by(:), initiator(:), term(:), event_type(:), roi(:)] ];
 end
 
 end
