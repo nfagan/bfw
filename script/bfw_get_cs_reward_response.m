@@ -8,6 +8,10 @@ defaults.is_firing_rate = true;
 defaults.event_names = { 'cs_presentation' };
 defaults.psth_func = @default_psth_func;
 defaults.include_rasters = false;
+defaults.spike_dir = 'spikes';
+
+p = bfw.parsestruct( defaults, varargin );
+spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
 
 inputs = { 'cs_task_events/m1', 'cs_labels/m1', 'cs_trial_data/m1' };
 output = '';
@@ -15,7 +19,7 @@ output = '';
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
 configure_loop_runner( loop_runner );
 
-spike_p = bfw.gid( 'spikes', params.config );
+spike_p = bfw.gid( spike_dir, params.config );
 meta_p = bfw.gid( 'meta', params.config );
 
 results = loop_runner.run( @gather_per_run, spike_p, meta_p, params );
