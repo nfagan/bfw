@@ -1,6 +1,6 @@
 % source_dir = '09062019_eyes_v_non_eyes_face';
 % source_dir = 'revisit_09032019';
-% source_dir = '091119_nsobj_eyes_matched';
+source_dir = '091119_nsobj_eyes_matched';
 % source_dir = '091219_ns_obj_non_collapsed_eyes_matched';
 % source_dir = 
 
@@ -16,7 +16,8 @@ gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'gaze_counts.mat') );
 %%
 
 counts = gaze_counts;
-t_window = [-1, -0.7];
+% t_window = [-1, -0.7];
+t_window = [0, 0.25];
 base_subdir = sprintf( '%d_%d', t_window*1e3 );
 
 t_ind = counts.t >= t_window(1) & counts.t <= t_window(2);
