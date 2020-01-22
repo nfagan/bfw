@@ -26,7 +26,7 @@ if ( isempty(fix_info_outs) )
 end
 
 active_rois = { 'eyes_nf', 'face', 'face_non_eyes_nf' };
-is_collapsed_over_day_or_run_cmbtns = true;
+is_collapsed_over_day_or_run_cmbtns = false;
 is_run_halves = false;
 is_trial_wise_subtractions = false;
 %is_long_shorts = [true false];

@@ -59,7 +59,7 @@ if ( strcmp(params.spike_dir, 'cc_spikes') )
   files('spikes') = files('cc_spikes');
 end
 
-[files, was_link] = require_spike_file( bfw.gid('spikes', params.config), files );
+[files, was_link] = require_spike_file( bfw.gid(params.spike_dir, params.config), files );
 
 aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
   , 'window_size', params.window_size ...

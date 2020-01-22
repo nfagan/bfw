@@ -47,7 +47,6 @@ for idx = 1:num_combs
     xcats = {};
     gcats = {};
     pcats = {};
-    fcat = {};
     base_subdir = params.base_subdir;
     
     mask = fcat.mask( decay_outs.labels ...
