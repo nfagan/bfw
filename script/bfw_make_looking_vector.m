@@ -3,10 +3,7 @@ function outs = bfw_make_looking_vector(varargin)
 defaults = bfw.get_common_make_defaults();
 defaults.rois = 'all';
 
-inputs = { 'aligned_raw_samples/bounds' ...
-  , 'aligned_raw_samples/raw_eye_mmv_fixations', 'meta' };
-
-[params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
+[params, runner] = bfw.get_params_and_loop_runner( inputs(), '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
 
 results = runner.run( @main, params );
@@ -15,10 +12,22 @@ outputs = shared_utils.pipeline.extract_outputs_from_results( results );
 if ( isempty(outputs) )
   outs = struct();
   outs.look_vectors = {};
+  outs.t = {};
   outs.labels = fcat();
 else
   outs = shared_utils.struct.soa( outputs );
 end
+
+end
+
+function dirs = inputs()
+
+dirs = {  ...
+    'aligned_raw_samples/bounds' ...
+  , 'aligned_raw_samples/time' ...
+  , 'aligned_raw_samples/raw_eye_mmv_fixations' ...
+  , 'meta'...
+};
 
 end
 
@@ -27,6 +36,7 @@ function outs = main(files, params)
 bounds_file = shared_utils.general.get( files, 'bounds' );
 fix_file = shared_utils.general.get( files, 'raw_eye_mmv_fixations' );
 meta_file = shared_utils.general.get( files, 'meta' );
+time_file = shared_utils.general.get( files, 'time' );
 
 m_fields = bfw.m_fields( bounds_file );
 
@@ -50,11 +60,12 @@ for i = 1:numel(m_fields)
   addsetcat( labs, 'roi', rois );
   append( labels, labs );
   
-  look_vectors = [ look_vectors; look_vecs(:) ];  
+  look_vectors = [ look_vectors; look_vecs(:) ];
 end
 
-outs.labels = labels;
+outs.labels = prune( bfw.add_monk_labels(labels) );
 outs.look_vectors = look_vectors;
+outs.t = repmat( {time_file.t}, size(look_vectors) );
 
 end
 

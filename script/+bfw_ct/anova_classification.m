@@ -298,7 +298,7 @@ end
 
 function outs = anova_classify(spikes, labels, mask, params)
 
-anova_each = { 'unit_uuid', 'session', 'region' };
+anova_each = { 'unit_uuid', 'session', 'region', 'unit_index' };
 anova_factors = { 'roi' };
 specified_factors = cellstr( params.factors );
 

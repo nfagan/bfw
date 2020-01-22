@@ -1,8 +1,10 @@
 % source_dir = '09062019_eyes_v_non_eyes_face';
 % source_dir = 'revisit_09032019';
-source_dir = '091119_nsobj_eyes_matched';
+% source_dir = '091119_nsobj_eyes_matched';
 % source_dir = '091219_ns_obj_non_collapsed_eyes_matched';
 % source_dir = 
+
+source_dir = '01152019-cc-spikes';
 
 base_load_p = fullfile( bfw.dataroot() ...
   , 'analyses/spike_lda/reward_gaze_spikes' ...
