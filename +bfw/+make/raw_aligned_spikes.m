@@ -33,6 +33,7 @@ for i = 1:numel(units)
   
   joined_labels = join( fcat.from(events_file), unit_labels );
   addsetcat( joined_labels, 'unit_index', sprintf('unit_index__%d', i) );
+  addsetcat( joined_labels, 'unit_uuid_str', shared_utils.general.uuid() );
   
   append( binned_labels, joined_labels );
   binned_spikes = [ binned_spikes; aligned ];

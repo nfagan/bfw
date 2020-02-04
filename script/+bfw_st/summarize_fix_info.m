@@ -26,7 +26,7 @@ if ( isempty(fix_info_outs) )
 end
 
 active_rois = { 'eyes_nf', 'face', 'face_non_eyes_nf' };
-is_collapsed_over_day_or_run_cmbtns = true;
+is_collapsed_over_day_or_run_cmbtns = false;
 is_run_halves = false;
 is_trial_wise_subtractions = false;
 %is_long_shorts = [true false];
@@ -60,8 +60,12 @@ for idx = 1:num_combs
     gcats = {};
     pcats = {};
     fcats = { 'region' };
-    base_subdir = '';
-    additional_mask_func_inputs = {};
+    base_subdir = params.base_subdir;
+    
+    % Subset of explicitly included sessions
+    additional_mask_func_inputs = { ...
+      @findor, bfw_st.included_sessions() ...
+    };
       
     if ( is_run_half )
       gcats{end+1} = 'run_time_quantile';

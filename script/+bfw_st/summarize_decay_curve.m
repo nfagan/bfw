@@ -47,9 +47,12 @@ for idx = 1:num_combs
     xcats = {};
     gcats = {};
     pcats = {};
-    fcat = {};
-    base_subdir = '';
-    mask = findnone( decay_outs.labels, 'previous_undefined' );
+    base_subdir = params.base_subdir;
+    
+    mask = fcat.mask( decay_outs.labels ...
+      , @findnone, 'previous_undefined' ...
+      , @findor, bfw_st.included_sessions() ...
+    );
       
     if ( is_run_half )
       gcats{end+1} = 'run_time_quantile';

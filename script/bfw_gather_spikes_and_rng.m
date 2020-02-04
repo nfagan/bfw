@@ -11,8 +11,12 @@ defaults.spike_func = @(x, t) deal(x, t);
 defaults.non_overlapping_mask_inputs = {};
 defaults.exclude_all_overlapping = true;
 defaults.non_overlapping_pairs = bfw_get_non_overlapping_pairs();
+defaults.spike_dir = 'spikes';
 
-inputs = { 'raw_events', 'spikes', 'meta', 'rng' };
+p = bfw.parsestruct( defaults, varargin );
+spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
+
+inputs = { 'raw_events', spike_dir, 'meta', 'rng' };
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 loop_runner.convert_to_non_saving_with_output();
@@ -51,7 +55,11 @@ end
 
 function outs = gather_spikes(files, params)
 
-[files, was_link] = require_spike_file( bfw.gid('spikes', params.config), files );
+if ( strcmp(params.spike_dir, 'cc_spikes') )
+  files('spikes') = files('cc_spikes');
+end
+
+[files, was_link] = require_spike_file( bfw.gid(params.spike_dir, params.config), files );
 
 aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
   , 'window_size', params.window_size ...

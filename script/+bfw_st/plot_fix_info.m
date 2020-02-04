@@ -176,7 +176,8 @@ for i = 1:numel(fig_I)
   pltlabs = prune( labels(fig_I{i}) );
   
   try
-    [trial_counts, count_labels] = count_num_trials( pltdat, pltlabs, spec );
+    count_each = { 'session' };
+    [trial_counts, count_labels] = count_num_trials( pltdat, pltlabs, count_each, spec );
     [pltdat, pltlabs] = params.before_plot_func( pltdat, pltlabs, spec );
   catch err
     warning( 'Error in before_plot_func: \n %s', err.message );
@@ -199,7 +200,7 @@ for i = 1:numel(fig_I)
     run_paired_ttests( pltdat, pltlabs', ttests_each, ttest_factors, rowmask(pltlabs), params, save_p );
     
     if ( params.do_save )
-      save_trial_counts( trial_counts, count_labels', spec, save_p, params );
+      save_trial_counts( trial_counts, count_labels', union(spec, count_each), save_p, params );
     end
   end
   
@@ -238,10 +239,19 @@ end
 
 end
 
-function [counts, count_labels] = count_num_trials(pltdat, pltlabs, spec)
+function [counts, count_labels] = count_num_trials(pltdat, pltlabs, count_each, spec)
 
-[count_labels, I] = keepeach( pltlabs', spec );
-counts = cellfun( @numel, I );
+count_I = findall_or_one( pltlabs, count_each );
+counts = cell( size(count_I) );
+count_labels = cell( size(count_I) );
+
+for i = 1:numel(count_I)
+  [count_labels{i}, I] = keepeach( pltlabs', spec, count_I{i} );
+  counts{i} = cellfun( @numel, I );
+end
+
+counts = vertcat( counts{:} );
+count_labels = vertcat( fcat(), count_labels{:} );
 
 end
 

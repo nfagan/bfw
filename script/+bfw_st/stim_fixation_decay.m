@@ -8,7 +8,7 @@ defaults.bin_size = 25;
 defaults.rect_padding = 0.1;
 defaults.bin_func = @any;
 defaults.num_day_time_quantiles = 2;
-defaults.stim_isi_quantile_edges = [10, 15];
+defaults.stim_isi_quantile_edges = [15, 25];
 defaults.rois = {'eyes_nf', 'face'};
 defaults.non_overlapping_pairs = {{'eyes_nf', 'face'}};
 defaults.non_overlapping_each = { 'looks_by', 'event_type' };
@@ -72,7 +72,7 @@ t_course = shared_utils.vector.slidebin( look_back:look_ahead, bin_amt, bin_amt,
 t_course = cellfun( @(x) x(1), t_course );
 
 rects = roi_file.m1.rects;
-roi_names = keys( rects );
+roi_names = intersect( keys(rects), params.rois );
 
 bounds = zeros( numel(stim_times) * numel(roi_names), numel(t_course) );
 

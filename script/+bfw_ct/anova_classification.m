@@ -246,17 +246,59 @@ pcats = { 'main_effect' };
 
 axs = pl.bar( double(is_sig), labels, xcats, gcats, pcats );
 
+[tbl, tbl_labels] = make_sig_counts_table( is_sig, labels' );
+
 if ( params.do_save )
   save_p = get_plot_p( params, 'summarized_performance' );
   shared_utils.plot.fullscreen( gcf );
   dsp3.req_savefig( gcf, save_p, labels, pcats, params.prefix );
+  
+  counts_p = fullfile( save_p, 'sig_counts' );
+  dsp3.req_writetable( tbl, counts_p, tbl_labels, {'region'} );
 end
+
+end
+
+function [tbl, tbl_labels] = make_sig_counts_table(is_sig, labels)
+
+each_I = findall( labels, 'region' );
+
+tbl_labels = fcat();
+tbl_dat = [];
+
+for i = 1:numel(each_I)
+  total_n = numel( findall(labels, {'unit_uuid', 'channel'}, each_I{i}) );
+  
+  [main_labs, main_I] = keepeach( labels', 'main_effect', each_I{i} );
+  is_sig_each = eachcell( @(x) is_sig(x), main_I );
+  
+  per_effect_counts = cellfun( @sum, is_sig_each );
+  all_effect_counts = sum( and_many(is_sig_each{:}) );
+  any_effect_counts = sum( or_many(is_sig_each{:}) );
+  
+  all_effect_labs = one( main_labs' );
+  any_effect_labs = one( main_labs' );
+  tot_labs = one( main_labs' );
+  
+  setcat( all_effect_labs, 'main_effect', 'All main effects' );
+  setcat( any_effect_labs, 'main_effect', 'Any main effect' );
+  setcat( tot_labs, 'main_effect', 'Total count' );
+  
+  extend( tbl_labels, main_labs, all_effect_labs, any_effect_labs, tot_labs );
+  tbl_dat = [ tbl_dat ...
+    ; per_effect_counts(:); all_effect_counts(:) ...
+    ; any_effect_counts; total_n ];
+end
+
+[t, rc] = tabular( tbl_labels, 'main_effect', 'region' );
+cts = cellfun( @(x) tbl_dat(x), t );
+tbl = fcat.table( cts, rc{:} );
 
 end
 
 function outs = anova_classify(spikes, labels, mask, params)
 
-anova_each = { 'unit_uuid', 'session', 'region' };
+anova_each = { 'unit_uuid', 'session', 'region', 'unit_index' };
 anova_factors = { 'roi' };
 specified_factors = cellstr( params.factors );
 
@@ -483,6 +525,7 @@ function rois = nonsocial_rois()
 
 rois = { 'left_nonsocial_object', 'right_nonsocial_object', 'nonsocial_object' ...
   , 'left_nonsocial_object_eyes_nf_matched', 'right_nonsocial_object_eyes_nf_matched' ...
+  , 'nonsocial_object_eyes_nf_matched' ...
 };
 
 end
