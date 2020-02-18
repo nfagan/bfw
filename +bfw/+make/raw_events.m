@@ -46,8 +46,6 @@ else
   events_file = roi_file_roi_method( roi_file, pos_file, fix_file, time_file, params );
 end
 
-d = 10;
-
 end
 
 function tf = check_has_mutual_events(roi_file, params)
