@@ -11,9 +11,9 @@ function [z,mu,sigma] = zscore(x, flag, dim, nanflag)
 
 if isequal(x,[]), z = x; return; end
 
-if nargin < 2, flag = 0; end
+if nargin < 2 || isempty( flag ), flag = 0; end
 
-if nargin < 3
+if nargin < 3 || isempty( dim )
   dim = find(size(x) ~= 1, 1);
   if isempty(dim), dim = 1; end
 end

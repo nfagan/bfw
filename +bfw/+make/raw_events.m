@@ -22,15 +22,13 @@ function events_file = raw_events(files, varargin)
 defaults = bfw.make.defaults.raw_events();
 params = bfw.parsestruct( defaults, varargin );
 
-bfw.validatefiles( files, {'time', 'bounds', params.fixations_subdir} );
+bfw.validatefiles( files, {'rois', 'time', 'bounds', 'position', params.fixations_subdir} );
 
+roi_file = shared_utils.general.get( files, 'rois' );
 time_file = shared_utils.general.get( files, 'time' );
 bounds_file = shared_utils.general.get( files, 'bounds' );
+pos_file = shared_utils.general.get( files, 'position' );
 fix_file = shared_utils.general.get( files, params.fixations_subdir );
-
-unified_filename = bfw.try_get_unified_filename( time_file );
-
-t = time_file.t;
   
 %   Check whether to adjust the duration to match the given bin size.
 if ( isfield(bounds_file.params, 'step_size') )
@@ -41,6 +39,174 @@ end
 
 % Save the step size used.
 params.step_size = step_size;
+
+if ( params.use_bounds_file_for_rois )
+  events_file = bounds_file_roi_method( bounds_file, fix_file, time_file, params );
+else
+  events_file = roi_file_roi_method( roi_file, pos_file, fix_file, time_file, params );
+end
+
+d = 10;
+
+end
+
+function tf = check_has_mutual_events(roi_file, params)
+
+monk_ids = intersect( {'m1', 'm2'}, fieldnames(roi_file) );
+tf = params.calculate_mutual && numel( monk_ids ) > 1;
+
+end
+
+function events_file = roi_file_roi_method(roi_file, pos_file, fix_file, time_file, params)
+
+unified_filename = bfw.try_get_unified_filename( time_file );
+events_file = empty_events_file( unified_filename, params );
+
+has_mutual_events = check_has_mutual_events( roi_file, params );
+mutual_evts = [];
+roi_order = params.roi_order_func( roi_file );
+
+t = time_file.t;
+step_size = params.step_size;
+check_accept_mutual_event_func = params.check_accept_mutual_event_func;
+
+exclusive_evts = find_exclusive_events_roi_method( t, step_size, fix_file, params );
+
+if ( has_mutual_events )
+  mutual_evts = find_mutual_events( t, step_size, exclusive_evts, params ); 
+end
+
+joined = join_events( exclusive_evts, mutual_evts, params );
+roi_labels = label_rois_for_joined_events( joined, roi_file, pos_file ...
+  , roi_order, check_accept_mutual_event_func );
+
+events_file.events = joined.events;
+events_file.event_key = joined.event_key;
+events_file.labels = [ joined.labels, roi_labels ];
+events_file.categories = cshorzcat( joined.categories, 'roi' );
+
+end
+
+function roi_labels = label_rois_for_joined_events(joined, roi_file, pos_file ...
+  , roi_order, check_accept_mutual_event_func)
+
+joined_labels = fcat.from( joined );
+roi_labels = cell( size(joined_labels, 1), 1 );
+
+m1_ind = find( joined_labels, 'm1' );
+m2_ind = find( joined_labels, 'm2' );
+mut_ind = find( joined_labels, 'mutual' );
+
+start_indices = joined.events(:, joined.event_key('start_index'));
+stop_indices = joined.events(:, joined.event_key('stop_index'));
+start_stop_indices = [ start_indices, stop_indices ];
+
+if ( isempty(m1_ind) )
+  m1_roi_labels = {};
+else
+  m1_roi_labels = label_exclusive_events( ...
+    start_stop_indices(m1_ind, :), roi_order, roi_file.m1.rects, pos_file.m1 );
+end
+
+if ( isempty(m2_ind) )
+  m2_roi_labels = {};
+else
+  m2_roi_labels = label_exclusive_events( ...
+    start_stop_indices(m2_ind, :), roi_order, roi_file.m2.rects, pos_file.m2 );
+end
+
+if ( isempty(mut_ind) )
+  mutual_roi_labels = {};
+else
+  mutual_roi_labels = label_mutual_events( ...
+    start_stop_indices(mut_ind, :), roi_order, check_accept_mutual_event_func ...
+    , roi_file.m1.rects, roi_file.m2.rects ...
+    , pos_file.m1, pos_file.m2 );
+end
+
+roi_labels(m1_ind) = m1_roi_labels;
+roi_labels(m2_ind) = m2_roi_labels;
+roi_labels(mut_ind) = mutual_roi_labels;
+
+end
+
+function roi_labels = ...
+  label_mutual_events(start_stop_indices, roi_order, check_accept_mutual_event_func ...
+  , m1_rects, m2_rects, m1_pos, m2_pos)
+
+num_events = size( start_stop_indices, 1 );
+roi_labels = cell( num_events, 1 );
+
+for i = 1:num_events
+  start = start_stop_indices(i, 1);
+  stop = start_stop_indices(i, 2);
+  
+  m1p = nanmean( m1_pos(:, start:stop), 2 );
+  m2p = nanmean( m2_pos(:, start:stop), 2 );
+  
+  roi_label = 'everywhere';
+  found_roi = false;
+  
+  for j = 1:numel(roi_order)
+    roi = roi_order{j};
+    ib_m1 = bfw.bounds.rect( m1p(1), m1p(2), m1_rects(roi) );
+    ib_m2 = bfw.bounds.rect( m2p(1), m2p(2), m2_rects(roi) );
+    
+    if ( ib_m1 && ib_m2 )
+      found_roi = true;
+      roi_label = roi;
+      break;
+    end
+  end
+  
+  if ( ~found_roi )
+    [accept, tmp_label] = check_accept_mutual_event_func( m1p, m2p, m1_rects, m2_rects );
+    if ( accept )
+      roi_label = tmp_label;
+    end
+  end
+  
+  roi_labels{i} = roi_label;
+end
+
+end
+
+function roi_labels = label_exclusive_events(start_stop_indices, roi_order, rects, position)
+
+num_events = size( start_stop_indices, 1 );
+roi_labels = cell( num_events, 1 );
+
+for i = 1:num_events
+  start = start_stop_indices(i, 1);
+  stop = start_stop_indices(i, 2);
+  
+  pos = position(:, start:stop);
+  mean_pos = nanmean( pos, 2 );
+  
+  roi_label = 'everywhere';
+  
+  for j = 1:numel(roi_order)
+    rect = rects(roi_order{j});
+    ib = bfw.bounds.rect( mean_pos(1), mean_pos(2), rect );
+    
+    if ( ib )
+      roi_label = roi_order{j};
+      break;
+    end
+  end
+  
+  roi_labels{i} = roi_label;
+end
+
+end
+
+function events_file = ...
+  bounds_file_roi_method(bounds_file, fix_file, time_file, params)
+
+unified_filename = bfw.try_get_unified_filename( time_file );
+
+t = time_file.t;
+step_size = params.step_size;
 
 monk_ids = intersect( {'m1', 'm2'}, fieldnames(bounds_file) );
 % Set of roi names that can be manually selected.
@@ -57,7 +223,7 @@ mutual_evts = [];
 for i = 1:numel(active_roi_names)
   roi_name = active_roi_names{i};
 
-  exclusive_evts = find_exclusive_events( roi_name, t, step_size, bounds_file, fix_file, params );
+  exclusive_evts = find_exclusive_events_bounds_method( roi_name, t, step_size, bounds_file, fix_file, params );
 
   if ( has_mutual_events )
     mutual_evts = find_mutual_events( t, step_size, exclusive_evts, params ); 
@@ -268,7 +434,43 @@ outs.is_valid = is_valid;
 
 end
 
-function exclusive_outs = find_exclusive_events(roi_name, t, step_size, bounds_file, fix_file, params)
+function exclusive_outs = find_exclusive_events_roi_method(t, step_size, fix_file, params)
+
+import shared_utils.vector.slidebin;
+import shared_utils.logical.find_starts;
+
+duration = ceil( params.duration / step_size );
+assert( ~isnan(duration), '"duration" cannot be nan.' );
+
+monk_ids = intersect( {'m1', 'm2'}, fieldnames(fix_file) );
+
+exclusive_outs = struct();
+
+for i = 1:numel(monk_ids)
+  monk_id = monk_ids{i}; 
+  is_fix = fix_file.(monk_id);
+
+  evts = find_starts( is_fix, duration );
+
+  if ( params.fill_gaps )
+    fill_gaps_duration = ceil( params.fill_gaps_duration / step_size );
+    assert( ~isnan(fill_gaps_duration), '"fill_gaps_duration" cannot be nan.' );
+    [is_fix, evts] = bfw.fill_gaps( is_fix, evts, fill_gaps_duration );
+  end
+
+  evt_info = get_event_info( t, evts, is_fix, duration );
+
+  outs.events = evt_info;
+  outs.event_key = get_event_key();
+  outs.is_valid = is_fix;
+  
+  exclusive_outs.(monk_id) = outs;
+end
+
+
+end
+
+function exclusive_outs = find_exclusive_events_bounds_method(roi_name, t, step_size, bounds_file, fix_file, params)
 
 import shared_utils.vector.slidebin;
 import shared_utils.logical.find_starts;
@@ -373,6 +575,15 @@ end
 function l = get_event_length(index, bounds)
 l = 0;
 while ( index+l <= numel(bounds) && bounds(index+l) ), l = l + 1; end
+end
+
+function events_file = empty_events_file(unified_filename, params)
+
+events_file.events = [];
+events_file.labels = {};
+events_file.unified_filename = unified_filename;
+events_file.params = params;
+
 end
 
 function events_file = get_base_events_file(unified_filename, active_roi_names, is_all_rois, params)
