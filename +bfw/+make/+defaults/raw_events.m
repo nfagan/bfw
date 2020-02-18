@@ -14,7 +14,7 @@ defaults.duration = nan;  % ms
 defaults.require_fixations = true;
 
 defaults.use_bounds_file_for_rois = true;
-defaults.roi_order_func = @(roi_file) bfw.default_roi_ordering();
+defaults.roi_order_func = @bfw.default_roi_ordering;
 defaults.check_accept_mutual_event_func = @(varargin) deal( false, '' );
 
 % 'fixations_subdir' gives the type of and intermediate directory containing 

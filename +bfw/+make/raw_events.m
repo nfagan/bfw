@@ -61,8 +61,7 @@ unified_filename = bfw.try_get_unified_filename( time_file );
 events_file = empty_events_file( unified_filename, params );
 
 has_mutual_events = check_has_mutual_events( roi_file, params );
-mutual_evts = [];
-roi_order = params.roi_order_func( roi_file );
+[excl_roi_order, mut_roi_order] = params.roi_order_func( roi_file );
 
 t = time_file.t;
 step_size = params.step_size;
@@ -70,18 +69,276 @@ check_accept_mutual_event_func = params.check_accept_mutual_event_func;
 
 exclusive_evts = find_exclusive_events_roi_method( t, step_size, fix_file, params );
 
+excl_events = linearize_exclusive_evts( exclusive_evts );
+excl_labels = fcat.from( excl_events );
+m1_ind = find( excl_labels, 'm1' );
+m2_ind = find( excl_labels, 'm2' );
+
+starts = excl_events.events(:, excl_events.event_key('start_index'));
+stops = excl_events.events(:, excl_events.event_key('stop_index'));
+start_stops = [ starts, stops ];
+
+[m1_roi_labels, m1_found_roi] = ...
+  check_label_exclusive_events( start_stops, excl_roi_order, roi_file, pos_file, 'm1', m1_ind );
+[m2_roi_labels, m2_found_roi] = ...
+  check_label_exclusive_events( start_stops, excl_roi_order, roi_file, pos_file, 'm2', m2_ind );
+
+roi_labels = cell( length(excl_labels), 1 );
+roi_labels(m1_ind) = m1_roi_labels;
+roi_labels(m2_ind) = m2_roi_labels;
+
+excl_events.labels = [ excl_events.labels, roi_labels ];
+excl_events.categories{end+1} = 'roi';
+
+maybe_mutual_m1 = m1_ind(m1_found_roi);
+maybe_mutual_m2 = m2_ind(m2_found_roi);
+
+mutual_inputs = struct();
+mutual_inputs.mut_m1 = maybe_mutual_m1;
+mutual_inputs.mut_m2 = maybe_mutual_m2;
+mutual_inputs.roi_order = mut_roi_order;
+mutual_inputs.check_accept_mutual_event_func = check_accept_mutual_event_func;
+
+all_keep_exclusive = true( length(excl_labels), 1 );
+
 if ( has_mutual_events )
-  mutual_evts = find_mutual_events( t, step_size, exclusive_evts, params ); 
+  mut_outs = handle_mutual_events_roi_method( start_stops, roi_file, pos_file, time_file, mutual_inputs );
+  
+  all_keep_exclusive(m1_ind(mut_outs.remove_m1)) = false;
+  all_keep_exclusive(m2_ind(mut_outs.remove_m2)) = false;
+  
+  excl_events.events = excl_events.events(all_keep_exclusive, :);
+  excl_events.labels = excl_events.labels(all_keep_exclusive, :);
+  
+  excl_events.events = [ excl_events.events; mut_outs.events ];
+  excl_events.labels = [ excl_events.labels; mut_outs.labels ];
 end
 
-joined = join_events( exclusive_evts, mutual_evts, params );
-roi_labels = label_rois_for_joined_events( joined, roi_file, pos_file ...
-  , roi_order, check_accept_mutual_event_func );
+events_file.events = excl_events.events;
+events_file.event_key = excl_events.event_key;
+events_file.labels = excl_events.labels;
+events_file.categories = excl_events.categories;
 
-events_file.events = joined.events;
-events_file.event_key = joined.event_key;
-events_file.labels = [ joined.labels, roi_labels ];
-events_file.categories = cshorzcat( joined.categories, 'roi' );
+end
+
+function mut_outs = handle_mutual_events_roi_method(start_stops, roi_file, pos_file, time_file, mutual_inputs)
+
+roi_order = mutual_inputs.roi_order;
+check_accept_mutual_event_func = mutual_inputs.check_accept_mutual_event_func;
+
+t = time_file.t;
+
+m1_ind = mutual_inputs.mut_m1;
+m2_ind = mutual_inputs.mut_m2;
+
+m1_pos = pos_file.m1;
+m2_pos = pos_file.m2;
+
+m1_rects = cellfun( @(x) roi_file.m1.rects(x), roi_order, 'un', 0 );
+m2_rects = cellfun( @(x) roi_file.m2.rects(x), roi_order, 'un', 0 );
+
+n_m1 = numel( m1_ind );
+n_m2 = numel( m2_ind );
+use_n = max( n_m1, n_m2 );
+
+if ( use_n == n_m1 )
+  src_is_m1 = true;
+  
+  src_monk_id = 'm1';
+  test_monk_id = 'm2';
+  
+  src_inds = m1_ind;
+  test_inds = m2_ind;
+  
+  src_pos = m1_pos;
+  test_pos = m2_pos;
+  
+  src_rects = m1_rects;
+  test_rects = m2_rects;
+  
+  src_rect_map = roi_file.m1.rects;
+  test_rect_map = roi_file.m2.rects;
+else
+  src_is_m1 = false;
+  
+  src_monk_id = 'm2';
+  test_monk_id = 'm1';
+  
+  src_inds = m2_ind;
+  test_inds = m1_ind;
+  
+  src_pos = m2_pos;
+  test_pos = m1_pos;
+  
+  src_rects = m2_rects;
+  test_rects = m1_rects;
+  
+  src_rect_map = roi_file.m2.rects;
+  test_rect_map = roi_file.m1.rects;
+end
+
+keep_exclusive_src = true( use_n, 1 );
+keep_exclusive_test = true( numel(test_inds), 1 );
+
+mutual_event_labels = {};
+mutual_event_info = [];
+
+for i = 1:use_n
+  src_ind = src_inds(i);
+  src_range = start_stops(src_ind, 1):start_stops(src_ind, 2);
+  
+  for j = 1:numel(test_inds)    
+    test_ind = test_inds(j);
+    test_range = start_stops(test_ind, 1):start_stops(test_ind, 2);
+    
+    overlap_range = intersect( src_range, test_range );
+    overlaps = ~isempty( overlap_range );
+    if ( ~overlaps )
+      continue;
+    end
+    
+    src_p = nanmean( src_pos(:, src_range), 2 );
+    test_p = nanmean( test_pos(:, test_range), 2 );
+
+    ib_src = cellfun( ...
+      @(x) bfw.bounds.rect(src_p(1), src_p(2), x), src_rects );
+    ib_test = cellfun( ...
+      @(x) bfw.bounds.rect(test_p(1), test_p(2), x), test_rects );
+
+    % First mutual in given roi order.
+    ib_both = find( ib_src & ib_test, 1 );
+    
+    accept = false;
+
+    if ( ~isempty(ib_both) )
+      mut_roi = roi_order{ib_both};
+      accept = true;
+      
+    elseif ( any(ib_src) && any(ib_test) )
+      [accept, tmp_label] = ...
+        check_accept_mutual_event_func( src_p, test_p, src_rect_map, test_rect_map );
+      
+      if ( accept )
+        mut_roi = tmp_label;
+      end
+    end
+    
+    if ( ~accept )
+      continue;
+    end
+    
+    keep_exclusive_src(i) = false;
+    keep_exclusive_test(j) = false;
+
+    min_src = min( src_range );
+    min_test = min( test_range );
+    max_src = max( src_range );
+    max_test = max( test_range );
+
+    mut_start = min( overlap_range );
+    mut_stop = max( overlap_range );
+
+    if ( min_src == min_test )
+      initiator = 'simultaneous';
+    elseif ( min_src < min_test )
+      initiator = src_monk_id;
+    else
+      initiator = test_monk_id;
+    end
+
+    if ( max_src == max_test )
+      terminator = 'simultaneous';
+    elseif ( max_src < max_test )
+      terminator = src_monk_id;
+    else
+      terminator = test_monk_id;
+    end
+
+    initiator_label = get_initiated_label( initiator );
+    terminator_label = get_terminated_label( terminator );
+    
+    mutual_event_labels(end+1, :) = ...
+      {'mutual', initiator_label, terminator_label, 'mutual_event', mut_roi};
+    mutual_event_info(end+1, :) = make_mutual_event_info(mut_start, mut_stop, t);
+  end
+end
+
+mut_outs = struct();
+mut_outs.events = mutual_event_info;
+mut_outs.labels = mutual_event_labels;
+mut_outs.categories = {'looks_by', 'initiator', 'terminator', 'event_type', 'roi'};
+
+if ( src_is_m1 )
+  mut_outs.remove_m1 = ~keep_exclusive_src;
+  mut_outs.remove_m2 = ~keep_exclusive_test;
+else
+  mut_outs.remove_m1 = ~keep_exclusive_test;
+  mut_outs.remove_m2 = ~keep_exclusive_src;
+end
+
+end
+
+function evt_info = make_mutual_event_info(start_ind, stop_ind, t)
+
+evt_length = stop_ind - start_ind + 1;
+
+start_t = t(start_ind);
+stop_t = t(stop_ind);
+
+duration = stop_t - start_t;
+
+evt_info = [ start_ind, stop_ind, evt_length, start_t, stop_t, duration ];
+
+end
+
+function [roi_labels, found_roi] = ...
+  check_label_exclusive_events(start_stops, roi_order, roi_file, pos_file, monk_id, mask)
+
+if ( ~isempty(mask) )
+  rects = roi_file.(monk_id).rects;
+  pos = pos_file.(monk_id);
+  m_start_stops = start_stops(mask, :);
+  
+  [roi_labels, found_roi] = label_exclusive_events( m_start_stops, roi_order, rects, pos );
+else
+  roi_labels = {};
+  found_roi = [];
+end
+
+end
+
+function out = linearize_exclusive_evts(events)
+
+monk_ids = fieldnames( events );
+looks_by = cell( size(monk_ids) );
+initiators = cell( size(monk_ids) );
+terminators = cell( size(monk_ids) );
+evts = cell( size(looks_by) );
+
+for i = 1:numel(monk_ids)
+  event = events.(monk_ids{i});
+  num_events = size( event.events, 1 );
+  label_size = [num_events, 1];
+  
+  m_id = monk_ids{i};
+  
+  looks_by{i} = repmat( {m_id}, label_size );
+  initiators{i} = repmat( {get_initiated_label(m_id)}, label_size );
+  terminators{i} = repmat( {get_terminated_label(m_id)}, label_size );
+  
+  evts{i} = event.events;
+end
+
+looks_by = vertcat( looks_by{:} );
+initiators = vertcat( initiators{:} );
+terminators = vertcat( terminators{:} );
+event_types = repmat( {'exclusive_event'}, size(looks_by) );
+
+out = struct();
+out.events = vertcat( evts{:} );
+out.event_key = events.(monk_ids{i}).event_key;
+out.labels = [ looks_by, initiators, terminators, event_types ];
+out.categories = { 'looks_by', 'initiator', 'terminator', 'event_type' };
 
 end
 
@@ -169,10 +426,12 @@ end
 
 end
 
-function roi_labels = label_exclusive_events(start_stop_indices, roi_order, rects, position)
+function [roi_labels, found_roi] = ...
+  label_exclusive_events(start_stop_indices, roi_order, rects, position)
 
 num_events = size( start_stop_indices, 1 );
 roi_labels = cell( num_events, 1 );
+found_roi = false( size(roi_labels) );
 
 for i = 1:num_events
   start = start_stop_indices(i, 1);
@@ -180,6 +439,7 @@ for i = 1:num_events
   
   pos = position(:, start:stop);
   mean_pos = nanmean( pos, 2 );
+  curr_found_roi = false;
   
   roi_label = 'everywhere';
   
@@ -189,11 +449,13 @@ for i = 1:num_events
     
     if ( ib )
       roi_label = roi_order{j};
+      curr_found_roi = true;
       break;
     end
   end
   
   roi_labels{i} = roi_label;
+  found_roi(i) = curr_found_roi;
 end
 
 end
