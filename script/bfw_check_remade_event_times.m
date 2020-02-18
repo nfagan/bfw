@@ -14,7 +14,7 @@ stim_event_outs = bfw_gather_events( 'config', bfw_st.default_config() );
 
 %%
 
-use_event_file = old_method_event_outs;
+use_event_file = stim_event_outs;
 
 roi_labels = use_event_file.labels';
 mask = fcat.mask( roi_labels ...
@@ -22,16 +22,16 @@ mask = fcat.mask( roi_labels ...
   , @find, {'eyes_nf', 'face'} ...
 );
 
-check_I = findall( roi_labels, {'unified_filename', 'roi'}, mask );
+check_I = findall( roi_labels, {'unified_filename'}, mask );
 start_indices = bfw.event_column( use_event_file, 'start_index' );
 stop_indices = bfw.event_column( use_event_file, 'stop_index' );
 
 num_use = numel( check_I );
 
 for i = 1:num_use
-  assert( numel(unique(start_indices(check_I{i}))) == numel(check_I{i}) );
+%   assert( numel(unique(start_indices(check_I{i}))) == numel(check_I{i}) );
   
-  keep = bfw_exclusive_events( start_indices, stop_indices, roi_labels' ...
+  keep = bfw_exclusive_events( start_indices, stop_indices, roi_labels ...
     , {{'eyes_nf', 'face'}}, check_I(i) );
   assert( numel(intersect(keep, check_I{i})) == numel(check_I{i}) );
 end
@@ -56,6 +56,20 @@ events = [ bounds_events; roi_events; old_events ];
 labels = [ bounds_labels'; roi_labels; old_labels ];
 
 bfw.add_monk_labels( labels );
+
+%%
+
+check_I = findall( labels, {'unified_filename', 'event_method', 'looks_by'} );
+start_indices = events(:, event_key('start_index'));
+stop_indices = events(:, event_key('stop_index'));
+num_use = numel( check_I );
+
+for i = 1:num_use  
+  keep = bfw_exclusive_events( start_indices, stop_indices, labels, {{'eyes_nf', 'face'}}, check_I(i) );
+  check_I{i} = intersect( check_I{i}, keep );
+end
+
+exclusive_mask = vertcat( check_I{:} );
 
 %%
 
@@ -114,7 +128,8 @@ end
 %%
 
 % mask = find( durations >= 0.07 );
-mask = rowmask( labels );
+mask = exclusive_mask;
+% mask = rowmask( labels );
 
 [count_labels, each_I] = keepeach( labels' ...
   , {'unified_filename', 'roi', 'looks_by', 'event_method'}, mask );
@@ -122,12 +137,12 @@ counts = cellfun( @numel, each_I );
 
 pl = plotlabeled.make_common();
 pl.summary_func = @nanmedian;
-% pl.y_lims = [0, 1];
+pl.y_lims = [0, 100];
 
 fcats = { };
 xcats = { 'looks_by' };
 gcats = { 'roi' };
-pcats = { 'event_method', 'id_m1' };
+pcats = { 'event_method' };
 
 mask = fcat.mask( count_labels ...
   , @find, {'roi_file', 'old_method'} ...
