@@ -94,6 +94,8 @@ maybe_mutual_m1 = m1_ind(m1_found_roi);
 maybe_mutual_m2 = m2_ind(m2_found_roi);
 
 mutual_inputs = struct();
+mutual_inputs.duration = params.duration;
+mutual_inputs.step_size = params.step_size;
 mutual_inputs.mut_m1 = maybe_mutual_m1;
 mutual_inputs.mut_m2 = maybe_mutual_m2;
 mutual_inputs.roi_order = mut_roi_order;
@@ -106,6 +108,9 @@ if ( has_mutual_events )
   
   all_keep_exclusive(m1_ind(mut_outs.remove_m1)) = false;
   all_keep_exclusive(m2_ind(mut_outs.remove_m2)) = false;
+  
+  adjust_excl_inds = mut_outs.adjust_exclusive_end_inds;
+  excl_events.events(adjust_excl_inds, :) = mut_outs.adjusted_exclusive_event_info;
   
   excl_events.events = excl_events.events(all_keep_exclusive, :);
   excl_events.labels = excl_events.labels(all_keep_exclusive, :);
@@ -127,6 +132,7 @@ roi_order = mutual_inputs.roi_order;
 check_accept_mutual_event_func = mutual_inputs.check_accept_mutual_event_func;
 
 t = time_file.t;
+duration_crit = ceil( mutual_inputs.duration / mutual_inputs.step_size );
 
 m1_ind = mutual_inputs.mut_m1;
 m2_ind = mutual_inputs.mut_m2;
@@ -183,6 +189,9 @@ keep_exclusive_test = true( numel(test_inds), 1 );
 mutual_event_labels = {};
 mutual_event_info = [];
 
+adjust_exclusive_end_inds = [];
+adjust_exclusive_ends = [];
+
 for i = 1:use_n
   src_ind = src_inds(i);
   src_range = start_stops(src_ind, 1):start_stops(src_ind, 2);
@@ -192,7 +201,8 @@ for i = 1:use_n
     test_range = start_stops(test_ind, 1):start_stops(test_ind, 2);
     
     overlap_range = intersect( src_range, test_range );
-    overlaps = ~isempty( overlap_range );
+    overlaps = numel( overlap_range ) >= duration_crit;
+    
     if ( ~overlaps )
       continue;
     end
@@ -226,9 +236,6 @@ for i = 1:use_n
     if ( ~accept )
       continue;
     end
-    
-    keep_exclusive_src(i) = false;
-    keep_exclusive_test(j) = false;
 
     min_src = min( src_range );
     min_test = min( test_range );
@@ -237,13 +244,29 @@ for i = 1:use_n
 
     mut_start = min( overlap_range );
     mut_stop = max( overlap_range );
+    
+    can_keep_src = false;
+    can_keep_test = false;
 
     if ( min_src == min_test )
       initiator = 'simultaneous';
+      
     elseif ( min_src < min_test )
       initiator = src_monk_id;
+      
+      % src event start preceded test event start. So truncate the src
+      % exclusive event to the start of the mutual event
+      [can_keep_src, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
+        check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
+        , adjust_exclusive_ends, src_ind, min_src, min_test, duration_crit );
     else
+      % test event start preceded src event start. So truncate the test
+      % exclusive event to the start of the mutual event
       initiator = test_monk_id;
+      
+      [can_keep_test, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
+        check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
+        , adjust_exclusive_ends, test_ind, min_test, min_src, duration_crit );
     end
 
     if ( max_src == max_test )
@@ -253,13 +276,16 @@ for i = 1:use_n
     else
       terminator = test_monk_id;
     end
+    
+    keep_exclusive_src(i) = can_keep_src;
+    keep_exclusive_test(j) = can_keep_test;
 
     initiator_label = get_initiated_label( initiator );
     terminator_label = get_terminated_label( terminator );
     
     mutual_event_labels(end+1, :) = ...
       {'mutual', initiator_label, terminator_label, 'mutual_event', mut_roi};
-    mutual_event_info(end+1, :) = make_mutual_event_info(mut_start, mut_stop, t);
+    mutual_event_info(end+1, :) = make_event_info( mut_start, mut_stop, t );
   end
 end
 
@@ -276,9 +302,59 @@ else
   mut_outs.remove_m2 = ~keep_exclusive_src;
 end
 
+adjusted_exclusive_event_info = ...
+  make_adjusted_exclusive_event_info( adjust_exclusive_end_inds ...
+  , adjust_exclusive_ends, start_stops, t );
+
+mut_outs.adjust_exclusive_end_inds = adjust_exclusive_end_inds;
+mut_outs.adjusted_exclusive_event_info = adjusted_exclusive_event_info;
+
 end
 
-function evt_info = make_mutual_event_info(start_ind, stop_ind, t)
+function event_info = make_adjusted_exclusive_event_info(end_inds, ends, start_stops, t)
+
+assert( numel(unique(end_inds)) == numel(ends), 'Duplicate exclusive end.' );
+
+event_info = zeros( numel(end_inds), 6 );
+
+for i = 1:numel(end_inds)
+  adjust_end_ind = end_inds(i);
+  
+  start = start_stops(adjust_end_ind, 1);
+  stop = ends(i);
+  
+  event_info(i, :) = make_event_info( start, stop, t );
+end
+
+end
+
+function [can_keep, end_inds, ends] = ...
+  check_update_adjusted_exclusive_ends(end_inds, ends, excl_start_ind, excl_start, mut_start, duration_crit)
+
+[already_marked, marked_ind] = ismember( excl_start_ind, end_inds );
+new_excl_end = mut_start - 1;
+
+if ( already_marked )
+  new_excl_end = min( new_excl_end, ends(marked_ind) );
+end
+
+can_keep = new_excl_end - excl_start + 1 >= duration_crit;
+
+if ( can_keep )
+  if ( already_marked )
+    ends(marked_ind) = new_excl_end;
+  else
+    end_inds(end+1) = excl_start_ind;
+    ends(end+1) = new_excl_end;
+  end
+elseif ( already_marked )
+  end_inds(marked_ind) = [];
+  ends(marked_ind) = [];
+end
+
+end
+
+function evt_info = make_event_info(start_ind, stop_ind, t)
 
 evt_length = stop_ind - start_ind + 1;
 

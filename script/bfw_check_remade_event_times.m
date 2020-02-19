@@ -1,6 +1,6 @@
 bounds_file_subdir = 'raw_events_remade_021820_bounds_file_method';
 roi_file_subdir = 'raw_events_remade_021820_roi_file_method';
-old_method_subdir = 'archive_021820';
+old_method_subdir = 'archive_021820_original_binned_events';
 
 inputs = struct();
 
@@ -10,11 +10,15 @@ old_method_event_outs = bfw_gather_events( 'event_subdir', old_method_subdir, in
 
 %%
 
-stim_event_outs = bfw_gather_events( 'config', bfw_st.default_config() );
+stim_bounds_file_subdir = '__archive_021220_non_binned_events_eye_mmv_fixations';
+stim_roi_file_subdir = '__archive_021820_non_binned_events_eye_mmv_fixations_roi_file_method';
+
+stim_bounds_outs = bfw_gather_events( 'event_subdir', stim_bounds_file_subdir, 'config', bfw_st.default_config() );
+stim_roi_outs = bfw_gather_events( 'event_subdir', stim_roi_file_subdir, 'config', bfw_st.default_config() );
 
 %%
 
-use_event_file = stim_event_outs;
+use_event_file = stim_roi_outs;
 
 roi_labels = use_event_file.labels';
 mask = fcat.mask( roi_labels ...
@@ -29,7 +33,7 @@ stop_indices = bfw.event_column( use_event_file, 'stop_index' );
 num_use = numel( check_I );
 
 for i = 1:num_use
-%   assert( numel(unique(start_indices(check_I{i}))) == numel(check_I{i}) );
+  assert( numel(unique(start_indices(check_I{i}))) == numel(check_I{i}) );
   
   keep = bfw_exclusive_events( start_indices, stop_indices, roi_labels ...
     , {{'eyes_nf', 'face'}}, check_I(i) );
@@ -50,10 +54,18 @@ old_events = old_method_event_outs.events;
 old_labels = old_method_event_outs.labels';
 addsetcat( old_labels, 'event_method', 'old_method' );
 
+stim_bounds_events = stim_bounds_outs.events;
+stim_bounds_labels = stim_bounds_outs.labels';
+addsetcat( stim_bounds_labels, 'event_method', 'stim_bounds_file' );
+
+stim_roi_events = stim_roi_outs.events;
+stim_roi_labels = stim_roi_outs.labels';
+addsetcat( stim_roi_labels, 'event_method', 'stim_roi_file' );
+
 event_key = bounds_file_event_outs.event_key;
 
-events = [ bounds_events; roi_events; old_events ];
-labels = [ bounds_labels'; roi_labels; old_labels ];
+events = [ bounds_events; roi_events; old_events; stim_bounds_events; stim_roi_events ];
+labels = [ bounds_labels'; roi_labels; old_labels; stim_bounds_labels; stim_roi_labels ];
 
 bfw.add_monk_labels( labels );
 
@@ -64,7 +76,7 @@ start_indices = events(:, event_key('start_index'));
 stop_indices = events(:, event_key('stop_index'));
 num_use = numel( check_I );
 
-for i = 1:num_use  
+parfor i = 1:num_use
   keep = bfw_exclusive_events( start_indices, stop_indices, labels, {{'eyes_nf', 'face'}}, check_I(i) );
   check_I{i} = intersect( check_I{i}, keep );
 end
@@ -129,6 +141,8 @@ end
 
 % mask = find( durations >= 0.07 );
 mask = exclusive_mask;
+mask = intersect( mask, find(durations >= 0.1) );
+
 % mask = rowmask( labels );
 
 [count_labels, each_I] = keepeach( labels' ...
@@ -137,7 +151,7 @@ counts = cellfun( @numel, each_I );
 
 pl = plotlabeled.make_common();
 pl.summary_func = @nanmedian;
-pl.y_lims = [0, 100];
+pl.y_lims = [0, 30];
 
 fcats = { };
 xcats = { 'looks_by' };
