@@ -2,6 +2,7 @@ bounds_file_subdir = 'raw_events_remade_021820_bounds_file_method';
 roi_file_subdir = 'raw_events_remade_021820_roi_file_method';
 old_method_subdir = 'archive_021820_original_binned_events';
 roi_file_preserve_excl_subdir = 'raw_events_remade_021920_roi_file_preserve_excl_method';
+roi_file_preserve_excl_subdir_70ms = 'raw_events_remade_021920_roi_file_preserve_excl_method_70ms';
 
 inputs = struct();
 
@@ -9,6 +10,7 @@ bounds_file_event_outs = bfw_gather_events( 'event_subdir', bounds_file_subdir, 
 roi_file_event_outs = bfw_gather_events( 'event_subdir', roi_file_subdir, inputs );
 old_method_event_outs = bfw_gather_events( 'event_subdir', old_method_subdir, inputs );
 roi_file_excl_event_outs = bfw_gather_events( 'event_subdir', roi_file_preserve_excl_subdir, inputs );
+roi_file_excl_70ms_event_outs = bfw_gather_events( 'event_subdir', roi_file_preserve_excl_subdir_70ms, inputs );
 
 %%
 
@@ -20,12 +22,12 @@ stim_roi_outs = bfw_gather_events( 'event_subdir', stim_roi_file_subdir, 'config
 
 %%
 
-use_event_file = roi_file_excl_event_outs;
+use_event_file = roi_file_excl_70ms_event_outs;
 
 roi_labels = use_event_file.labels';
 mask = fcat.mask( roi_labels ...
   , @find, 'm1' ...
-  , @find, {'eyes_nf', 'face'} ...
+  , @find, {'eyes_nf', 'face', 'everywhere'} ...
 );
 
 check_I = findall( roi_labels, {'unified_filename'}, mask );
@@ -39,14 +41,21 @@ for i = 1:num_use
   
   keep = bfw_exclusive_events( start_indices, stop_indices, roi_labels ...
     , {{'eyes_nf', 'face'}}, check_I(i) );
+  keep2 = bfw_exclusive_events( start_indices, stop_indices, roi_labels ...
+    , {{'face', 'everywhere'}}, check_I(i) );
+  keep3 = bfw_exclusive_events( start_indices, stop_indices, roi_labels ...
+    , {{'eyes_nf', 'everywhere'}}, check_I(i) );
+  
   assert( numel(intersect(keep, check_I{i})) == numel(check_I{i}) );
+  assert( numel(intersect(keep2, check_I{i})) == numel(check_I{i}) );
+  assert( numel(intersect(keep3, check_I{i})) == numel(check_I{i}) );
 end
 
 %%
 
 to_append_events = {bounds_file_event_outs, old_method_event_outs ...
-  , roi_file_excl_event_outs, roi_file_event_outs};
-event_methods = { 'bounds_file', 'old_method', 'roi_file_excl_events', 'roi_file' };
+  , roi_file_excl_event_outs, roi_file_excl_70ms_event_outs, roi_file_event_outs};
+event_methods = { 'bounds_file', 'old_method', 'roi_file_excl_events', 'roi_file_excl_events_70ms', 'roi_file' };
 
 events = cell( size(to_append_events) );
 labels = fcat();
@@ -151,7 +160,7 @@ gcats = { 'roi' };
 pcats = { 'event_method' };
 
 mask = fcat.mask( count_labels ...
-  , @find, {'roi_file', 'old_method', 'roi_file_excl_events'} ...
+  , @find, {'roi_file', 'old_method', 'roi_file_excl_events', 'roi_file_excl_events_70ms'} ...
   , @find, {'eyes_nf', 'face'} ...
 );
 

@@ -96,6 +96,7 @@ maybe_mutual_m2 = m2_ind(m2_found_roi);
 mutual_inputs = struct();
 mutual_inputs.duration = params.duration;
 mutual_inputs.step_size = params.step_size;
+mutual_inputs.allow_keep_initiating_exclusive_event = params.allow_keep_initiating_exclusive_event;
 mutual_inputs.mut_m1 = maybe_mutual_m1;
 mutual_inputs.mut_m2 = maybe_mutual_m2;
 mutual_inputs.roi_order = mut_roi_order;
@@ -130,6 +131,7 @@ function mut_outs = handle_mutual_events_roi_method(start_stops, roi_file, pos_f
 
 roi_order = mutual_inputs.roi_order;
 check_accept_mutual_event_func = mutual_inputs.check_accept_mutual_event_func;
+allow_keep_initiating_exclusive_event = mutual_inputs.allow_keep_initiating_exclusive_event;
 
 t = time_file.t;
 duration_crit = ceil( mutual_inputs.duration / mutual_inputs.step_size );
@@ -254,19 +256,23 @@ for i = 1:use_n
     elseif ( min_src < min_test )
       initiator = src_monk_id;
       
-      % src event start preceded test event start. So truncate the src
-      % exclusive event to the start of the mutual event
-      [can_keep_src, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
-        check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
-        , adjust_exclusive_ends, src_ind, min_src, min_test, duration_crit );
+      if ( allow_keep_initiating_exclusive_event )
+        % src event start preceded test event start. So truncate the src
+        % exclusive event to the start of the mutual event
+        [can_keep_src, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
+          check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
+          , adjust_exclusive_ends, src_ind, min_src, min_test, duration_crit );
+      end
     else
-      % test event start preceded src event start. So truncate the test
-      % exclusive event to the start of the mutual event
       initiator = test_monk_id;
       
-      [can_keep_test, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
-        check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
-        , adjust_exclusive_ends, test_ind, min_test, min_src, duration_crit );
+      if ( allow_keep_initiating_exclusive_event )
+        % test event start preceded src event start. So truncate the test
+        % exclusive event to the start of the mutual event
+        [can_keep_test, adjust_exclusive_end_inds, adjust_exclusive_ends] = ...
+          check_update_adjusted_exclusive_ends( adjust_exclusive_end_inds ...
+          , adjust_exclusive_ends, test_ind, min_test, min_src, duration_crit );
+      end
     end
 
     if ( max_src == max_test )

@@ -16,6 +16,7 @@ defaults.require_fixations = true;
 defaults.use_bounds_file_for_rois = true;
 defaults.roi_order_func = @bfw.default_roi_ordering;
 defaults.check_accept_mutual_event_func = @(varargin) deal( false, '' );
+defaults.allow_keep_initiating_exclusive_event = true;
 
 % 'fixations_subdir' gives the type of and intermediate directory containing 
 % the fixations vector. Each subdirectory contains a file that is structured in
