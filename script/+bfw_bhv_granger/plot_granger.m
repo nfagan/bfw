@@ -81,11 +81,13 @@ for i = 1:numel(start_info)
   max_num_wins = params.max_num_epoch_windows;
   
   for j = ewo:min(numel(window_inds), ewo+max_num_wins)
-    granger_win = g(i, window_inds(j));
-    cv_win = cv(i, window_inds(j));
+    win_ind = window_inds(j);
     
-    trace_win1 = trace{1, j};
-    trace_win2 = trace{2, j};
+    granger_win = g(i, win_ind);
+    cv_win = cv(i, win_ind);
+    
+    trace_win1 = trace{1, win_ind};
+    trace_win2 = trace{2, win_ind};
     
     x = (1:numel(trace_win1)) + offset;
     offset = offset + numel( trace_win1 ) + 1e3;
@@ -110,6 +112,8 @@ for i = 1:numel(start_info)
     
     legend( {'m1', 'm2'} );
   end 
+  
+  d = 10;
 end
 
 end
