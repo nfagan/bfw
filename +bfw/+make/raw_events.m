@@ -87,8 +87,11 @@ roi_labels = cell( length(excl_labels), 1 );
 roi_labels(m1_ind) = m1_roi_labels;
 roi_labels(m2_ind) = m2_roi_labels;
 
-excl_events.labels = [ excl_events.labels, roi_labels ];
-excl_events.categories{end+1} = 'roi';
+m1_excl_roi_labels = cellfun( @(x) get_monk_id_roi_label('m1', x), roi_labels, 'un', 0 );
+m2_excl_roi_labels = cellfun( @(x) get_monk_id_roi_label('m2', x), roi_labels, 'un', 0 );
+
+excl_events.labels = [ excl_events.labels, roi_labels, m1_excl_roi_labels, m2_excl_roi_labels ];
+excl_events.categories = [ excl_events.categories, {'roi', 'm1_roi', 'm2_roi'} ];
 
 maybe_mutual_m1 = m1_ind(m1_found_roi);
 maybe_mutual_m2 = m2_ind(m2_found_roi);
@@ -224,14 +227,16 @@ for i = 1:use_n
 
     if ( ~isempty(ib_both) )
       mut_roi = roi_order{ib_both};
+      src_roi_label = mut_roi;
+      test_roi_label = mut_roi;
       accept = true;
       
     elseif ( any(ib_src) && any(ib_test) )
-      [accept, tmp_label] = ...
+      [accept, tmp_roi_label, src_roi_label, test_roi_label] = ...
         check_accept_mutual_event_func( src_p, test_p, src_rect_map, test_rect_map );
       
       if ( accept )
-        mut_roi = tmp_label;
+        mut_roi = tmp_roi_label;
       end
     end
     
@@ -289,8 +294,21 @@ for i = 1:use_n
     initiator_label = get_initiated_label( initiator );
     terminator_label = get_terminated_label( terminator );
     
-    mutual_event_labels(end+1, :) = ...
-      {'mutual', initiator_label, terminator_label, 'mutual_event', mut_roi};
+    if ( ~src_is_m1 )
+      % Swap
+      tmp_src_label = src_roi_label;
+      src_roi_label = test_roi_label;
+      test_roi_label = tmp_src_label;
+    end
+    
+    m1_roi_label = get_monk_id_roi_label( 'm1', src_roi_label );
+    m2_roi_label = get_monk_id_roi_label( 'm2', test_roi_label );
+    
+    mutual_event_labels(end+1, :) = {...
+      'mutual', initiator_label, terminator_label, 'mutual_event', mut_roi ...
+      , m1_roi_label, m2_roi_label ...
+    };
+  
     mutual_event_info(end+1, :) = make_event_info( mut_start, mut_stop, t );
   end
 end
@@ -298,7 +316,8 @@ end
 mut_outs = struct();
 mut_outs.events = mutual_event_info;
 mut_outs.labels = mutual_event_labels;
-mut_outs.categories = {'looks_by', 'initiator', 'terminator', 'event_type', 'roi'};
+mut_outs.categories = {'looks_by', 'initiator', 'terminator', 'event_type' ...
+  , 'roi', 'm1_roi', 'm2_roi'};
 
 if ( src_is_m1 )
   mut_outs.remove_m1 = ~keep_exclusive_src;
@@ -627,6 +646,10 @@ outs.event_key = exclusive.(monk_ids{1}).event_key;
 outs.labels = labels;
 outs.categories = { 'looks_by', 'initiator', 'terminator', 'event_type' };
 
+end
+
+function l = get_monk_id_roi_label(m_id, roi_name)
+l = sprintf( '%s_%s', m_id, roi_name );
 end
 
 function l = get_initiated_label(m_id)
