@@ -60,7 +60,6 @@ parfor i = 1:numel(each_I)
     look_m2 = look_vectors{m2_ind};
 
     bin_inds = shared_utils.vector.slidebin( 1:numel(look_m1), bin_size, step_size );
-    bin_inds = bin_inds(1:5);
     
     granger_f = nan( 2, numel(bin_inds) );
     granger_cv = nan( size(granger_f) );
