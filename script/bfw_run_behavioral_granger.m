@@ -15,7 +15,7 @@ mask_func = @(labels, mask) fcat.mask( labels, mask ...
 );
 
 % wrap_mask_func = mask_func;
-sessions_func = @(l) ref( combs(l, 'session'), '()', 1 );
+sessions_func = @(l) ref( combs(l, 'session'), '()', 1:10 );
 wrap_mask_func = @(l, m) find( l, sessions_func(l), mask_func(l, m) );
 
 granger_outs = bfw_bhv_granger.behavioral_granger( look_outputs ...
