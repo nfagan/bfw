@@ -20,9 +20,9 @@ bfw_run_behavioral_granger( ...
 % fname = '10e3_window_granger_1.mat';
 
 % date_dir = '021720';
-date_dir = '022420';
+date_dir = '030320';
 % fname = '500_window_10_sessions_granger_1.mat';
-fname = '500_window_1000_step_10_sessions_granger_1.mat';
+fname = 'permutation_testgranger_1.mat';
 
 load_p = bfw_bhv_granger.granger_save_p( {date_dir} );
 file_p = fullfile( load_p, fname );

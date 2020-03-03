@@ -15,12 +15,14 @@ g_labels = granger_outs.granger_labels';
 traces = granger_outs.smoothed_traces;
 g_fs = granger_outs.granger_fs;
 cvs = granger_outs.granver_cvs;
+null_fs = shared_utils.struct.field_or( granger_outs, 'null_fs', [] );
+null_cvs = shared_utils.struct.field_or( granger_outs, 'null_cs', [] );
 sums = granger_outs.sums;
 
 mask = get_base_mask( g_labels, params.mask_func );
 
 if ( params.plot_epochs )
-  plot_epochs( g_fs, cvs, traces, g_labels', mask, params );
+  plot_epochs( g_fs, cvs, null_fs, null_cvs, traces, g_labels', mask, params );
 end
 
 if ( params.plot_average )
@@ -33,7 +35,7 @@ end
 
 end
 
-function plot_epochs(g_fs, cvs, traces, labels, mask, params)
+function plot_epochs(g_fs, cvs, null_fs, null_cvs, traces, labels, mask, params)
 
 fcats = { 'unified_filename' };
 fig_I = findall_or_one( labels, fcats, mask );
@@ -41,12 +43,14 @@ fig_I = findall_or_one( labels, fcats, mask );
 fig = figure( 1 );
 
 for i = 1:numel(fig_I)
-  plot_epochs_one_run( fig, g_fs, cvs, traces, labels, fig_I{i}, params );
+  plot_epochs_one_run( fig, g_fs, cvs, null_fs, null_cvs ...
+    , traces, labels, fig_I{i}, params );
 end
 
 end
 
-function plot_epochs_one_run(fig, g_fs, cvs, traces, labels, mask, params)
+function plot_epochs_one_run(fig, g_fs, cvs, null_fs, null_cvs, traces ...
+  , labels, mask, params)
 
 g = g_fs(mask, :);
 cv = cvs(mask, :);
@@ -102,10 +106,18 @@ for i = 1:numel(start_info)
     g_projected = tot_max * g_frac_max;
     text_offset = 0.05 * tot_max;
     
+    if ( ~isempty(null_fs) )
+      null_dist = null_fs{mask(i), win_ind};
+      null_p_val = 1 - pnz( granger_win > null_dist );
+    else
+      null_p_val = nan;
+    end
+    
     g_text = sprintf('G=%0.2f', granger_win );
     cv_text = sprintf( 'CV=%0.2f', cv_win );
     sig_text = ternary( granger_win > cv_win, '**', '' );
-    use_text = sprintf( '%s;%s%s', g_text, cv_text, sig_text );
+    pval_text = sprintf( 'p=%0.2f', null_p_val );
+    use_text = sprintf( '%s;%s%s (%s)', g_text, cv_text, sig_text, pval_text );
     
     plot( ax, mean_x, g_projected, 'k*', 'MarkerSize', 3 );
     text( ax, mean_x, g_projected+text_offset, use_text ); 
