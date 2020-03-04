@@ -15,7 +15,7 @@ mask_func = @(labels, mask) fcat.mask( labels, mask ...
 );
 
 % wrap_mask_func = mask_func;
-sessions_func = @(l) ref( combs(l, 'session'), '()', 1:10 );
+sessions_func = @(l) ref( combs(l, 'session'), '()', 1 );
 wrap_mask_func = @(l, m) find( l, sessions_func(l), mask_func(l, m) );
 
 granger_outs = bfw_bhv_granger.behavioral_granger( look_outputs ...
@@ -46,32 +46,6 @@ if ( isempty(look_outputs) )
     , 'config', params.config ...
   );
 end
-
-end
-
-function debug_plot(granger_outs)
-
-g_labs = granger_outs.granger_labels';
-addsetcat( g_labs, 'measure', 'granger_F' );
-
-s_labs = granger_outs.sum_labels';
-addsetcat( s_labs, 'measure', 'look_frequencies' );
-
-% labs = [ g_labs'; s_labs ];
-% data = [ granger_outs.granger_fs; granger_outs.sums ];
-% 
-pl = plotlabeled.make_common();
-% axs = pl.lines( data, labs', {'measure', 'direction'}, 'unified_filename' );
-
-pl.fig = figure(1);
-axs1 = pl.lines( granger_outs.granger_fs, granger_outs.granger_labels' ...
-  , {'direction'}, {'unified_filename'} );
-
-pl.fig = figure(2);
-axs2 = pl.lines( granger_outs.sums, granger_outs.sum_labels' ...
-  , {'direction'}, {'unified_filename'} );
-
-d = 10;
 
 end
 
