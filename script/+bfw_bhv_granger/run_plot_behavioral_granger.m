@@ -31,6 +31,10 @@ granger_outs = shared_utils.io.fload( file_p );
 
 %%
 
+granger_outs = shared_utils.io.fload( '/Users/Nick/Desktop/030520/permutation_testgranger_1.mat' );
+
+%%
+
 mask_func = @(l, m) fcat.mask( l, m ...
   ...
 );

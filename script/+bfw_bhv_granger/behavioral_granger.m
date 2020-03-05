@@ -43,7 +43,7 @@ num_cols = rowzeros( rows(sums) );
 
 %%
 
-parfor i = 1:numel(each_I)  
+for i = 1:numel(each_I)  
   shared_utils.general.progress( i, numel(each_I) );
   
   prev_state = warning( 'off', 'all' );
@@ -69,7 +69,7 @@ parfor i = 1:numel(each_I)
     
     tmp_smooth_traces = cell( 2, numel(bin_inds) );
 
-    for j = 1:numel(bin_inds)
+    parfor j = 1:numel(bin_inds)
       smooth_m1 = filter( win, 1, look_m1(bin_inds{j}) );
       smooth_m2 = filter( win, 1, look_m2(bin_inds{j}) );
       
@@ -85,8 +85,7 @@ parfor i = 1:numel(each_I)
         end
       end
       
-      tmp_smooth_traces{1, j} = smooth_m1;
-      tmp_smooth_traces{2, j} = smooth_m2;
+      tmp_smooth_traces(:, j) = {smooth_m1; smooth_m2};
     end  
     
     g_labs = make_granger_labels( labels, each_I{i} );
