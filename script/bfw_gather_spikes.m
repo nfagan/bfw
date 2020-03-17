@@ -1,14 +1,17 @@
 function outs = bfw_gather_spikes(varargin)
 
 defaults = bfw.get_common_make_defaults();
+defaults.spike_subdir = 'spikes';
 
-inputs = { 'spikes', 'meta' };
+params = bfw.parsestruct( defaults, varargin );
 
-[params, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
+inputs = { params.spike_subdir, 'meta' };
+
+[~, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
 runner.func_name = mfilename;
 
-results = runner.run( @main );
+results = runner.run( @main, params.spike_subdir );
 outputs = [ results([results.success]).output ];
 
 outs = struct();
@@ -22,9 +25,9 @@ end
 
 end
 
-function out = main(files)
+function out = main(files, spike_subdir)
 
-spike_file = shared_utils.general.get( files, 'spikes' );
+spike_file = shared_utils.general.get( files, spike_subdir );
 meta_file = shared_utils.general.get( files, 'meta' );
 
 if ( spike_file.is_link )
