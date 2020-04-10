@@ -17,7 +17,7 @@ outs = struct();
 
 if ( isempty(outputs) )
   outs.events = [];
-  outs.event_key = containers.Map();
+  outs.event_key = bfw.empty_event_key();
   outs.labels = fcat();
 else
   outs.events = vertcat( outputs.events );

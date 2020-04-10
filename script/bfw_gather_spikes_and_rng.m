@@ -12,11 +12,13 @@ defaults.non_overlapping_mask_inputs = {};
 defaults.exclude_all_overlapping = true;
 defaults.non_overlapping_pairs = bfw_get_non_overlapping_pairs();
 defaults.spike_dir = 'spikes';
+defaults.events_subdir = 'raw_events';
+defaults.is_already_non_overlapping = false;
 
 p = bfw.parsestruct( defaults, varargin );
 spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
 
-inputs = { 'raw_events', spike_dir, 'meta', 'rng' };
+inputs = { p.events_subdir, spike_dir, 'meta', 'rng' };
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 loop_runner.convert_to_non_saving_with_output();
@@ -67,11 +69,12 @@ aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
   , 'look_back', params.look_back ...
   , 'look_ahead', params.look_ahead ...
   , 'rois', params.rois ...
+  , 'events_subdir', params.events_subdir ...
 );
 
 meta_file = shared_utils.general.get( files, 'meta' );
 rng_file = shared_utils.general.get( files, 'rng' );
-events_file = shared_utils.general.get( files, 'raw_events' );
+events_file = shared_utils.general.get( files, params.events_subdir );
 
 [spikes, t] = feval( params.spike_func, aligned_spike_file.spikes, aligned_spike_file.t );
 spike_labels = fcat.from( aligned_spike_file );
@@ -80,22 +83,28 @@ if ( params.collapse_nonsocial_object_rois )
   collapse_nonsocial_object_rois( spike_labels );
 end
 
-if ( ~isempty(params.non_overlapping_mask_inputs) )
-  non_overlapping_mask = fcat.mask( fcat.from(events_file) ...
-    , params.non_overlapping_mask_inputs{:} );
+if ( params.is_already_non_overlapping )
+  % No need to exclusive-ize events; initially use all of them.
+  non_overlapping = rowmask( events_file.labels );
 else
-  non_overlapping_mask = rowmask( events_file.labels );
+  if ( ~isempty(params.non_overlapping_mask_inputs) )
+    non_overlapping_mask = fcat.mask( fcat.from(events_file) ...
+      , params.non_overlapping_mask_inputs{:} );
+  else
+    non_overlapping_mask = rowmask( events_file.labels );
+  end
+
+  if ( params.exclude_all_overlapping )
+    overlap_rois = {};
+  else
+    overlap_rois = params.rois;
+  end
+
+  % Subset of rows of spike_labels that contain events that are non-overlapping
+  non_overlapping = get_non_overlapping_event_indices( events_file, params.non_overlapping_pairs ...
+    , overlap_rois, non_overlapping_mask );
 end
 
-if ( params.exclude_all_overlapping )
-  overlap_rois = {};
-else
-  overlap_rois = params.rois;
-end
-
-% Subset of rows of spike_labels that contain events that are non-overlapping
-non_overlapping = get_non_overlapping_event_indices( events_file, params.non_overlapping_pairs ...
-  , overlap_rois, non_overlapping_mask );
 ok_event_inds = find( ismember(aligned_spike_file.event_indices, non_overlapping) );
 
 join( spike_labels, bfw.struct2fcat(meta_file) );
