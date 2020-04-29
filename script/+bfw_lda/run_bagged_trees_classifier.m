@@ -18,7 +18,7 @@ replace( rwd_counts.labels, 'acc', 'accg' );
 outs = bfw_lda.bagged_trees_classifier( gaze_counts, rwd_counts ...
   , 'permutation_test_iters', 100 ...
   , 'permutation_test', true ...
-  , 'reward_time_windows', 'cs_target_acquire' ...
+  , 'reward_time_windows', 'cs_reward' ...
 );
 
 %%
@@ -190,4 +190,65 @@ axs = pl.bar( x, bar_labels, xcats, gcats, pcats );
 
 anova_outs = dsp3.anovan( x, bar_labels, {}, {'event-name', 'region'} );
 
+%%
+
+load_dir = '/Users/Nick/Desktop/performance';
+load_mats = shared_utils.io.findmat( load_dir );
+loaded = eachcell( @shared_utils.io.fload, load_mats );
+loaded = shared_utils.struct.soa( vertcat(loaded{:}) );
+
+bfw_lda.recode_sig_labels( loaded.accuracy_labels, 100 );
+bfw_lda.add_both_either_sig_labels( loaded.accuracy_labels );
+prune( loaded.accuracy_labels );
+
+%%
+
+mask = fcat.mask( loaded.accuracy_labels ...
+  , @find, 'real' ...
+);
+
+do_save = true;
+base_subdir = '';
+
+kinds = { {}, 'either-sig', 'both-sig', 'gaze-sig', 'rwd-sig' };
+% kinds = { {} };
+regions = combs( loaded.accuracy_labels, 'region', mask );
+
+cs = dsp3.numel_combvec( kinds, regions );
+
+for idx = 1:size(cs, 2)
+  kind = kinds{cs(1, idx)};
+  region = regions{cs(2, idx)};
+  
+  pl = plotlabeled.make_common();
+  pl.marker_size = 10;
+
+  fcats = { 'region' };
+  pcats = csunion( fcats, [{'event-name'}, kind] );
+  gcats = {};
+  
+  kind_str = ternary( isempty(char(kind)), 'any', char(kind) );
+  session_subdir = fullfile( kind_str, region );
+
+  use_mask = intersect( mask, find(loaded.accuracy_labels, region) );
+
+  fig_I = findall( loaded.accuracy_labels, fcats, use_mask );
+
+  for i = 1:numel(fig_I)
+    dat = loaded.accuracies(fig_I{i}, :);
+    labels = prune( loaded.accuracy_labels(fig_I{i}) );
+
+    [axs, ids] = pl.scatter( dat(:, 1), dat(:, 2), labels, gcats, pcats );
+    plotlabeled.scatter_addcorr( ids, dat(:, 1), dat(:, 2) );
+    
+    plot_spec = unique( [fcats, gcats, pcats] );
+    
+    if ( do_save )  
+      shared_utils.plot.fullscreen( gcf );
+      save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_sens_vs_lda' ...
+        , dsp3.datedir, base_subdir, session_subdir );
+      dsp3.req_savefig( gcf, save_p, prune(labels), plot_spec );
+    end
+  end
+end
 

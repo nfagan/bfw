@@ -1,15 +1,47 @@
+%{
+@T begin
+import mt.base
+
+record Labels
+end
+
+record SpikeInfo
+  spikes: double
+  labels: Labels
+  mask: double
+  target_category: char
+end
+record ClassifyParams
+  seed: double
+end
+record Params
+  seed: double
+  gaze_t_win: double
+  permutation_test: logical
+  permutation_test_iters: double
+  mask_func: [double] = (Labels, double)
+  alpha: double
+  reward_time_windows: {list<double>}
+end
+
+end
+%}
 function outs = bagged_trees_classifier(gaze_counts, rwd_counts, varargin)
 
-defaults = struct();
-defaults.seed = 0;
-defaults.gaze_t_win = [0, 0.3];
-defaults.permutation_test = false;
-defaults.permutation_test_iters = 1e2;
-defaults.mask_func = @bfw.default_mask_func;
-defaults.alpha = 0.05;
-[~, defaults.reward_time_windows] = bfw_lda.reward_time_windows();
+[~, reward_time_windows] = bfw_lda.reward_time_windows();
 
-params = bfw.parsestruct( defaults, varargin );
+% @T constructor
+defaults = struct( ...
+    'seed', 0 ...
+  , 'gaze_t_win', [0, 0.3] ...
+  , 'permutation_test', false ...
+  , 'permutation_test_iters', 1e2 ...
+  , 'mask_func', @bfw.default_mask_func ...
+  , 'alpha', 0.05 ...
+  , 'reward_time_windows', {reward_time_windows} ...
+);
+
+params = get_params( defaults, varargin );
 
 %%
 
@@ -19,8 +51,10 @@ shared_ids = bfw_lda.shared_unit_ids( gaze_counts.labels, rwd_counts.labels );
 
 num_units = size( shared_ids, 2 );
 
-classify_params = struct();
-classify_params.seed = params.seed;
+% @T constructor
+classify_params = struct( ...
+  'seed', params.seed ...
+);
 
 gaze_min_t = params.gaze_t_win(1);
 gaze_max_t = params.gaze_t_win(2);
@@ -142,12 +176,19 @@ outs.accuracy_labels = accuracy_labels;
 
 end
 
+% @T :: [Params] = (Params, ?)
+function params = get_params(defaults, varargin)
+params = bfw.parsestruct( defaults, varargin );
+end
+
+% @T :: [logical] = (double, double, double)
 function tf = check_significance(null_dist, real_val, alpha_thresh)
   
 tf = pnz( null_dist > real_val ) < alpha_thresh;
   
 end
 
+% @T :: [double, Labels] = (SpikeInfo, Labels, ClassifyParams, Params)
 function [accuracies, out_labels] = permutation_test(spike_info, dest_labels, classify_params, params)
 
 spikes = spike_info.spikes;
@@ -175,6 +216,7 @@ out_labels = vertcat( fcat, out_labels{:} );
 
 end
 
+% @T :: [double] = (SpikeInfo, ClassifyParams)
 function accuracy = run_classification_from_info(spike_info, classify_params)
 
 accuracy = run_classification( spike_info.spikes, spike_info.labels ...
@@ -182,6 +224,7 @@ accuracy = run_classification( spike_info.spikes, spike_info.labels ...
 
 end
 
+% @T :: [double] = (double, Labels, char, double, double, ClassifyParams)
 function accuracy = run_classification(spikes, labels, target_category ...
   , spike_mask, label_mask, classify_params)
 
