@@ -2,30 +2,37 @@ function stim_amp_vs_vel(varargin)
 
 defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.config = bfw.set_dataroot( bfw_st.make_data_root(defaults.config) );
+defaults.amp_vel_outs = [];
+defaults.full_screen = true;
+defaults.configure_axes_func = @(x) x;
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
 
-session_types = bfw.get_sessions_by_stim_type( conf, 'cache', true );
+if ( isempty(params.amp_vel_outs) )
+  session_types = bfw.get_sessions_by_stim_type( conf, 'cache', true );
 
-eyes_sessions = session_types.m1_exclusive_sessions;
-face_sessions = session_types.m1_radius_sessions;
+  eyes_sessions = session_types.m1_exclusive_sessions;
+  face_sessions = session_types.m1_radius_sessions;
 
-select_files = csunion( eyes_sessions, face_sessions );
+  select_files = csunion( eyes_sessions, face_sessions );
+
+  %%
+
+  amp_vel_outs = bfw_stim_amp_vs_vel( ...
+      'look_ahead', 5 ...
+    , 'files_containing', select_files ...
+    , 'fixations_subdir', 'raw_eye_mmv_fixations' ...
+    , 'samples_subdir', 'aligned_raw_samples' ...
+    , 'minimum_fix_length', 10 ...
+    , 'minimum_saccade_length', 10 ...
+    , 'config', conf ...
+  );
+else
+  amp_vel_outs = params.amp_vel_outs;
+end
 
 plot_p = fullfile( bfw.dataroot(conf), 'plots', 'stim_summary', datestr(now, 'mmddyy') );
-
-%%
-
-amp_vel_outs = bfw_stim_amp_vs_vel( ...
-    'look_ahead', 5 ...
-  , 'files_containing', select_files ...
-  , 'fixations_subdir', 'raw_eye_mmv_fixations' ...
-  , 'samples_subdir', 'aligned_raw_samples' ...
-  , 'minimum_fix_length', 10 ...
-  , 'minimum_saccade_length', 10 ...
-  , 'config', conf ...
-);
 
 amps = amp_vel_outs.amps;
 vels = amp_vel_outs.velocities;
@@ -105,7 +112,11 @@ for idx = 1:numel(specs)
 
   shared_utils.plot.match_xlims( all_axs );
   shared_utils.plot.match_ylims( all_axs );
-  shared_utils.plot.fullscreen( figs );
+  params.configure_axes_func( all_axs );
+  
+  if ( params.full_screen )
+    shared_utils.plot.fullscreen( figs );
+  end
 
   if ( do_save )
     for i = 1:numel(figs)

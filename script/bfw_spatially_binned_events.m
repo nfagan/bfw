@@ -50,6 +50,7 @@ y = edges;
 % Rows are y, cols x
 events = cell( numel(rois), numel(y)-1, numel(x)-1 );
 relative_rois = nan( numel(rois), 4 );
+fractional_rois = nan( numel(rois), 4 );
 
 for i = 1:numel(rois)
   roi = rois{i};
@@ -61,6 +62,11 @@ for i = 1:numel(rois)
   relative_roi([1, 3]) = relative_roi([1, 3]) - roi_center(1);
   relative_roi([2, 4]) = relative_roi([2, 4]) - roi_center(2);
   relative_rois(i, :) = relative_roi;
+  
+  fractional_roi = roi;
+  fractional_roi([1, 3]) = (fractional_roi([1, 3]) - min( x_edges )) / span( x_edges );
+  fractional_roi([2, 4]) = (fractional_roi([2, 4]) - min( y_edges )) / span( y_edges );
+  fractional_rois(i, :) = fractional_roi;
   
   for j = 1:size(fix_positions, 2)
     x_ind = find( histc(fix_positions(1, j), x_edges), 1 );
@@ -88,6 +94,7 @@ out.labels = labels;
 out.x_edges = repmat( columnize(x(1:end-1))', rows(events), 1 );
 out.y_edges = repmat( columnize(y(1:end-1))', rows(events), 1 );
 out.relative_rois = relative_rois;
+out.fractional_rois = fractional_rois;
 
 end
 
@@ -99,6 +106,10 @@ roi_labels = fcat.from( roi_labels(:), 'roi' );
 repmat( labels, rows(roi_labels) );
 join( labels, roi_labels );
 
+end
+
+function x = span(x)
+x = max( x ) - min( x );
 end
 
 function fix_positions = get_fixation_positions(position, fix_starts, fix_durs)

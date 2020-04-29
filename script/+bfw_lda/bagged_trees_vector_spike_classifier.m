@@ -5,14 +5,19 @@ defaults = struct();
 defaults.holdout_p = 0.75;
 defaults.bag_size = 200;
 defaults.seed = [];
+defaults.label_mask = mask;
 params = bfw.parsestruct( defaults, varargin );
+
+label_mask = params.label_mask;
 
 assert_ispair( spikes, labels );
 assert_hascat( labels, predictor_categories );
 validateattributes( spikes, {'double'}, {'vector'}, mfilename, 'spikes' );
+assert( numel(label_mask) == numel(mask), ['Number of elements' ...
+  , ' of label mask must match number of elements of spike mask.'] );
 
 x = spikes(mask);
-categ = removecats( categorical(labels, predictor_categories, mask) );
+categ = removecats( categorical(labels, predictor_categories, label_mask) );
 
 y = double( categ );
 

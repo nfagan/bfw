@@ -1,11 +1,25 @@
-gaze_counts_file = '/Users/Nick/Downloads/gaze_counts.mat';
-rwd_counts_file = '/Users/Nick/Downloads/reward_counts.mat';
+% @T import base
+
+conf = bfw.set_dataroot( '/Users/Nick/Desktop/bfw' );
+base_counts_p = fullfile( bfw.dataroot(conf), 'analyses/spike_lda/reward_gaze_spikes_tree' );
+
+% counts_p = fullfile( base_counts_p, 'counts' );
+counts_p = fullfile( base_counts_p, 'counts_right_object_only' );
+
+gaze_counts_file = fullfile( counts_p, 'gaze_counts.mat' );
+rwd_counts_file = fullfile( counts_p, 'reward_counts.mat' );
 
 gaze_counts = shared_utils.io.fload( gaze_counts_file );
 rwd_counts = shared_utils.io.fload( rwd_counts_file );
+replace( rwd_counts.labels, 'acc', 'accg' );
 
-%
-% Use whole right object for nonsocial_object
+%%
+
+outs = bfw_lda.bagged_trees_classifier( gaze_counts, rwd_counts ...
+  , 'permutation_test_iters', 100 ...
+  , 'permutation_test', true ...
+  , 'reward_time_windows', 'cs_target_acquire' ...
+);
 
 %%
 
@@ -22,10 +36,19 @@ gaze_t_ind = gaze_counts.t >= 0 & gaze_counts.t <= 0.3;
 select_gaze_spikes = nanmean( gaze_counts.spikes(:, gaze_t_ind), 2 );
 
 [rwd_t_windows, rwd_event_names] = bfw_lda.reward_time_windows();
+% keep_ind = ismember( rwd_event_names, 'cs_target_acquire' );
+keep_ind = true( size(rwd_event_names) );
+
+rwd_t_windows = rwd_t_windows(keep_ind);
+rwd_event_names = rwd_event_names(keep_ind);
 
 rwd_base_mask = fcat.mask( rwd_counts.labels ...
   , @find, rwd_event_names ...
   , @findnone, 'reward-NaN' ...
+);
+
+gaze_base_mask = fcat.mask( gaze_counts.labels ...
+  , @find, {'face', 'eyes_nf'} ...
 );
 
 rwd_I = cellfun( @(x) find(rwd_counts.labels, x, rwd_base_mask), rwd_event_names, 'un', 0 );
@@ -46,7 +69,7 @@ for idx = 1:numel(rwd_I)
 
   parfor i = 1:num_units
     unit_selectors = shared_ids(:, i);
-    gaze_ind = find( gaze_counts.labels, unit_selectors );
+    gaze_ind = find( gaze_counts.labels, unit_selectors, gaze_base_mask );
     rwd_ind = find( rwd_counts.labels, unit_selectors, rwd_each_ind );
 
     if ( isempty(gaze_ind) )
@@ -85,6 +108,10 @@ load( '~/Desktop/bfw/analyses/spike_lda/reward_gaze_spikes_tree/performance/perf
 
 %%
 
+do_save = true;
+per_session = true;
+base_subdir = 'eyes-face-object';
+
 x = accuracies(:, 1);
 y = accuracies(:, 2);
 scatter_labels = accuracy_labels';
@@ -94,11 +121,26 @@ gcats = {};
 pcats = { 'event-name' };
 pcats = union( pcats, fcats );
 
-fig_I = findall_or_one( scatter_labels, fcats );
+if ( per_session )
+  gcats{end+1} = 'session';
+end
+
+mask = fcat.mask( scatter_labels );
+
+fig_I = findall_or_one( scatter_labels, fcats, mask );
+
+all_axs = cell( size(fig_I) );
+figs = cell( size(all_axs) );
+plt_labs = cell( size(all_axs) );
+
+plot_spec = unique( [fcats, gcats, pcats] );
 
 for i = 1:numel(fig_I)
+  
+figs{i} = figure( i );
+  
 pl = plotlabeled.make_common();
-pl.fig = figure(i);
+pl.fig = figs{i};
 pl.marker_size = 10;
 
 ind = fig_I{i};
@@ -107,8 +149,31 @@ y_ = y(ind);
 labs = prune( scatter_labels(ind) );
 
 [axs, ids] = pl.scatter( x_, y_, labs, gcats, pcats );
-plotlabeled.scatter_addcorr( ids, x_, y_ );
 
+if ( ~per_session )
+  plotlabeled.scatter_addcorr( ids, x_, y_ );
+end
+
+all_axs{i} = axs;
+plt_labs{i} = labs;
+
+end
+
+all_axs = vertcat( all_axs{:} );
+shared_utils.plot.match_xlims( all_axs );
+shared_utils.plot.match_ylims( all_axs );
+shared_utils.plot.xlabel( all_axs, 'Gaze decoding accuracy' );
+shared_utils.plot.ylabel( all_axs, 'Reward decoding accuracy' );
+
+if ( do_save )
+  session_subdir = ternary( per_session, 'per_session', 'across_sessions' );
+  
+  for i = 1:numel(figs)
+    shared_utils.plot.fullscreen( figs{i} );
+    save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_sens_vs_lda' ...
+      , dsp3.datedir, base_subdir, session_subdir );
+    dsp3.req_savefig( figs{i}, save_p, prune(plt_labs{i}), plot_spec );
+  end
 end
 
 %%  
