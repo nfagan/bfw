@@ -1,4 +1,6 @@
-
+% @T import mt.base
+% @T import bfw.types.config
+% @T :: [bfw.Config] = (char)
 function out = load(cmd)
 
 %   LOAD -- Load the config file.

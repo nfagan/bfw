@@ -193,7 +193,7 @@ anova_outs = dsp3.anovan( x, bar_labels, {}, {'event-name', 'region'} );
 %%
 
 load_dir = '/Users/Nick/Desktop/performance';
-load_mats = shared_utils.io.findmat( load_dir );
+load_mats = shared_utils.io.findmat( load_dir, true );
 loaded = eachcell( @shared_utils.io.fload, load_mats );
 loaded = shared_utils.struct.soa( vertcat(loaded{:}) );
 
@@ -223,16 +223,14 @@ for idx = 1:size(cs, 2)
   pl = plotlabeled.make_common();
   pl.marker_size = 10;
 
-  fcats = { 'region' };
+  fcats = { 'region', 'event-name' };
   pcats = csunion( fcats, [{'event-name'}, kind] );
   gcats = {};
-  
-  kind_str = ternary( isempty(char(kind)), 'any', char(kind) );
-  session_subdir = fullfile( kind_str, region );
 
   use_mask = intersect( mask, find(loaded.accuracy_labels, region) );
-
   fig_I = findall( loaded.accuracy_labels, fcats, use_mask );
+  
+  kind_str = ternary( isempty(char(kind)), 'any', char(kind) );
 
   for i = 1:numel(fig_I)
     dat = loaded.accuracies(fig_I{i}, :);
@@ -243,6 +241,9 @@ for idx = 1:size(cs, 2)
     
     plot_spec = unique( [fcats, gcats, pcats] );
     
+    event_name = char( combs(labels, 'event-name') );
+    session_subdir = fullfile( kind_str, event_name );
+    
     if ( do_save )  
       shared_utils.plot.fullscreen( gcf );
       save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_sens_vs_lda' ...
@@ -252,3 +253,29 @@ for idx = 1:size(cs, 2)
   end
 end
 
+%%  
+
+mask = fcat.mask( loaded.accuracy_labels ...
+  , @find, 'real' ...
+);
+
+kinds = { 'either-sig', 'both-sig', 'gaze-sig', 'rwd-sig' };
+props_each = { 'region', 'event-name' };
+
+props = [];
+prop_labels = fcat();
+
+for i = 1:numel(kinds)
+  [tmp, tmp_labels] = ...
+    proportions_of( loaded.accuracy_labels, props_each, kinds{i}, mask ); 
+  addsetcat( tmp_labels, 'sig-kind', kinds{i} );
+  
+  true_lab_ind = find( tmp_labels, sprintf('%s-true', kinds{i}) );
+  assert( ~isempty(true_lab_ind) );
+  
+  append( prop_labels, tmp_labels, true_lab_ind );
+  props = [ props; tmp(true_lab_ind) ];
+end
+
+pl = plotlabeled.make_common();
+axs = pl.bar( props, prop_labels, {'sig-kind'}, {'event-name'}, 'region' );

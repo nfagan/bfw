@@ -1,3 +1,4 @@
+% @T import mt.base
 % event_subdir = '031720_70ms_non_binned';
 event_subdir = '040320_70ms_non_binned_mouth';
 
@@ -21,6 +22,7 @@ n_back_mask_func = @(l, m) fcat.mask(l, m ...
 );
 
 back_of = { 'roi', 'looks_by' };
+% @T constructor
 common_inputs = struct( 'mask_func', n_back_mask_func, 'of', {back_of} );
 
 [prevs, prev_ts] = bfw.n_back_event_labels( sorted_events, 'num_back', -1, common_inputs );
@@ -40,10 +42,11 @@ back_within_thresh = @(l, m) intersect(m, find(abs(prev_ts) <= back_thresh));
 conf = bfw.set_dataroot( '~/Desktop/bfw/' );
 
 base_mask_func = @(l, m) fcat.mask( l, m ...
-  , @findor, {'eyes_nf', 'face', 'mouth'} ...
+  , @findor, {'eyes_nf', 'face', 'mouth', 'right_nonsocial_object'} ...
+  , @findnot, {'right_nonsocial_object', 'mutual', 'm2'} ...
 );
 
-require_n_back_within_thresh = true;
+require_n_back_within_thresh = false;
 
 if ( require_n_back_within_thresh )
   mask_func = @(l, m) base_mask_func(l, back_within_thresh(l, m));
@@ -68,7 +71,7 @@ else
   base_subdir = sprintf( 'day-level-%s', base_subdir );
 end
 
-per_monks = true;
+per_monks = false;
 per_pairs = false;
 per_excl = false;
 cs = dsp3.numel_combvec( per_monks, per_pairs, per_excl );
@@ -88,6 +91,7 @@ for i = 1:size(cs, 2)
     , 'config', conf ...
     , 'base_subdir', base_subdir ...
     , 'base_specificity', base_spec ...
+    , 'x_order', {'eyes_nf', 'mouth', 'face'} ...
   );
 end
 

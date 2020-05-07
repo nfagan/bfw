@@ -1,7 +1,7 @@
 function labels = recode_sig_labels(labels, expect_num_perms)
 
 [each_I, each_C] = findall( labels ...
-  , {'unit_uuid', 'region', 'session', 'unit_rating', 'channel'} );
+  , {'unit_uuid', 'region', 'session', 'unit_rating', 'channel', 'event-name'} );
 
 for i = 1:numel(each_I)
   real_ind = find( labels, 'real', each_I{i} );

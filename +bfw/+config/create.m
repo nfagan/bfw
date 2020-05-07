@@ -1,3 +1,6 @@
+% @T import bfw.types.config
+% @T import mt.base
+% @T :: [bfw.Config] = (logical)
 function conf = create(do_save)
 
 %   CREATE -- Create the config file. 
@@ -11,36 +14,36 @@ function conf = create(do_save)
 
 if ( nargin < 1 ), do_save = false; end
 
-const = bfw.config.constants();
-
-conf = struct();
-
-%   ID
-conf.(const.config_id) = true;
-
 %   PATHS
-PATHS = struct();
-PATHS.data_root = '';
-PATHS.repositories = '';
-PATHS.plots = '';
-PATHS.mount = '';
+% @T constructor
+PATHS = struct( ...
+    'data_root', '' ...
+  , 'repositories', '' ...
+  , 'plots', '' ...
+  , 'mount', '' ...
+);
 
 %   DEPENDENCIES
-DEPENDS = struct();
-DEPENDS.repositories = { 'shared_utils', 'spike_helpers', 'plexon' ...
-  , 'jsonlab-1.5', 'chronux_2_11', 'dsp', 'global' };
-DEPENDS.classes = { 'Edf2Mat' };
-DEPENDS.others = { '' };
+% @T constructor
+DEPENDS = struct( ...
+  'repositories', {{'shared_utils', 'spike_helpers', 'plexon' ...
+  , 'jsonlab-1.5', 'chronux_2_11', 'dsp', 'global'}} ...
+  , 'classes', {{ 'Edf2Mat' }} ...
+  , 'others', {{''}} ...
+);
 
 %   CLUSTER
-
-CLUSTER = struct();
-CLUSTER.use_cluster = false;
+% @T constructor
+CLUSTER = struct( 'use_cluster', false );
 
 %   EXPORT
-conf.PATHS = PATHS;
-conf.DEPENDS = DEPENDS;
-conf.CLUSTER = CLUSTER;
+% @T constructor
+conf = struct( ...
+  'BFW__IS_CONFIG__', true ...
+  , 'PATHS', PATHS ...
+  , 'DEPENDS', DEPENDS ...
+  , 'CLUSTER', CLUSTER ...
+);
 
 if ( do_save )
   bfw.config.save( conf );

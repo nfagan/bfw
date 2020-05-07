@@ -7,12 +7,13 @@ defaults.per_m1_m2_pair = false;
 defaults.per_exlusive_monk_id = false;
 defaults.base_specificity = {'unified_filename', 'roi'};
 defaults.back_of = { 'looks_by', 'roi' };
+defaults.x_order = {};
 params = bfw.parsestruct( defaults, varargin );
 
 base_mask = params.mask_func( labels, rowmask(labels) );
 
-n_back_prop( labels, base_mask, params );
-% basic_gaze_behavior( events, labels, base_mask, params );
+% n_back_prop( labels, base_mask, params );
+basic_gaze_behavior( events, labels, base_mask, params );
 
 end
 
@@ -162,6 +163,8 @@ for i = 1:numel(fig_I)
   labs = prune( labels(fig_I{i}) );
   
   pl = plotlabeled.make_common();
+  pl.x_order = params.x_order;
+  
   pl.fig = figs{i};
   axs = pl.bar( dat, labs, xcats, gcats, pcats );  
   ylabel( axs(1), plot_info.data_type );

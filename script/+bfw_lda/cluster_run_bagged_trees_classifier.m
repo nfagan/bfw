@@ -3,6 +3,8 @@ function cluster_run_bagged_trees_classifier(varargin)
 defaults = struct();
 defaults.config = bfw.config.load();
 defaults.mask_func = @bfw.default_mask_func;
+% defaults.spike_func = @(x) nanmean( x, 2 );
+defaults.spike_func = @(x) max( x, [], 2 );
 params = bfw.parsestruct( defaults, varargin );
 
 conf = params.config;
@@ -21,12 +23,14 @@ replace( rwd_counts.labels, 'acc', 'accg' );
 %%
 
 mask_func = params.mask_func;
+spike_func = params.spike_func;
 
 outs = bfw_lda.bagged_trees_classifier( gaze_counts, rwd_counts ...
   , 'permutation_test_iters', 100 ...
   , 'permutation_test', true ...
   , 'reward_time_windows', {'cs_delay', 'cs_reward'} ...
   , 'mask_func', mask_func ...
+  , 'spike_func', spike_func ...
 );
 
 save_p = fullfile( base_counts_p, 'performance' );

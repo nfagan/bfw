@@ -1,4 +1,6 @@
-
+% @T import bfw.types.config
+% @T import mt.base
+% @T :: [] = (bfw.Config)
 function save(conf)
 
 %   SAVE -- Save the config file.

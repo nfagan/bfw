@@ -20,6 +20,7 @@ record Params
   permutation_test: logical
   permutation_test_iters: double
   mask_func: [double] = (Labels, double)
+  spike_func: [double] = (double)
   alpha: double
   reward_time_windows: {list<double>}
 end
@@ -37,6 +38,7 @@ defaults = struct( ...
   , 'permutation_test', false ...
   , 'permutation_test_iters', 1e2 ...
   , 'mask_func', @bfw.default_mask_func ...
+  , 'spike_func', @(x) nanmean(x, 2) ...
   , 'alpha', 0.05 ...
   , 'reward_time_windows', {reward_time_windows} ...
 );
@@ -60,7 +62,9 @@ gaze_min_t = params.gaze_t_win(1);
 gaze_max_t = params.gaze_t_win(2);
 
 gaze_t_ind = gaze_counts.t >= gaze_min_t & gaze_counts.t <= gaze_max_t;
-select_gaze_spikes = nanmean( gaze_counts.spikes(:, gaze_t_ind), 2 );
+select_gaze_spikes = select_spikes( gaze_counts.spikes, gaze_t_ind, params.spike_func );
+
+% nanmean( gaze_counts.spikes(:, gaze_t_ind), 2 );
 
 [rwd_t_windows, rwd_event_names] = bfw_lda.reward_time_windows();
 keep_ind = ismember( rwd_event_names, params.reward_time_windows );
@@ -90,7 +94,7 @@ for idx = 1:numel(rwd_I)
   rwd_each_ind = rwd_I{idx};
   rwd_t_win = rwd_t_windows{idx};
   rwd_t_ind = rwd_counts.t >= rwd_t_win(1) & rwd_counts.t <= rwd_t_win(2);
-  select_rwd_spikes = nanmean( rwd_counts.psth(:, rwd_t_ind), 2 );
+  select_rwd_spikes = select_spikes( rwd_counts.psth, rwd_t_ind, params.spike_func );
   
   tmp_accuracies = cell( num_units, 1 );
   tmp_labels = cell( size(tmp_accuracies) );
@@ -173,6 +177,7 @@ end
 outs = struct();
 outs.accuracies = accuracies;
 outs.accuracy_labels = accuracy_labels;
+outs.params = params;
 
 end
 
@@ -213,6 +218,13 @@ parfor i = 1:params.permutation_test_iters
 end
 
 out_labels = vertcat( fcat, out_labels{:} );
+
+end
+
+% @T :: [double] = (double, double, [double] = (double))
+function s = select_spikes(spikes, time_ind, func)
+
+s = func( spikes(:, time_ind) );
 
 end
 
