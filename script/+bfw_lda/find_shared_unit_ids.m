@@ -1,3 +1,7 @@
+% @T import bfw.types.types
+% @T import mt.base
+% @T import bfw.types.fcat
+% @T :: [double, bfw.fcat] = (bfw.fcat, bfw.fcat, bfw.MaskFunction, bfw.MaskFunction)
 function [inds, labs] = find_shared_unit_ids(gaze_labels, rwd_labels ...
   , gaze_mask_func, rwd_mask_func)
 
@@ -14,6 +18,7 @@ num_units = size( shared_ids, 2 );
 gaze_base_mask = get_gaze_base_mask( gaze_labels, gaze_mask_func );
 rwd_base_mask = get_rwd_base_mask( rwd_labels, rwd_mask_func );
 
+% @T cast {list<uint64>}
 inds = {};
 labs = fcat();
 
@@ -47,7 +52,7 @@ end
 
 function mask = get_rwd_base_mask(labels, func)
 
-rwd_base_mask = fcat.mask( labels ...
+rwd_base_mask = fcat.mask( labels, rowmask(labels) ...
   , @findnone, 'reward-NaN' ...
 );
 

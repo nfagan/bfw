@@ -1,3 +1,6 @@
+% @T import bfw.types.types
+% @T import bfw.types.fcat
+% @T :: [mt.cellstr, mt.cellstr] = (bfw.fcat, bfw.fcat, bfw.mask_t, bfw.mask_t)
 function [ids, cats] = shared_unit_ids(a, b, mask_a, mask_b)
 
 if ( nargin < 3 )

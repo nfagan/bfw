@@ -71,17 +71,9 @@ keep_ind = ismember( rwd_event_names, params.reward_time_windows );
 
 rwd_t_windows = rwd_t_windows(keep_ind);
 rwd_event_names = rwd_event_names(keep_ind);
+rwd_base_mask = get_rwd_base_mask( rwd_counts.labels, params.mask_func, rwd_event_names );
 
-rwd_base_mask = fcat.mask( rwd_counts.labels ...
-  , @find, rwd_event_names ...
-  , @findnone, 'reward-NaN' ...
-);
-rwd_base_mask = params.mask_func( rwd_counts.labels, rwd_base_mask );
-
-gaze_base_mask = fcat.mask( gaze_counts.labels ...
-  , @find, {'face', 'eyes_nf'} ...
-);
-gaze_base_mask = params.mask_func( gaze_counts.labels, gaze_base_mask );
+gaze_base_mask = get_gaze_base_mask( gaze_counts.labels, params.mask_func );
 
 rwd_I = cellfun( @(x) find(rwd_counts.labels, x, rwd_base_mask), rwd_event_names, 'un', 0 );
 
@@ -248,5 +240,28 @@ else
     , 'label_mask', label_mask ...
   );
 end
+
+end
+
+function gaze_base_mask = get_gaze_base_mask(labels, mask_func)
+
+gaze_base_mask = fcat.mask( labels ...
+  , @find, {'face', 'eyes_nf', 'nonsocial_object'} ...
+  , @find, 'm1' ...
+);
+
+gaze_base_mask = mask_func( labels, gaze_base_mask );
+
+end
+
+function rwd_base_mask = get_rwd_base_mask(labels, mask_func, rwd_event_names)
+
+rwd_base_mask = fcat.mask( labels ...
+  , @find, rwd_event_names ...
+  , @findnone, 'reward-NaN' ...
+  , @find, 'no-error' ...
+);
+
+rwd_base_mask = mask_func( labels, rwd_base_mask );
 
 end
