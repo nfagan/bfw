@@ -2,12 +2,9 @@
 
 @T begin
 
-begin
-  import bfw.types.fcat
-end
-
 begin export
   import mt.base
+  import bfw.types.fcat
 
   namespace bfw
     let mask_t = uint64 | double

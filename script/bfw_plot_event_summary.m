@@ -106,7 +106,12 @@ plot_info.xcats = { 'roi' };
 % nfix
 plot_info.data_type = 'N-fix';
 plot_info.subdir = fullfile( subdir, plot_info.data_type );
-plot_bars( bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
+
+args = {bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
+
+plot_boxplot( args{:} );
+plot_bar( args{:} );
+plot_violin( args{:} );
 
 run_anova_stats( bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
 
@@ -115,7 +120,11 @@ init_plot_info = plot_info;
 init_plot_info.data_type = 'Initiator-proportions';
 init_plot_info.subdir = fullfile( subdir, init_plot_info.data_type );
 init_plot_info.gcats = union( plot_info.gcats, {'initiator'} );
-plot_bars( init_props, init_labels, rowmask(init_labels), init_plot_info, params );
+
+args = {init_props, init_labels, rowmask(init_labels), init_plot_info, params};
+plot_boxplot( args{:} );
+plot_bar( args{:} );
+plot_violin( args{:} );
 
 run_anova_stats( init_props, init_labels, rowmask(init_labels), init_plot_info, params );
 
@@ -124,27 +133,98 @@ term_plot_info = init_plot_info;
 term_plot_info.data_type = 'Terminator-proportions';
 term_plot_info.subdir = fullfile( subdir, term_plot_info.data_type );
 term_plot_info.gcats = union( plot_info.gcats, {'terminator'} );
-plot_bars( term_props, term_labels, rowmask(term_labels), term_plot_info, params );
+
+args = {term_props, term_labels, rowmask(term_labels), term_plot_info, params};
+plot_boxplot( args{:} );
+plot_bar( args{:} );
+plot_violin( args{:} );
 
 run_anova_stats( term_props, term_labels, rowmask(term_labels), term_plot_info, params );
 
 % duration
 plot_info.data_type = 'Duration';
 plot_info.subdir = fullfile( subdir, plot_info.data_type );
-plot_bars( bhv_info.duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
+
+args = {bhv_info.duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
+plot_boxplot( args{:} );
+plot_bar( args{:} );
+plot_violin( args{:} );
 
 run_anova_stats( bhv_info.duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
 
 % total-duration
 plot_info.data_type = 'Total-duration';
 plot_info.subdir = fullfile( subdir, plot_info.data_type );
-plot_bars( bhv_info.total_duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
+
+args = {bhv_info.total_duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
+plot_boxplot( args{:} );
+plot_bar( args{:} );
+plot_violin( args{:} );
 
 run_anova_stats( bhv_info.total_duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
 
 end
 
-function plot_bars(data, labels, mask, plot_info, params)
+function plot_boxplot(data, labels, mask, plot_info, params)
+
+plot_func = @boxplot;
+plot_two( plot_func, data, labels, mask, plot_info, params );
+
+end
+
+function plot_violin(data, labels, mask, plot_info, params)
+
+plot_func = @violinalt;
+plot_two( plot_func, data, labels, mask, plot_info, params );
+
+end
+
+function plot_two(plot_func, data, labels, mask, plot_info, params)
+
+fcats = plot_info.fcats;
+pcats = plot_info.pcats;
+gcats = plot_info.gcats;
+xcats = plot_info.xcats;
+
+pcats = union( pcats, fcats );
+
+fig_I = findall_or_one( labels, fcats, mask );
+figs = cell( size(fig_I) );
+all_axs = cell( size(fig_I) );
+
+pcats = csunion( pcats, xcats );
+
+for i = 1:numel(fig_I)
+  figs{i} = figure( i );
+  dat = data(fig_I{i});
+  labs = prune( labels(fig_I{i}) );
+  
+  pl = plotlabeled.make_common();
+  pl.x_order = params.x_order;
+  
+  pl.fig = figs{i};
+  axs = plot_func( pl, dat, labs, gcats, pcats );  
+  ylabel( axs(1), plot_info.data_type );
+  all_axs{i} = axs;
+end
+
+all_axs = vertcat( all_axs{:} );
+shared_utils.plot.match_ylims( all_axs );
+
+for i = 1:numel(figs)
+  labs = prune( labels(fig_I{i}) );
+  
+  if ( params.do_save )
+    shared_utils.plot.fullscreen( figs{i} );
+    use_subdir = fullfile( plot_info.subdir, func2str(plot_func) );
+    save_p = bfw.behav_summary_data_path( 'behavior', use_subdir, params );
+    dsp3.req_savefig( figs{i}, save_p, labs, [fcats, pcats, gcats], params.prefix );
+  end
+end
+
+end
+
+function plot_bar(data, labels, mask, plot_info, params)
 
 fcats = plot_info.fcats;
 pcats = plot_info.pcats;
@@ -179,7 +259,8 @@ for i = 1:numel(figs)
   
   if ( params.do_save )
     shared_utils.plot.fullscreen( figs{i} );
-    save_p = bfw.behav_summary_data_path( 'behavior', plot_info.subdir, params );
+    use_subdir = fullfile( plot_info.subdir, 'bars' );
+    save_p = bfw.behav_summary_data_path( 'behavior', use_subdir, params );
     dsp3.req_savefig( figs{i}, save_p, labs, [fcats, pcats, gcats], params.prefix );
   end
 end

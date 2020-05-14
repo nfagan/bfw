@@ -1,3 +1,5 @@
+% @T import mt.base
+% @T :: [int64] = (numeric, numeric)
 function nearest_indices = find_nearest(t, b)
 
 %   FIND_NEAREST -- Find indices of elements of sorted array A closest to B.

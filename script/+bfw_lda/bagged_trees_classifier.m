@@ -23,6 +23,7 @@ record Params
   spike_func: [double] = (double)
   alpha: double
   reward_time_windows: {list<double>}
+  spike_criterion_func: [uint64] = (double, Labels, double | uint64)
 end
 
 end
@@ -41,6 +42,7 @@ defaults = struct( ...
   , 'spike_func', @(x) nanmean(x, 2) ...
   , 'alpha', 0.05 ...
   , 'reward_time_windows', {reward_time_windows} ...
+  , 'spike_criterion_func', @(s, l, m) m ...
 );
 
 params = get_params( defaults, varargin );
@@ -97,6 +99,9 @@ for idx = 1:numel(rwd_I)
     unit_selectors = shared_ids(:, i);
     gaze_ind = find( gaze_counts.labels, unit_selectors, gaze_base_mask );
     rwd_ind = find( rwd_counts.labels, unit_selectors, rwd_each_ind );
+    
+    gaze_ind = params.spike_criterion_func( select_gaze_spikes, gaze_counts.labels, gaze_ind );
+    rwd_ind = params.spike_criterion_func( select_rwd_spikes, rwd_counts.labels, rwd_ind );
     
     if ( isempty(gaze_ind) || isempty(rwd_ind) )
       continue;

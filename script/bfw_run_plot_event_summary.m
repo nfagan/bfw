@@ -77,6 +77,8 @@ per_excl = false;
 cs = dsp3.numel_combvec( per_monks, per_pairs, per_excl );
 
 for i = 1:size(cs, 2)
+  shared_utils.general.progress( i, size(cs, 2) );
+  
   c = cs(:, i);
   per_m1_m2 = per_monks(c(1));
   per_m1_m2_pair = per_pairs(c(2));

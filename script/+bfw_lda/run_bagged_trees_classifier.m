@@ -19,6 +19,7 @@ outs = bfw_lda.bagged_trees_classifier( gaze_counts, rwd_counts ...
   , 'permutation_test_iters', 100 ...
   , 'permutation_test', true ...
   , 'reward_time_windows', 'cs_reward' ...
+  , 'spike_criterion_func', @(varargin) bfw_lda.pnz_spike_criterion(varargin{:}, 0.3) ...
 );
 
 %%
@@ -192,7 +193,7 @@ anova_outs = dsp3.anovan( x, bar_labels, {}, {'event-name', 'region'} );
 
 %%
 
-load_dir = '/Users/Nick/Desktop/performance/all_epochs';
+load_dir = '/Users/Nick/Desktop/performance/cs_target_acquire_ns_object_m1_only';
 load_mats = shared_utils.io.findmat( load_dir, true );
 loaded = eachcell( @shared_utils.io.fload, load_mats );
 loaded = shared_utils.struct.soa( vertcat(loaded{:}) );
