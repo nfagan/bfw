@@ -16,6 +16,26 @@ bin_size_deg = hwwa.px2deg( 1000, monitor_info.height, monitor_info.distance, mo
 
 %%
 
+monitor_info = bfw_default_monitor_info();
+to_degrees = ...
+  @(px, info) hwwa.px2deg( px, info.height, info.distance, info.vertical_resolution );
+
+%%
+
+h = monitor_info.height;  % 27
+d = monitor_info.distance;  % 50
+r = monitor_info.vertical_resolution; % 768
+
+deg_per_px = rad2deg(atan2(.5*h, d)) / (.5*r);
+
+px = 20 / deg_per_px;
+
+x = rad2deg(atan(27/2 * 1/50)) * 2 / 768;
+
+deg = px * deg_per_px;
+
+%%
+
 bin_size = 10;
 num_bins = 100;
 
@@ -31,6 +51,14 @@ spatial_outs = bfw_spatially_binned_events( ...
 );
 
 possible_rois = combs( spatial_outs.labels, 'roi' );
+
+%%
+
+spatial_outs = shared_utils.io.fload( '~/Desktop/spatial_outs.mat' );
+counts = load( '/Users/Nick/Desktop/bfw/analyses/fixation_position_gradient/counts.mat' );
+
+count_labels = counts.count_labels;
+counts = counts.counts;
 
 %%
 
@@ -72,6 +100,8 @@ count_labels = vertcat( fcat(), all_labels{:} );
 custom_rois = containers.Map();
 custom_roi_names = { 'eyes_nf', 'face', 'right_nonsocial_object' };
 max_ares = containers.Map();
+% clims = [-0.45, 0.57];
+clims = [];
 
 for i = 1:numel(custom_roi_names)  
   roi_ind = find( spatial_outs.labels, custom_roi_names{i} );
@@ -97,12 +127,23 @@ for i = 1:numel(custom_roi_names)
   custom_rois(custom_roi_names{i}) = frac_rois(max_ind, :);
 end
 
+base_mask_func = @(l, m) find(l, {'eyes_nf', 'face', 'right_nonsocial_object'}, m);
+find_ns_obj = @(l) find(l, 'right_nonsocial_object');
+
+% Exclude nonsocial-object samples from sessions preceding the actual
+% introduction of the object.
+mask_func = @(l, m) setdiff(...
+  base_mask_func(l, m) ...
+  , bfw.find_sessions_before_nonsocial_object_was_added(l, find_ns_obj(l)) ...
+);
+
 bfw_plot_binned_position( counts, count_labels', spatial_outs ...
   , 'zscore_collapse', true ...
-  , 'mask_func', @(l, m) find(l, {'eyes_nf', 'face', 'right_nonsocial_object'}, m) ...
+  , 'per_unit', false ...
+  , 'mask_func', mask_func ...
   , 'use_custom_rois', true ...
   , 'custom_rois', custom_rois ...
-  , 'c_lims', [-0.45, 0.57] ...
+  , 'c_lims', clims ...
   , 'do_save', true ...
   , 'config', bfw.set_dataroot('~/Desktop/bfw') ...
   , 'invert_y', true ...
@@ -114,7 +155,7 @@ bfw_plot_binned_position( counts, count_labels', spatial_outs ...
 %%
 
 do_save = true;
-zscore_collapse = false;
+zscore_collapse = true;
 save_p = fullfile( bfw.dataroot(conf), 'plots', 'binned_position_psth', 'lower-res', dsp3.datedir );
 
 use_labels = count_labels';
@@ -129,14 +170,13 @@ pl.add_smoothing = true;
 % pl.smooth_func = @(x) imgaussfilt( x, 1.2 );
 
 plt_mask = fcat.mask( use_labels ...
-%{
-%   , @find, ref(combs(count_labels, 'unit_uuid'), '{}', 3) ...
-%}
+  , @findor, setdiff(possible_rois, 'left_nonsocial_object') ...
 );
 
 if ( zscore_collapse )
   zscore_each = { 'unit_uuid', 'session', 'region', 'roi' };
-  mean_each = { 'region', 'roi' };
+%   mean_each = { 'region', 'roi' };
+  mean_each = zscore_each;
   
   z_I = findall( use_labels, zscore_each, plt_mask );
   for i = 1:numel(z_I)
@@ -159,16 +199,18 @@ for idx = 1:numel(fig_I)
 
   plt_counts = use_data(fig_mask, :, :);
   plt_labels = use_labels(fig_mask);
+  plt_x_edges = to_degrees( x_edges, monitor_info );
+  plt_y_edges = to_degrees( y_edges, monitor_info );
 
   plt_cats = { 'unit_uuid', 'roi', 'region' };
   axs = pl.imagesc( plt_counts, plt_labels, plt_cats );
-  shared_utils.plot.tseries_xticks( axs, x_edges, 10 );
-  shared_utils.plot.fseries_yticks( axs, flip(y_edges), 10 );
+  shared_utils.plot.tseries_xticks( axs, round(plt_x_edges), 10 );
+  shared_utils.plot.fseries_yticks( axs, round(flip(plt_y_edges)), 10 );
   shared_utils.plot.hold( axs, 'on' );
-  shared_utils.plot.add_vertical_lines( axs, find(x_edges == 0) );
-  shared_utils.plot.add_horizontal_lines( axs, find(y_edges == 0) );
+  shared_utils.plot.add_vertical_lines( axs, find(plt_x_edges == 0) );
+  shared_utils.plot.add_horizontal_lines( axs, find(plt_y_edges == 0) );
 
-  if ( ~zscore_collapse )
+  if ( ~zscore_collapse || ismember('unit_uuid', mean_each) )
     for i = 1:numel(axs)
       ax = axs(i);
       title_labels = strrep( strsplit(get(get(ax, 'title'), 'string'), ' | '), ' ', '_' );
@@ -196,7 +238,12 @@ for idx = 1:numel(fig_I)
     end
   end
   
+  for i = 1:numel(axs)
+    axis( axs(i), 'square' );
+  end
+  
   if ( do_save )
+    shared_utils.plot.fullscreen( gcf );
     dsp3.req_savefig( gcf, save_p, prune(plt_labels), plt_cats, '', {'epsc', 'png', 'fig', 'svg'} );
   end
 end

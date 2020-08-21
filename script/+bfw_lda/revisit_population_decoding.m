@@ -9,6 +9,10 @@ defaults.rwd_t_win = [-0.25, 0];
 defaults.iters = 1;
 defaults.shuffle = false;
 defaults.permutation_test = false;
+defaults.include_reward = true;
+defaults.resample_to_larger_n = false;
+defaults.model_type = 'lda';
+defaults.gaze_condition = 'roi';
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -32,6 +36,9 @@ ps = cell( size(perf) );
 p_labels = cell( size(perf) );
 
 for i = 1:num_combs
+  fprintf( '\n  ' );
+  shared_utils.general.progress( i, num_combs );
+  
   comb_uuid = sprintf( 'comb-%s', shared_utils.general.uuid() );
   
   gaze_mask_func = @(l, m) find(l, cs(:, i), intersect(m, base_gaze_mask));
@@ -42,35 +49,55 @@ for i = 1:num_combs
   gaze_lda_outs = run_gaze( gaze_spikes, gaze_counts.labels, col_cat ...
     , gaze_mask_func, false, params );
   
-  rwd_lda_outs = run_rwd( rwd_spikes, rwd_counts.labels, col_cat ...
-    , rwd_mask_func, false, params );
+  if ( params.include_reward )
+    rwd_lda_outs = run_rwd( rwd_spikes, rwd_counts.labels, col_cat ...
+      , rwd_mask_func, false, params );
+  end
   
   if ( params.permutation_test )
     null_gaze_outs = run_gaze( gaze_spikes, gaze_counts.labels, col_cat ...
       , gaze_mask_func, true, params );
     
-    null_rwd_outs = run_rwd( rwd_spikes, rwd_counts.labels, col_cat ...
-      , rwd_mask_func, true, params );
+    if ( params.include_reward )
+      null_rwd_outs = run_rwd( rwd_spikes, rwd_counts.labels, col_cat ...
+        , rwd_mask_func, true, params );
+    end
   end
 
-  to_join = make_joined_labels( gaze_lda_outs.labels', rwd_lda_outs.labels' );
+  if ( params.include_reward )
+    to_join = make_joined_labels( gaze_lda_outs.labels', rwd_lda_outs.labels' );
+    tmp_perf = [ gaze_lda_outs.performance, rwd_lda_outs.performance ];
+  else
+    to_join = gaze_lda_outs.labels';
+    tmp_perf = gaze_lda_outs.performance;
+  end
+  
   maybe_addsetcat( to_join, 'data-type', 'real' );
   maybe_addsetcat( to_join, 'comb-uuid', comb_uuid );
-  
-  tmp_perf = [ gaze_lda_outs.performance, rwd_lda_outs.performance ];
   tmp_labels = to_join';
   
   if ( params.permutation_test )
-    null_to_join = make_joined_labels( null_gaze_outs.labels', null_rwd_outs.labels' );
+    if ( params.include_reward )
+      null_to_join = ...
+        make_joined_labels( null_gaze_outs.labels', null_rwd_outs.labels' );
+      tmp_perf = [ tmp_perf; [null_gaze_outs.performance, null_rwd_outs.performance] ];
+    else
+      null_to_join = null_gaze_outs.labels';
+      tmp_perf = [ tmp_perf; null_gaze_outs.performance ];
+    end
+    
     maybe_addsetcat( null_to_join, 'data-type', 'null' );
     maybe_addsetcat( null_to_join, 'comb-uuid', comb_uuid );
-    
-    tmp_perf = [ tmp_perf; [null_gaze_outs.performance, null_rwd_outs.performance] ];
     append( tmp_labels, null_to_join );
     
     combined_labels = one( append(to_join', null_to_join) );
     combined_p_gaze = null_p_value( gaze_lda_outs.performance, null_gaze_outs.performance );
-    combined_p_rwd = null_p_value( rwd_lda_outs.performance, null_rwd_outs.performance );
+    
+    if ( params.include_reward )
+      combined_p_rwd = null_p_value( rwd_lda_outs.performance, null_rwd_outs.performance );
+    else
+      combined_p_rwd = nan;
+    end
     
     ps{i} = [combined_p_gaze, combined_p_rwd];
     p_labels{i} = combined_labels;
@@ -84,7 +111,7 @@ outs = struct();
 outs.performance = vertcat( perf{:} );
 outs.labels = vertcat( fcat, labels{:} );
 outs.ps = vertcat( ps{:} );
-outs.p_labels = vertcat( fcat, p_labels{:} );
+outs.p_labels = vertcat( fcat, p_labels{~cellfun('isempty', p_labels)} );
 
 end
 
@@ -105,6 +132,8 @@ lda_outs = ...
   , 'shuffle', shuffle ...
   , 'iters', params.iters ...
   , 'mask_func', mask_func ...
+  , 'resample_to_larger_n', params.resample_to_larger_n ...
+  , 'model_type', params.model_type ...
 );
 
 end
@@ -113,10 +142,12 @@ function lda_outs = ...
   run_gaze(gaze_spikes, gaze_labels, col_cat, mask_func, shuffle, params)
 
 lda_outs = ...
-  bfw_lda.fitcdiscr_matrix( gaze_spikes, gaze_labels, col_cat, 'roi' ...
+  bfw_lda.fitcdiscr_matrix( gaze_spikes, gaze_labels, col_cat, params.gaze_condition ...
   , 'shuffle', shuffle ...
   , 'iters', params.iters ...
   , 'mask_func', mask_func ...
+  , 'resample_to_larger_n', params.resample_to_larger_n ...
+  , 'model_type', params.model_type ...
 );
 
 end

@@ -8,13 +8,14 @@ defaults.post_hoc_significant_factor = 'social';
 defaults.mask_func = @(labels) rowmask( labels );
 defaults.factors = { 'roi', 'social' };
 defaults.is_nested = true;
+defaults.include_mutual = false;
 defaults.alpha = 0.05;
 params = bfw.parsestruct( defaults, varargin );
 
 labels = gaze_outs.labels';
 handle_labels( labels );
 
-mask = get_base_mask( labels, params.mask_func );
+mask = get_base_mask( labels, params.mask_func, params.include_mutual );
 
 anova_outs = anova_classify( gaze_outs.spikes, labels, mask, params );
 
@@ -536,11 +537,17 @@ bfw.unify_single_region_labels( labels );
 
 end
 
-function mask = get_base_mask(labels, mask_func)
+function mask = get_base_mask(labels, mask_func, include_mutual)
+
+if ( include_mutual )
+  looks_by = { 'm1', 'mutual' };
+else
+  looks_by = { 'm1' };
+end
 
 mask = fcat.mask( labels, mask_func(labels) ...
   , @findnone, bfw.nan_unit_uuid() ...
-  , @find, 'm1' ...
+  , @find, looks_by ...
   , @find, 'exclusive_event' ...
 );
 

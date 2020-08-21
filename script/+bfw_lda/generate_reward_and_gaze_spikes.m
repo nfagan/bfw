@@ -6,9 +6,14 @@ defaults.spike_dir = 'spikes';
 defaults.non_eye_face_method = true;
 defaults.events_subdir = 'raw_events';
 defaults.gaze_rois = default_gaze_rois();
+defaults.include_reward = true;
+defaults.window_size = 0.05;
+defaults.step_size = 0.05;
 
 params = bfw.parsestruct( defaults, varargin );
 pruned_params = prune_struct( params, make_defaults );
+
+include_reward = params.include_reward;
 
 save_p = get_save_path( params );
 
@@ -16,6 +21,8 @@ common_gaze_inputs = struct();
 common_gaze_inputs.spike_func = 'spike_counts';
 common_gaze_inputs.look_back = -1;
 common_gaze_inputs.look_ahead = 1;
+common_gaze_inputs.window_size = params.window_size;
+common_gaze_inputs.step_size = params.step_size;
 common_gaze_inputs.events_subdir = params.events_subdir;
 
 if ( params.non_eye_face_method )
@@ -47,18 +54,23 @@ else
   );
 end
 
-reward_counts = bfw_get_cs_reward_response( ...
-    'event_names', {'cs_target_acquire', 'cs_reward', 'cs_delay'} ...
-  , 'look_back', -1 ...
-  , 'look_ahead', 1 ...
-  , 'is_firing_rate', false ...
-  , pruned_params ...
-  , 'spike_dir', params.spike_dir ...
-);
+if ( include_reward )
+  reward_counts = bfw_get_cs_reward_response( ...
+      'event_names', {'cs_target_acquire', 'cs_reward', 'cs_delay'} ...
+    , 'look_back', -1 ...
+    , 'look_ahead', 1 ...
+    , 'is_firing_rate', false ...
+    , pruned_params ...
+    , 'spike_dir', params.spike_dir ...
+  );
+end
 
 shared_utils.io.require_dir( save_p );
 save( fullfile(save_p, 'gaze_counts.mat'), 'gaze_counts', '-v7.3' );
-save( fullfile(save_p, 'reward_counts.mat'), 'reward_counts', '-v7.3' );
+
+if ( include_reward )
+  save( fullfile(save_p, 'reward_counts.mat'), 'reward_counts', '-v7.3' );
+end
 
 end
 

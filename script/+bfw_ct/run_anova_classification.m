@@ -54,8 +54,26 @@ anova_outs = bfw_ct.anova_classification( counts ...
 
 %%
 
+session_ind_before_obj = ...
+  bfw.find_sessions_before_nonsocial_object_was_added( gaze_counts.labels );
+
+%%
+
 % mask_func = @(labels) findnone( labels, 'face' );
-mask_func = @(labels) rowmask(labels);
+% mask_func = @(labels) rowmask(labels);
+
+% Remove nonsocial-object data preceding the introduction of the object.
+find_ns_obj = @(labels) find(labels, 'nonsocial_object');
+
+% mask_func = @(labels) setdiff(...
+%     find(labels, {'eyes_nf', 'face', 'nonsocial_object'}) ...
+%   , bfw.find_sessions_before_nonsocial_object_was_added(labels, find_ns_obj(labels)) ...
+% );
+
+mask_func = @(labels) setdiff(...
+    find(labels, {'eyes_nf', 'face', 'nonsocial_object'}) ...
+  , bfw.find_sessions_before_nonsocial_object_was_added(labels) ...
+);
 
 pre_win = [-0.5, 0];
 post_win = [0, 0.5];
@@ -66,8 +84,12 @@ post_spikes = nanmean( gaze_counts.spikes(:, mask_gele(gaze_counts.t, post_win(1
 pre_counts = setfield( gaze_counts, 'spikes', pre_spikes );
 post_counts = setfield( gaze_counts, 'spikes', post_spikes );
 
-anova_outs_pre = bfw_ct.anova_classification( pre_counts, 'mask_func', mask_func );
-anova_outs_post = bfw_ct.anova_classification( post_counts, 'mask_func', mask_func );
+anova_inputs = struct();
+anova_inputs.mask_func = mask_func;
+anova_inputs.include_mutual = true;
+
+anova_outs_pre = bfw_ct.anova_classification( pre_counts, anova_inputs );
+anova_outs_post = bfw_ct.anova_classification( post_counts, anova_inputs );
 
 %%
 
@@ -81,6 +103,7 @@ post_soc = is_sig( anova_outs_post, 'social', alpha );
 post_roi = is_sig( anova_outs_post, 'roi', alpha );
 
 is_sig_soc = pre_soc | post_soc;
+sig_cell_ids = combs( anova_outs_pre.labels, {'unit_uuid'}, find(is_sig_soc) );
 
 add_non_sig_cat = @(l) addsetcat(l, 'is_significant', 'not_significant');
 add_sig_labels = @(l, ind) setcat(l, 'is_significant', 'significant', find(ind));
@@ -95,6 +118,10 @@ roi_subset_labs = add_non_sig_cat( anova_outs_pre.labels(find(is_sig_soc)) );
 add_sig_labels( roi_subset_labs, roi_subset );
 [roi_props, roi_prop_labels] = proportions_of( roi_subset_labs, 'region', 'is_significant' );
 addsetcat( roi_prop_labels, 'factor', 'roi' );
+
+%%
+
+
 
 %%
 

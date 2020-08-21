@@ -193,7 +193,7 @@ anova_outs = dsp3.anovan( x, bar_labels, {}, {'event-name', 'region'} );
 
 %%
 
-load_dir = '/Users/Nick/Desktop/performance/cs_target_acquire_ns_object_m1_only';
+load_dir = '/Users/Nick/Desktop/performance/cs_target_acquire_spike_crit';
 load_mats = shared_utils.io.findmat( load_dir, true );
 loaded = eachcell( @shared_utils.io.fload, load_mats );
 loaded = shared_utils.struct.soa( vertcat(loaded{:}) );

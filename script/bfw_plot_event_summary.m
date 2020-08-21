@@ -8,10 +8,12 @@ defaults.per_exlusive_monk_id = false;
 defaults.base_specificity = {'unified_filename', 'roi'};
 defaults.back_of = { 'looks_by', 'roi' };
 defaults.x_order = {};
+defaults.normalized_ratio = false;
 params = bfw.parsestruct( defaults, varargin );
 
 base_mask = params.mask_func( labels, rowmask(labels) );
 
+% ratio_measures( events, labels, base_mask, params );
 % n_back_prop( labels, base_mask, params );
 basic_gaze_behavior( events, labels, base_mask, params );
 
@@ -82,6 +84,93 @@ for i = 1:numel(fig_I)
   addsetcat( tmp_labs, n_back_cat, combined );
   
   run_anova_stats( plt, tmp_labs, rowmask(tmp_labs), plot_info, params );
+end
+
+end
+
+function pairs = ratio_pairs()
+
+pairs = { ...
+  {'whole_face', 'right_nonsocial_object'} ...
+  , {'eyes_nf', 'face'} ...
+  , {'eyes_nf', 'right_nonsocial_object_eyes_nf_matched'} ...
+};
+
+end
+
+function f = make_ratio_field(fieldname)
+
+f = sprintf( 'ratio_%s', fieldname );
+
+end
+
+function ratio_measures(events, labels, mask, params)
+
+base_spec = union( base_specificity(params), {'event_type'} );
+base_spec = modify_specificity( base_spec, params );
+
+bhv_info = basic_behavior_summary( events, labels, mask, base_spec );
+subdir = 'basic_behavior';
+
+pairs = ratio_pairs();
+pair_spec = setdiff( base_spec, 'roi' );
+each_I = findall( bhv_info.labels, pair_spec );
+
+to_ratio_fields = setdiff( fieldnames(bhv_info), 'labels' );
+ratio_labels = fcat();
+
+for i = 1:numel(to_ratio_fields)
+  ratio_field = make_ratio_field( to_ratio_fields{i} );
+  bhv_info.(ratio_field) = [];
+end
+
+for i = 1:numel(each_I)
+  for j = 1:numel(pairs)
+    ind_a = find( bhv_info.labels, pairs{j}{1}, each_I{i} );
+    ind_b = find( bhv_info.labels, pairs{j}{2}, each_I{i} );
+    
+    for k = 1:numel(to_ratio_fields)
+      ratio_field = make_ratio_field( to_ratio_fields{k} );
+      vs = bhv_info.(to_ratio_fields{k});
+      
+      ma = mean( vs(ind_a) );
+      mb = mean( vs(ind_b) );
+
+      if ( params.normalized_ratio )
+        ratio = (ma - mb) / (ma + mb);
+      else
+        ratio = ma / mb;
+      end
+
+      bhv_info.(ratio_field)(end+1, 1) = ratio;
+    end
+    
+    roi_label = sprintf( '%s/%s', pairs{j}{:} );
+    append1( ratio_labels, bhv_info.labels, each_I{i} );
+    setcat( ratio_labels, 'roi', roi_label, rows(ratio_labels) );
+  end
+end
+  
+plot_info = struct();
+plot_info.fcats = intersect( {'m1_m2', 'exclusive_monk_id'}, base_spec );
+plot_info.pcats = {};
+plot_info.gcats = intersect( {'event_type', 'looks_by'}, base_spec );
+plot_info.xcats = { 'roi' };
+
+plot_ratio_fields = {'ratio_counts', 'ratio_duration', 'ratio_total_duration'};
+for i = 1:numel(plot_ratio_fields)
+
+  plot_info.data_type = plot_ratio_fields{i};
+  plot_info.subdir = fullfile( subdir, plot_info.data_type );
+  plot_info.normalized_ratio = params.normalized_ratio;
+
+  dat = bhv_info.(plot_ratio_fields{i});
+  plt_mask = find( isfinite(dat) );
+
+  args = {dat, ratio_labels, plt_mask, plot_info, params};
+
+  plot_bar( args{:} );
+  plot_violin( args{:} );
 end
 
 end
@@ -210,6 +299,11 @@ end
 
 all_axs = vertcat( all_axs{:} );
 shared_utils.plot.match_ylims( all_axs );
+
+if ( params.normalized_ratio && ...
+     shared_utils.struct.field_or(plot_info, 'normalized_ratio', false) )
+  shared_utils.plot.set_ylims( all_axs, [-1, 1] );
+end
 
 for i = 1:numel(figs)
   labs = prune( labels(fig_I{i}) );

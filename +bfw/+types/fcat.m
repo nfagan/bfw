@@ -22,6 +22,7 @@ begin export
   declare method bfw.fcat append    :: [bfw.fcat] = (bfw.fcat, bfw.fcat, list<bfw.mask_t>)
   declare method bfw.fcat append1   :: [bfw.fcat] = (bfw.fcat, bfw.fcat, list<bfw.mask_t>)
   declare method bfw.fcat join      :: [bfw.fcat] = (bfw.fcat, list<bfw.fcat>)
+  declare method bfw.fcat categorical :: [categorical] = (bfw.fcat, mt.cellstr | char, list<bfw.mask_t>)
 
   namespace fcat
     let FindFunction = [uint64] = (bfw.fcat, mt.cellstr | char, list<bfw.mask_t>)

@@ -12,6 +12,7 @@ defaults.square_axes = false;
 defaults.smooth_func = [];
 defaults.monitor_info = bfw_default_monitor_info;
 defaults.color_map = 'jet';
+defaults.per_unit = false;
 
 params = bfw.parsestruct( defaults, varargin );
 conf = params.config;
@@ -240,7 +241,7 @@ mask = rowmask( labels );
 
 end
 
-function [data, labels, mask] = zscore_collapse2(data, labels, mask)
+function [data, labels, mask] = zscore_collapse2(data, labels, mask, per_unit)
 
 zscore_each = { 'unit_uuid', 'session', 'region' };
 z_I = findall( labels, zscore_each, mask );
@@ -253,7 +254,9 @@ for i = 1:numel(z_I)
   data(ind, :, :) = (data(ind, :, :) - mu) / dev;
 end
 
-collapsecat( labels, {'unit_uuid', 'session'} );
+if ( ~per_unit) 
+  collapsecat( labels, {'unit_uuid', 'session'} );
+end
 
 end
 
@@ -261,7 +264,7 @@ function [data, labels, mask] = handle_unit_collapsing(data, labels, mask, param
 
 if ( params.zscore_collapse )
 %   [data, labels, mask] = zscore_collapse( data, labels, mask );
-  [data, labels, mask] = zscore_collapse2( data, labels, mask );
+  [data, labels, mask] = zscore_collapse2( data, labels, mask, params.per_unit );
 end
 
 end
