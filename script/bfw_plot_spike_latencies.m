@@ -5,17 +5,23 @@ defaults.mask_func = @bfw.default_mask_func;
 defaults.plot_type = 'spectra';
 defaults.fig = gcf();
 defaults.y_lims = [ 0, 0.04 ];
+defaults.target_categories = { 'roi' };
+defaults.hist_pcats = { 'roi' };
+defaults.hist_gcats = { 'region' };
+defaults.anova_each = { 'region' };
+defaults.anova_categories = { 'roi' };
 
 params = bfw.parsestruct( defaults, varargin );
 
-plot_type = validatestring( params.plot_type, {'spectra', 'lines', 'hist'} );
+target_cats = params.target_categories;
+plot_type = validatestring( params.plot_type, {'spectra', 'lines', 'hist', 'bars'} );
 params.plot_type = plot_type;
 
 assert_ispair( spikes, labels );
 assert( numel(time) == size(spikes, 2), 'Time does not correspond to spikes.' );
 
 mask = get_mask( labels, params );
-[mean_spikes, mean_labs] = get_mean_spikes( spikes, labels', mask );
+[mean_spikes, mean_labs] = get_mean_spikes( spikes, labels', target_cats, mask );
 [peak_ts, peak_mat] = get_peak_times( mean_spikes, time );
 
 if ( ismember(plot_type, {'spectra', 'lines'}) )
@@ -23,6 +29,10 @@ if ( ismember(plot_type, {'spectra', 'lines'}) )
   
 elseif ( strcmp(plot_type, 'hist') )
   plot_cumulative_hist( peak_ts(:), peak_mat, time, mean_labs', params );
+  
+elseif ( strcmp(plot_type, 'bars') )
+  plot_mean_bars( peak_ts(:), mean_labs', params );
+  
 else
   error( 'Unrecognized plot type "%s".', plot_type );
 end
@@ -50,7 +60,7 @@ end
 
 function plot_cumulative_hist(peak_ts, peak_mat, time, labels, params)
 
-prop_I = findall( labels, {'region', 'roi'} );
+prop_I = findall( labels, [{'region'}, params.target_categories] );
 
 props = cell( size(prop_I) );
 labs = cell( size(prop_I) );
@@ -73,8 +83,8 @@ end
 pl = plotlabeled.make_common();
 pl.x = time;
 
-gcats = { 'region' };
-pcats = { 'roi' };
+gcats = params.hist_gcats;
+pcats = params.hist_pcats;
 
 axs = pl.lines( props, labs, gcats, pcats );
 shared_utils.plot.hold( axs, 'on' );
@@ -98,9 +108,37 @@ end
 
 end
 
+function plot_mean_bars(peak_ts, mean_labs, params)
+
+%%
+
+pl = plotlabeled.make_common();
+
+pcats = { 'joint-event-type' };
+gcats = { 'initiated-by' };
+xcats = { 'region' };
+
+axs = pl.bar( peak_ts, mean_labs, xcats, gcats, pcats );
+ylabel( axs(1), 'Mean time of peak firing rate (s)' );
+
+ttest_results = dsp3.ttest2( peak_ts, mean_labs', xcats, 'm1-init', 'm2-init' );
+
+if ( params.do_save )
+  subdirs = {};
+  plot_type = 'bars';
+  save_p = get_save_p( params, subdirs );
+  
+  shared_utils.plot.fullscreen( gcf );
+  dsp3.req_savefig( gcf, save_p, mean_labs, pcats, plot_type );
+  
+  dsp3.save_ttest2_outputs( ttest_results, fullfile(save_p, 'stats'), xcats );
+end
+
+end
+
 function plot_spectra_or_lines(peak_ts, peak_mat, time, mean_labs, params)
 
-pcats = {'region', 'roi'};
+pcats = [{'region'}, params.target_categories];
 [p_I, p_C] = findall( mean_labs, pcats );
 axs = gobjects( size(p_I) );
 shp = plotlabeled.get_subplot_shape( numel(p_I) );
@@ -129,7 +167,9 @@ for i = 1:numel(p_I)
     colorbar;
   else
     h = plot( ax, time, trace );
-    set( ax, 'ylim', ylims );
+    if ( ~isempty(ylims) )
+      set( ax, 'ylim', ylims );
+    end
   end
   
   title_labs = strrep( strjoin(p_C(:, i), ' | '), '_' , ' ' );
@@ -159,7 +199,12 @@ for i = 1:numel(p_I)
   end
 end
 
-anova_results = dsp3.anova1( peak_ts(:), mean_labs, {'roi'}, 'region' ...
+% anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
+%   , 'remove_nonsignificant_comparisons', false ...
+% );
+
+anova_results = dsp3.anovan( peak_ts(:), mean_labs, params.anova_each ...
+  , params.anova_categories ...
   , 'remove_nonsignificant_comparisons', false ...
 );
 
@@ -183,9 +228,10 @@ save_p = fullfile( bfw.dataroot(params.config) ...
 
 end
 
-function [mean_spikes, labels] = get_mean_spikes(spikes, labels, mask)
+function [mean_spikes, labels] = get_mean_spikes(spikes, labels, target_categories, mask)
 
-mean_each = { 'unit_uuid', 'session', 'region', 'roi' };
+mean_each = union( {'unit_uuid', 'session', 'region'}, target_categories );
+
 [~, mean_I] = keepeach( labels, mean_each, mask );
 mean_spikes = bfw.row_nanmean( spikes, mean_I );
 
