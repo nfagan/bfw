@@ -1,13 +1,18 @@
 conf = bfw.config.load();
 
-cc_events_file_path = ...
+cc_events_file_path_non_eyes = ...
+  fullfile( bfw.dataroot(conf), 'public', 'mutual_join_event_idx_and_labels_noneyes.mat' );
+cc_events_file_path_eyes = ...
   fullfile( bfw.dataroot(conf), 'public', 'mutual_join_event_idx_and_labels.mat' );
 
 cc_time_file_path = ...
   fullfile( bfw.dataroot(conf), 'public', 'behavior_time_for_interactive_alignment.mat' );
 
-cc_events_file = load( cc_events_file_path );
+cc_events_file_eyes = load( cc_events_file_path_eyes );
+cc_events_file_non_eyes = load( cc_events_file_path_non_eyes );
 cc_time_file = load( cc_time_file_path );
+
+cc_events_file_non_eyes.nday = cc_events_file_eyes.nday;
 
 %%
 
@@ -16,7 +21,12 @@ cc_spikes = bfw_gather_spikes( 'spike_subdir', 'cc_spikes' );
 %%
 
 [event_inds, event_ts, event_labels] = ...
-  bfw_extract_cc_interactive_event_info( cc_events_file, cc_time_file );
+  bfw_extract_cc_interactive_event_info( cc_events_file_eyes, cc_time_file, 'eyes' );
+
+%%
+
+gathered_labels = gather( event_labels );
+save( fullfile(bfw.dataroot(conf), 'public', 'eyes_events.mat'), 'event_ts', 'gathered_labels' );
 
 %%
 
@@ -75,7 +85,7 @@ plot_each = { 'joint-event-type' };
 
 [plot_I, plot_C] = findall( psth_labels, plot_each, base_mask );
 
-plot_types = { 'bars' };
+plot_types = { 'spectra' };
 plot_combs = dsp3.numel_combvec( plot_I, plot_types );
 
 for i = 1:size(plot_combs, 2)
@@ -98,6 +108,12 @@ mask_func = @(l, m) fcat.mask(l, intersect(m, plot_mask) ...
   , @findor, {'solo', 'join'} ...
 );
 
+% hist_pcats = { 'region', 'roi' };
+% hist_gcats = target_categories;
+
+hist_pcats = target_categories;
+hist_gcats = { 'region', 'roi' };
+
 bfw_plot_spike_latencies( psth, psth_labels', psth_t ...
   , 'mask_func', mask_func ...
   , 'config', conf ...
@@ -106,9 +122,10 @@ bfw_plot_spike_latencies( psth, psth_labels', psth_t ...
   , 'plot_type', plot_type ...
   , 'y_lims', y_lims ...
   , 'target_categories', target_categories ...
-  , 'hist_gcats', target_categories ...
-  , 'hist_pcats', {'region'} ...
+  , 'hist_gcats', hist_gcats ...
+  , 'hist_pcats', hist_pcats ...
   , 'anova_each', {} ...
   , 'anova_categories', {'initiated-by', 'region'} ...
 );
+
 end

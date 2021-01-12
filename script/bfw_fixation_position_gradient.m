@@ -36,29 +36,49 @@ deg = px * deg_per_px;
 
 %%
 
-bin_size = 10;
-num_bins = 100;
+% bin_size = 10;
+% num_bins = 100;
 
-% bin_size = 20;
-% num_bins = 50;
+bin_size = 40;
+num_bins = 25;
 
 spatial_outs = bfw_spatially_binned_events( ...
     'config', conf ...
   , 'is_parallel', false ...
   , 'bin_size', bin_size ...
   , 'num_bins', num_bins ...
-  , 'select_rois', {'eyes_nf', 'face', 'left_nonsocial_object', 'right_nonsocial_object'} ...
+  , 'select_rois', {'eyes_nf', 'face', 'right_nonsocial_object'} ...
 );
 
 possible_rois = combs( spatial_outs.labels, 'roi' );
 
 %%
 
-spatial_outs = shared_utils.io.fload( '~/Desktop/spatial_outs.mat' );
-counts = load( '/Users/Nick/Desktop/bfw/analyses/fixation_position_gradient/counts.mat' );
+conf = bfw.set_dataroot( '~/Destkop/bfw' );
+
+%%  based on spiking activity
+
+bin_dir = '100_bins';
+fix_grad_p = fullfile( bfw.dataroot(conf), 'analyses', 'fixation_position_gradient' );
+fix_pos_p = fullfile( fix_grad_p, bin_dir );
+
+spatial_outs = shared_utils.io.fload( fullfile(fix_pos_p, 'spatial_outs.mat') );
+counts = load( fullfile(fix_pos_p, 'counts.mat') );
 
 count_labels = counts.count_labels;
 counts = counts.counts;
+
+%%  based on behavior
+
+dur_counts = load( fullfile(fix_grad_p, '100_bins_duration', 'counts.mat') );
+dur_count_labels = dur_counts.count_labels;
+dur_counts = dur_counts.counts;
+
+fix_counts = load( fullfile(fix_grad_p, '100_bins_fix_counts', 'counts.mat') );
+fix_count_labels = fix_counts.count_labels;
+fix_counts = fix_counts.counts;
+
+assert( dur_count_labels == count_labels && fix_count_labels == count_labels );
 
 %%
 
@@ -70,7 +90,10 @@ sessions = combs( spike_data.labels, 'session' );
 all_counts = cell( numel(sessions), 1 );
 all_labels = cell( numel(sessions), 1 );
 
-parfor i = 1:numel(sessions)
+% count_measure = 'spikes';
+count_measure = 'events';
+
+for i = 1:numel(sessions)
   shared_utils.general.progress( i, numel(sessions) );
   
   unit_mask_func = @(labels, varargin) fcat.mask( labels, varargin{:} ...
@@ -85,7 +108,7 @@ parfor i = 1:numel(sessions)
   [counts, count_labels] = bfw_aggregate_spatial_bins( spike_data, spatial_outs ...
     , 'unit_mask_func', unit_mask_func ...
     , 'spatial_mask_func', spatial_mask_func ...
-    , 'measure', 'spikes' ...
+    , 'measure', count_measure ...
   );  
 
   all_counts{i} = counts;
@@ -100,8 +123,10 @@ count_labels = vertcat( fcat(), all_labels{:} );
 custom_rois = containers.Map();
 custom_roi_names = { 'eyes_nf', 'face', 'right_nonsocial_object' };
 max_ares = containers.Map();
-% clims = [-0.45, 0.57];
-clims = [0.4, 0.55];
+clims = [];
+% clims = [-0.7, 0.5];
+% deg_limits = [-20, 20];
+deg_limits = [-20, 20];
 
 for i = 1:numel(custom_roi_names)  
   roi_ind = find( spatial_outs.labels, custom_roi_names{i} );
@@ -127,7 +152,10 @@ for i = 1:numel(custom_roi_names)
   custom_rois(custom_roi_names{i}) = frac_rois(max_ind, :);
 end
 
-base_mask_func = @(l, m) find(l, {'eyes_nf', 'face', 'right_nonsocial_object'}, m);
+base_mask_func = @(l, m) fcat.mask(l, m ...
+  , @find, {'eyes_nf', 'face', 'right_nonsocial_object'} ...
+);
+
 find_ns_obj = @(l) find(l, 'right_nonsocial_object');
 
 % Exclude nonsocial-object samples from sessions preceding the actual
@@ -137,19 +165,35 @@ mask_func = @(l, m) setdiff(...
   , bfw.find_sessions_before_nonsocial_object_was_added(l, find_ns_obj(l)) ...
 );
 
+% disp_counts = fix_counts;
+% disp_counts = dur_counts;
+disp_counts = [];
+
+has_behav_dispersion_counts = ~isempty( disp_counts );
+
 bfw_plot_binned_position( counts, count_labels', spatial_outs ...
   , 'zscore_collapse', true ...
+  , 'zero_one_normalize', false ...
   , 'per_unit', true ...
   , 'mask_func', mask_func ...
   , 'use_custom_rois', true ...
   , 'custom_rois', custom_rois ...
   , 'c_lims', clims ...
   , 'do_save', true ...
-  , 'config', bfw.set_dataroot('~/Desktop/bfw') ...
+  , 'config', conf ...
   , 'invert_y', true ...
   , 'to_degrees', true ...
   , 'square_axes', true ...
   , 'smooth_func', @(x) imgaussfilt(x, 1.25) ...
+  , 'plot_heatmap', false ...
+  , 'normalize_xy_roi_info_to_bla', false ...
+  , 'use_roi_center_for_dispersion', true ...
+  , 'dispersion_x_deg_limits', deg_limits ...
+  , 'dispersion_y_deg_limits', deg_limits ...
+  , 'use_raw_counts_for_dispersion', true ...
+  , 'dispersion_data', disp_counts ...
+  , 'collapse_units_in_dispersion_stats', has_behav_dispersion_counts ...
+  , 'per_dispersion_quantile', false ...
 );
 
 %%

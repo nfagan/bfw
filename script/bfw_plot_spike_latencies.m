@@ -5,24 +5,48 @@ defaults.mask_func = @bfw.default_mask_func;
 defaults.plot_type = 'spectra';
 defaults.fig = gcf();
 defaults.y_lims = [ 0, 0.04 ];
+defaults.c_lims = [];
 defaults.target_categories = { 'roi' };
 defaults.hist_pcats = { 'roi' };
 defaults.hist_gcats = { 'region' };
 defaults.anova_each = { 'region' };
 defaults.anova_categories = { 'roi' };
+defaults.imgauss_filter_spectra = true;
+defaults.first_trial_average = true;
+defaults.exclude_all_zero_trials = false;
+defaults.ordered_points_for_cell = false;
 
 params = bfw.parsestruct( defaults, varargin );
 
 target_cats = params.target_categories;
-plot_type = validatestring( params.plot_type, {'spectra', 'lines', 'hist', 'bars'} );
+plot_type = validatestring( params.plot_type, allowed_plot_types() );
 params.plot_type = plot_type;
 
 assert_ispair( spikes, labels );
 assert( numel(time) == size(spikes, 2), 'Time does not correspond to spikes.' );
 
 mask = get_mask( labels, params );
-[mean_spikes, mean_labs] = get_mean_spikes( spikes, labels', target_cats, mask );
+
+if ( params.exclude_all_zero_trials )
+  zero_trials = all( spikes == 0, 2 );
+  mask = intersect( mask, find(~zero_trials) );
+end
+
+if ( params.first_trial_average )
+  [mean_spikes, mean_labs] = get_mean_spikes( spikes, labels', target_cats, mask );
+else
+  mean_spikes = spikes(mask, :);
+  mean_labs = labels(mask);
+end
+
 [peak_ts, peak_mat] = get_peak_times( mean_spikes, time );
+
+if ( ~params.first_trial_average )
+  peak_ts = peak_ts(:);
+  peak_ts = get_mean_spikes( peak_ts, mean_labs', target_cats, rowmask(peak_ts) );
+  [peak_mat, mean_labs] = ...
+    get_mean_spikes( double(peak_mat), mean_labs', target_cats, rowmask(peak_mat) );
+end
 
 if ( ismember(plot_type, {'spectra', 'lines'}) )
   plot_spectra_or_lines( peak_ts, peak_mat, time, mean_labs', params );
@@ -30,8 +54,11 @@ if ( ismember(plot_type, {'spectra', 'lines'}) )
 elseif ( strcmp(plot_type, 'hist') )
   plot_cumulative_hist( peak_ts(:), peak_mat, time, mean_labs', params );
   
-elseif ( strcmp(plot_type, 'bars') )
-  plot_mean_bars( peak_ts(:), mean_labs', params );
+% elseif ( strcmp(plot_type, 'bars') )
+%   plot_mean_bars( peak_ts(:), mean_labs', params );
+  
+elseif ( ismember(plot_type, {'violin', 'bars'}) )
+  plot_mean( peak_ts(:), mean_labs', plot_type, params );
   
 else
   error( 'Unrecognized plot type "%s".', plot_type );
@@ -58,9 +85,7 @@ labs = append1( fcat, labels, mask );
 
 end
 
-function plot_cumulative_hist(peak_ts, peak_mat, time, labels, params)
-
-prop_I = findall( labels, [{'region'}, params.target_categories] );
+function [props, labs] = make_cumulative_proportion(peak_mat, time, labels, prop_I)
 
 props = cell( size(prop_I) );
 labs = cell( size(prop_I) );
@@ -72,6 +97,13 @@ end
 
 props = vertcat( props{:} );
 labs = vertcat( fcat, labs{:} );
+
+end
+
+function plot_cumulative_hist(peak_ts, peak_mat, time, labels, params)
+
+prop_I = findall( labels, [{'region'}, params.target_categories] );
+[props, labs] = make_cumulative_proportion( peak_mat, time, labels, prop_I );
 
 %%
 
@@ -136,6 +168,47 @@ end
 
 end
 
+function plot_mean(peak_ts, mean_labs, plot_type, params)
+
+%%
+
+pl = plotlabeled.make_common();
+
+if ( strcmp(plot_type, 'violin') )
+  pl.group_order = { 'bla', 'ofc', 'accg', 'dmpfc' };
+
+  pcats = { 'roi' };
+  gcats = { 'region' };
+
+  axs = pl.violinalt( peak_ts, mean_labs, gcats, pcats );
+  
+elseif ( strcmp(plot_type, 'bars') )
+  pl.group_order = { 'bla', 'ofc', 'accg', 'dmpfc' };
+
+  pcats = { 'roi' };
+  gcats = { 'region' };
+
+  axs = pl.bar( peak_ts, mean_labs, {}, gcats, pcats );
+  
+else
+  error( 'Unrecognized plot type "%s".', plot_type );
+end
+  
+ylabel( axs(1), 'Mean time of peak firing rate (s)' );
+
+if ( ~isempty(params.y_lims) )
+  shared_utils.plot.set_ylims( axs, params.y_lims );
+end
+
+if ( params.do_save )
+  subdirs = {};
+  save_p = get_save_p( params, subdirs );
+  shared_utils.plot.fullscreen( gcf );
+  dsp3.req_savefig( gcf, save_p, mean_labs, pcats, plot_type );
+end
+
+end
+
 function plot_spectra_or_lines(peak_ts, peak_mat, time, mean_labs, params)
 
 pcats = [{'region'}, params.target_categories];
@@ -153,8 +226,12 @@ for i = 1:numel(p_I)
   cla( ax );
   axs(i) = ax;
   
-  subset_peaks = peak_mat(p_I{i}, :);
-  subset_peaks = imgaussfilt( double(subset_peaks), 1.5 );
+  subset_peaks = double( peak_mat(p_I{i}, :) );
+  
+  if ( params.imgauss_filter_spectra )
+    subset_peaks = imgaussfilt( subset_peaks, 1.5 );
+  end
+  
   subset_peak_ts = peak_ts(p_I{i});
   
   [~, sort_ind] = sort( subset_peak_ts );
@@ -163,8 +240,18 @@ for i = 1:numel(p_I)
   trace = nanmean( subset_peaks, 1 );
   
   if ( plot_spectra )
-    h = imagesc( ax, time, 1:size(subset_peaks, 2), subset_peaks );
-    colorbar;
+    if ( params.ordered_points_for_cell )
+      hs = gobjects( size(subset_peaks, 1), 1 );
+      
+      for j = 1:size(subset_peaks, 1)
+        frac_j = 1 - (j-1) / size(subset_peaks, 1);
+        hs(j) = plot( ax, time(logical(subset_peaks(j, :))), frac_j, 'ko' );
+        hold( ax, 'on' );
+      end      
+    else
+      h = imagesc( ax, time, 1:size(subset_peaks, 2), subset_peaks );
+      colorbar;
+    end
   else
     h = plot( ax, time, trace );
     if ( ~isempty(ylims) )
@@ -199,14 +286,18 @@ for i = 1:numel(p_I)
   end
 end
 
-% anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
-%   , 'remove_nonsignificant_comparisons', false ...
-% );
+if ( ~isempty(params.c_lims) )
+  shared_utils.plot.set_clims( axs, params.c_lims );
+end
 
-anova_results = dsp3.anovan( peak_ts(:), mean_labs, params.anova_each ...
-  , params.anova_categories ...
+anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
   , 'remove_nonsignificant_comparisons', false ...
 );
+
+% anova_results = dsp3.anovan( peak_ts(:), mean_labs, params.anova_each ...
+%   , params.anova_categories ...
+%   , 'remove_nonsignificant_comparisons', false ...
+% );
 
 if ( params.do_save )
   subdirs = {};
@@ -248,5 +339,11 @@ end
 function mask = get_mask(labels, params)
 
 mask = params.mask_func( labels, rowmask(labels) );
+
+end
+
+function types = allowed_plot_types()
+
+types = {'spectra', 'lines', 'hist', 'bars', 'violin'};
 
 end

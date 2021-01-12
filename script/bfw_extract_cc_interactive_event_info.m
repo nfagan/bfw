@@ -1,4 +1,4 @@
-function [indices, times, labels] = bfw_extract_cc_interactive_event_info(cc_event_file, cc_time_file)
+function [indices, times, labels] = bfw_extract_cc_interactive_event_info(cc_event_file, cc_time_file, roi)
 
 day_labels = cc_event_file.nday;
 
@@ -37,6 +37,10 @@ end
 
 assert_ispair( indices, labels );
 assert_ispair( times, labels );
+
+if ( ~isempty(labels) )
+  addsetcat( labels, 'roi', roi );
+end
 
 end
 

@@ -22,7 +22,8 @@ session_ind = ismember( unit_each, 'session' );
 min_t = params.psth_min_t;
 max_t = params.psth_max_t;
 psth_bin_width = params.psth_bin_width;
-measure = validatestring( params.measure, {'spikes', 'events'}, mfilename, 'measure' );
+measure = validatestring( params.measure, {'spikes', 'events', 'duration'} ...
+  , mfilename, 'measure' );
 
 all_counts = cell( numel(unit_I), 1 );
 all_labels = cell( numel(unit_I), 1 );
@@ -31,7 +32,7 @@ events = spatial_outs.events;
 spike_times = spike_data.spike_times;
 
 for i = 1:numel(unit_I)
-  shared_utils.general.progress( i, numel(unit_I) );
+  fprintf( '\n  %d of %d', i, numel(unit_I) );
   
   spike_ts = vertcat( spike_times{unit_I{i}} );
   
@@ -50,15 +51,18 @@ for i = 1:numel(unit_I)
     
     if ( strcmp(measure, 'spikes') )
       psth_func = @(x) nanmean( bfw.trial_psth(spike_ts, x, min_t, max_t, psth_bin_width), 2 );
+      counts = cellfun( @(x) if_nonempty(x, @() nanmean(psth_func(x)), @zeros), starts );
       
     elseif ( strcmp(measure, 'events') )
-      psth_func = @rows;
+      counts = cellfun( @numel, starts );
+      
+    elseif ( strcmp(measure, 'duration') )
+      stops = eachcell( @(x) if_nonempty(x, @() x(:, 2)), combined );
+      counts = total_durations( starts, stops );
       
     else
       error( 'Unrecognized measure "%s".', measure );
     end
-    
-    counts = cellfun( @(x) if_nonempty(x, @() nanmean(psth_func(x)), @zeros), starts );
     
     tmp_counts(j, :, :) = counts;
   end
@@ -71,6 +75,21 @@ end
 
 counts = vertcat( all_counts{:} );
 count_labels = vertcat( all_labels{:} );
+
+end
+
+function durs = total_durations(starts, stops)
+
+durs = zeros( size(starts) );
+
+for i = 1:numel(starts)
+  starts_one_bin = starts{i};
+  
+  if ( ~isempty(starts_one_bin) )
+    durs_one_bin = stops{i} - starts_one_bin;
+    durs(i) = sum( durs_one_bin );
+  end
+end
 
 end
 

@@ -202,6 +202,7 @@ plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
 
+run_sign_rank_stats( bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
 run_anova_stats( bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
 
 % prop initiated
@@ -216,6 +217,7 @@ plot_bar( args{:} );
 plot_violin( args{:} );
 
 run_anova_stats( init_props, init_labels, rowmask(init_labels), init_plot_info, params );
+run_sign_rank_stats( init_props, init_labels, rowmask(init_labels), init_plot_info, params );
 
 % prop terminated
 term_plot_info = init_plot_info;
@@ -229,6 +231,7 @@ plot_bar( args{:} );
 plot_violin( args{:} );
 
 run_anova_stats( term_props, term_labels, rowmask(term_labels), term_plot_info, params );
+run_sign_rank_stats( term_props, term_labels, rowmask(term_labels), term_plot_info, params );
 
 % duration
 plot_info.data_type = 'Duration';
@@ -239,7 +242,9 @@ plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
 
-run_anova_stats( bhv_info.duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
+dur_mask = find( ~isnan(bhv_info.duration) );
+run_anova_stats( bhv_info.duration, bhv_info.labels, dur_mask, plot_info, params );
+run_sign_rank_stats( bhv_info.duration, bhv_info.labels, dur_mask, plot_info, params );
 
 % total-duration
 plot_info.data_type = 'Total-duration';
@@ -250,7 +255,9 @@ plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
 
-run_anova_stats( bhv_info.total_duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params );
+dur_mask = find( ~isnan(bhv_info.total_duration) );
+run_anova_stats( bhv_info.total_duration, bhv_info.labels, dur_mask, plot_info, params );
+run_sign_rank_stats( bhv_info.total_duration, bhv_info.labels, dur_mask, plot_info, params );
 
 end
 
@@ -380,6 +387,103 @@ if ( params.do_save )
   save_p = bfw.behav_summary_data_path( 'behavior', stat_subdir, params );
   dsp3.save_anova_outputs( anova_outs, save_p, union(total_spec, each) );
 end
+
+end
+
+function [d, l] = match_sessions(data, labels, each, mask, a, b)
+
+each_I = findall_or_one( labels, each, mask );
+
+d = data;
+l = labels';
+
+for i = 1:numel(each_I)
+  sesh_I = findall( labels, 'unified_filename', each_I{i} );
+  
+  for j = 1:numel(sesh_I)
+    ind_a = find( labels, a, sesh_I{j} );
+    ind_b = find( labels, b, sesh_I{j} );
+    
+    need_append = false;
+    
+    if ( isempty(ind_a) && ~isempty(ind_b) )
+      copy_labs = append1( fcat, labels, ind_b );
+      cat = whichcat( labels, a );
+      setcat( copy_labs, cat, a );
+      need_append = true;
+      
+    elseif ( isempty(ind_b) && ~isempty(ind_a) )
+      copy_labs = append1( fcat, labels, ind_a );
+      cat = whichcat( labels, b );
+      setcat( copy_labs, cat, b );
+      need_append = true;
+      
+    end
+    if ( need_append )
+      d(end+1) = nan;
+      append( l, copy_labs );
+    end
+  end
+end
+
+end
+
+function run_sign_rank_stats(data, labels, mask, plot_info, params)
+
+%%
+total_spec = unique( [plot_info.xcats, plot_info.gcats, plot_info.pcats, plot_info.fcats] );
+total_spec(isuncat(labels, total_spec, mask)) = [];
+
+if ( isfield(plot_info, 'each') )
+  each = plot_info.each;
+else
+  each = {};
+end
+
+total_spec = setdiff( total_spec, each );
+total_spec = setdiff( total_spec, {'roi'} );
+
+roi_combs = { {'eyes_nf', 'face'}, {'eyes_nf', 'right_nonsocial_object'} ...
+  , {'face', 'right_nonsocial_object'}};
+
+if ( ~haslab(labels, 'right_nonsocial_object') )
+  return;
+end
+
+store_sr_outs = cell( numel(roi_combs), 1 );
+
+for i = 1:numel(roi_combs)
+  a = roi_combs{i}{1};
+  b = roi_combs{i}{2};
+  
+  [l, I] = keepeach( labels', {'unified_filename', 'roi'}, mask );
+  d = bfw.row_nanmean( data, I );
+  [d, l] = match_sessions( d, l, {}, rowmask(d), a, b ); 
+  addsetcat( l, 'roi_pair', sprintf('%s-%s', a, b) );
+
+  sr_outs = dsp3.signrank2( d, l', union(total_spec, {'roi_pair'}), a, b );
+  store_sr_outs{i} = sr_outs;
+end
+
+ps = cellfun( @(x) cellfun(@(y) y.p, x.sr_tables), store_sr_outs );
+fdr_ps = dsp3.fdr( ps );
+p_stp = 1;
+
+for i = 1:numel(store_sr_outs)
+  for j = 1:numel(store_sr_outs{i}.sr_tables)
+    store_sr_outs{i}.sr_tables{j}.fdr_p = fdr_ps(p_stp);
+    p_stp = p_stp + 1;
+  end
+end
+
+if ( params.do_save )
+  stat_subdir = fullfile( plot_info.subdir, 'stats' );
+  save_p = bfw.behav_summary_data_path( 'behavior', stat_subdir, params );
+  
+  for i = 1:numel(store_sr_outs)
+    dsp3.save_signrank1_outputs( store_sr_outs{i}, save_p, union(total_spec, each) );
+  end
+end  
 
 end
 
