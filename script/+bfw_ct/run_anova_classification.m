@@ -17,6 +17,10 @@ gaze_counts = shared_utils.io.fload( fullfile(base_load_p, 'gaze_counts.mat') );
 
 %%
 
+conf = bfw.set_dataroot( '~/Desktop/bfw' );
+
+%%
+
 %{
 
 anova hierarhy sig cells:
@@ -33,7 +37,10 @@ spike density heat map
 
 %}
 
-gaze_counts = shared_utils.io.fload( '/Users/Nick/Desktop/bfw/analyses/spike_lda/reward_gaze_spikes/for_anova_class/gaze_counts.mat' );
+load_p = fullfile( bfw.dataroot(conf), 'analyses', 'spike_lda' ...
+  , 'reward_gaze_spikes', 'for_anova_class', 'gaze_counts.mat' );
+
+gaze_counts = shared_utils.io.fload( load_p );
 
 %%
 
@@ -111,22 +118,68 @@ add_sig_labels = @(l, ind) setcat(l, 'is_significant', 'significant', find(ind))
 soc_labs = add_non_sig_cat( anova_outs_pre.labels' );
 add_sig_labels( soc_labs, is_sig_soc );
 [soc_props, soc_prop_labels] = proportions_of( soc_labs, 'region', 'is_significant' );
+soc_counts = counts_of( soc_labs, 'region', 'is_significant' );
 addsetcat( soc_prop_labels, 'factor', 'social' );
 
 roi_subset = pre_roi(is_sig_soc) | post_roi(is_sig_soc);
 roi_subset_labs = add_non_sig_cat( anova_outs_pre.labels(find(is_sig_soc)) );
 add_sig_labels( roi_subset_labs, roi_subset );
 [roi_props, roi_prop_labels] = proportions_of( roi_subset_labs, 'region', 'is_significant' );
+roi_counts = counts_of( roi_subset_labs, 'region', 'is_significant' );
 addsetcat( roi_prop_labels, 'factor', 'roi' );
 
 %%
 
-
+save_sig_labels = true;
+if ( save_sig_labels )
+  save_file_path = fullfile( bfw.dataroot(conf), 'analyses' ...
+    , 'anova_class', 'sig_labels', 'sig_soc_labels.mat' );
+  shared_utils.io.require_dir( fileparts(save_file_path) );  
+  save( save_file_path, 'soc_labs' );
+end
 
 %%
 
-conf = bfw.set_dataroot( '~/Desktop/bfw' );
+sig_soc_ind = find( soc_prop_labels, 'significant' );
+
+sig_soc_counts = soc_counts(sig_soc_ind);
+sig_soc_labels = soc_prop_labels(sig_soc_ind);
+
+soc_mat = zeros( numel(sig_soc_counts), 2 );
+soc_mat(:, 1) = sig_soc_counts;
+
+for i = 1:numel(sig_soc_counts)
+  ns_ind = find( soc_prop_labels, [combs(sig_soc_labels, 'region', i), {'not_significant'}] );
+  assert( nnz(ind) == 1 );
+  soc_mat(i, 2) = sig_soc_counts(i) + soc_counts(ns_ind);
+end
+
+%%  chi2 test
+
+save_stats = true;
+
+[soc_chi_stats, soc_chi_tbl, soc_chi_labels] = ...
+  chi2_prop_test_all_combinations( soc_counts, soc_prop_labels' );
+
+[roi_chi_stats, roi_chi_tbl, roi_chi_labels] = ...
+  chi2_prop_test_all_combinations( roi_counts, roi_prop_labels' );
+
+if ( save_stats )
+  save_p = fullfile( bfw.dataroot(conf), 'analyses', 'anova_class' ...
+    , 'chi2_proportions', dsp3.datedir );
+  shared_utils.io.require_dir( save_p );
+  
+  soc_filepath = fullfile( save_p, 'social-v-nonsocial.csv' );
+  roi_filepath = fullfile( save_p, 'eyes-v-face.csv' );
+  
+  writetable( soc_chi_tbl, soc_filepath, 'writerownames', true );
+  writetable( roi_chi_tbl, roi_filepath, 'writerownames', true );
+end
+
+%%
+
 do_save = true;
+plot_counts = true;
 
 pl = plotlabeled.make_common();
 pl.pie_include_percentages = true;
@@ -135,10 +188,19 @@ pl.fig = figure(1);
 pcats = {'region', 'factor'};
 gcats = 'is_significant';
 
-axs1 = pl.pie( soc_props*1e2, soc_prop_labels, gcats, pcats );
+if ( plot_counts )
+  use_soc_props = soc_counts;
+  use_roi_props = roi_counts;
+  pl.pie_percentage_format = '%s (%d)';
+else
+  use_soc_props = soc_props * 1e2;
+  use_roi_props = roi_props * 1e2;
+end
+
+axs1 = pl.pie( use_soc_props, soc_prop_labels, gcats, pcats );
 
 pl.fig = figure(2);
-axs2 = pl.pie( roi_props*1e2, roi_prop_labels, gcats, pcats );
+axs2 = pl.pie( use_roi_props, roi_prop_labels, gcats, pcats );
 
 if ( do_save )
   figs = { figure(1), figure(2) };
@@ -193,6 +255,43 @@ axs = pl.bar( props, prop_labels, 'epoch', 'region', 'main_effect' );
 % end
 
 
+%%
 
+function [chi_stats, chi_tbl, chi_labels] = ...
+  chi2_prop_test_all_combinations(use_counts, use_labels)
 
+regs = combs( use_labels, 'region' );
 
+cs = combvec( 1:numel(regs), 1:numel(regs) );
+cs(:, cs(1, :) == cs(2, :)) = [];
+cs = sort( cs, 1 );
+cs = unique( cs', 'rows' )';
+
+chi_stats = zeros( size(cs, 2), 2 );
+chi_labels = fcat();
+
+for i = 1:size(cs, 2)
+  c = cs(:, i);
+  reg_a = regs{c(1)}; 
+  reg_b = regs{c(2)};
+  
+  sig_a = use_counts( find(use_labels, {reg_a, 'significant'}) );
+  cnt_a = sum( use_counts(find(use_labels, reg_a)) );
+  
+  sig_b = use_counts( find(use_labels, {reg_b, 'significant'}) );
+  cnt_b = sum( use_counts(find(use_labels, reg_b)) );
+  
+  [~, p, chi2] = prop_test( [sig_a, sig_b], [cnt_a, cnt_b], false );
+  chi_stats(i, :) = [chi2, p];
+  
+  l = append1( fcat, use_labels, find(use_labels, {reg_a, reg_b}) );  
+  setcat( l, 'region', sprintf('%s-%s', reg_a, reg_b) );
+  append( chi_labels, l );
+end
+
+% Include fdr-corrected p value.
+chi_stats(:, 3) = dsp3.fdr( chi_stats(:, 2) );
+
+chi_tbl = fcat.table( chi_stats, chi_labels(:, 'region'), {'chi2', 'p-value', 'fdr-p-value'} );
+
+end

@@ -19,6 +19,8 @@ prune( sorted_events.labels );
 
 conf = bfw.set_dataroot( '~/Desktop/bfw' );
 
+%%
+
 sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
   , 'analyses/events/sorted_events.mat') );
 
@@ -50,10 +52,9 @@ back_within_thresh = @(l, m) intersect(m, find(abs(prev_ts) <= back_thresh));
 
 %%
 
-conf = bfw.set_dataroot( '~/Desktop/bfw/' );
-
 make_ratio = false;
 nonsocial_obj_rois = {'right_nonsocial_object', 'right_nonsocial_object_eyes_nf_matched'};
+collapse_event_type = true;
 
 if ( make_ratio )
   possible_rois = {'eyes_nf', 'face', 'mouth' ...
@@ -91,6 +92,10 @@ end
 
 use_labs = labs';
 
+if ( collapse_event_type )
+  collapsecat( use_labs, 'event_type' );
+end
+
 has_mouth = ~isempty( find(use_labs, 'mouth') );
 base_spec = { 'unified_filename', 'roi' };
 % base_spec = { 'roi', 'session' };
@@ -110,8 +115,8 @@ end
 per_monks = false;
 per_pairs = false;
 per_excl = false;
-is_normalized_ratio = trufls;
-% is_normalized_ratio = true;
+% is_normalized_ratio = trufls;
+is_normalized_ratio = true;
 cs = dsp3.numel_combvec( per_monks, per_pairs, per_excl, is_normalized_ratio );
 
 for i = 1:size(cs, 2)

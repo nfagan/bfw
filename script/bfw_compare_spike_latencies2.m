@@ -80,11 +80,12 @@ end
 
 %%  new
 
-% rois = { 'whole_face', 'eyes_nf', 'nonsocial_object_eyes_nf_matched' };
+% rois = { 'whole_face', 'eyes_nf', 'face', 'nonsocial_object_eyes_nf_matched' };
+% rois = { 'whole_face', 'eyes_nf' };
 rois = { 'nonsocial_object' };
-% rois = { rois };
 
-% plot_types = { 'spectra', 'lines' };
+% plot_types = { 'spectra' };
+% plot_types = { 'hist' };
 plot_types = { 'hist', 'spectra', 'lines' };
 only_significant_cells = [false];
 one_event_per_time_windows = true;
@@ -92,7 +93,11 @@ one_event_per_time_windows = true;
 cs = dsp3.numel_combvec( rois, plot_types, only_significant_cells ...
   , one_event_per_time_windows );
 
-y_lims = [ 0, 0.04 ];
+% y_lims = [ 0, 0.04 ];
+y_lims = [ -0.12, 0.03 ];
+% y_lims = [ -1, 1 ];
+% c_lims = [ 0, 0.2 ];
+c_lims = [ 0, 0.1 ];
 
 for i = 1:size(cs, 2)
   shared_utils.general.progress( i, size(cs, 2) );
@@ -141,5 +146,10 @@ for i = 1:size(cs, 2)
     , 'do_save', true ...
     , 'plot_type', plot_type ...
     , 'y_lims', y_lims ...
+    , 'c_lims', c_lims ...
+    , 'imgauss_filter_spectra', false ...
+    , 'first_trial_average', true ...
+    , 'exclude_all_zero_trials', false ...
+    , 'ordered_points_for_cell', false ...
   );
 end

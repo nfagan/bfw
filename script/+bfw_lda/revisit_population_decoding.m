@@ -13,6 +13,7 @@ defaults.include_reward = true;
 defaults.resample_to_larger_n = false;
 defaults.model_type = 'lda';
 defaults.gaze_condition = 'roi';
+defaults.match_gaze_and_reward_units = true;
 
 params = bfw.parsestruct( defaults, varargin );
 

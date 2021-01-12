@@ -1,4 +1,4 @@
-conf = bfw.set_dataroot( '~/Desktop/bfw' );
+% conf = bfw.set_dataroot( '~/Desktop/bfw' );
 
 [gaze_counts, rwd_counts] = bfw_lda.load_gaze_reward_spikes( conf );
 
@@ -22,10 +22,14 @@ specificity_type = 'per_region';
 
 switch ( gaze_decoding_type )
   case 'roi'
+%     roi_pairs = { ...
+%         {'eyes_nf', 'nonsocial_object'} ...
+%       , {'eyes_nf', 'face'} ...
+%       , {'whole_face', 'nonsocial_object'} ...
+%     };
+  
     roi_pairs = { ...
         {'eyes_nf', 'nonsocial_object'} ...
-      , {'eyes_nf', 'face'} ...
-      , {'whole_face', 'nonsocial_object'} ...
     };
   
     gaze_condition_cat = 'roi';
@@ -63,11 +67,24 @@ end
 cs = dsp3.numel_combvec( roi_pairs, eaches, initiators );
 nc = size( cs, 2 );
 
+gaze_time_series = -0.5:0.05:0.5;
+gaze_time_window = [-0.1, 0.1];
+
+% gaze_time_series = 0;
+% gaze_t_win = [0, 0.3];
+
+store_over_time = cell( numel(gaze_time_series), 1 );
+
+for idx = 1:numel(gaze_time_series)
+  
+fprintf( '\n %d of %d', idx, numel(gaze_time_series) );
+
 all_perf = struct();
+gaze_t_win = gaze_time_series(idx) + gaze_time_window;
 
 for i = 1:nc
   
-shared_utils.general.progress( i, nc );
+fprintf( '\n\t %d of %d', i, nc );
   
 c = cs(:, i);
 roi_pair = roi_pairs{c(1)};
@@ -105,6 +122,7 @@ decode_outs = bfw_lda.revisit_population_decoding( gaze_counts, rwd_counts ...
   , 'resample_to_larger_n', true ...
   , 'model_type', 'lda' ...
   , 'gaze_condition', gaze_condition_cat ...
+  , 'gaze_t_win', gaze_t_win ...
 );
 
 lab_fs = { 'labels', 'p_labels' };
@@ -121,6 +139,10 @@ else
     all_perf.(fs{j}) = [all_perf.(fs{j}); decode_outs.(fs{j})];
   end
 end
+
+end
+
+store_over_time{idx} = all_perf;
 
 end
 
