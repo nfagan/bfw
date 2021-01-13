@@ -22,15 +22,15 @@ specificity_type = 'per_region';
 
 switch ( gaze_decoding_type )
   case 'roi'
-%     roi_pairs = { ...
-%         {'eyes_nf', 'nonsocial_object'} ...
-%       , {'eyes_nf', 'face'} ...
-%       , {'whole_face', 'nonsocial_object'} ...
-%     };
-  
     roi_pairs = { ...
         {'eyes_nf', 'nonsocial_object'} ...
+      , {'eyes_nf', 'face'} ...
+      , {'whole_face', 'nonsocial_object'} ...
     };
+  
+%     roi_pairs = { ...
+%         {'eyes_nf', 'nonsocial_object'} ...
+%     };
   
     gaze_condition_cat = 'roi';
     initiators = { {'m1', 'mutual'} };
@@ -145,6 +145,28 @@ end
 store_over_time{idx} = all_perf;
 
 end
+
+%%
+
+perf = cat_expanded( 2, cellfun(@(x) x.performance, store_over_time, 'un', 0) );
+perf_labels = store_over_time{1}.labels;
+
+ps = cat_expanded( 2, cellfun(@(x) x.ps(:, 1), store_over_time, 'un', 0) );
+p_labels = store_over_time{1}.p_labels;
+
+for i = 2:numel(store_over_time)
+  cats = setdiff( getcats(perf_labels), 'comb-uuid' );
+  c = categorical( perf_labels, cats );
+  s = categorical( store_over_time{i}.labels, cats );
+  assert( isequal(c, s) );
+end
+
+bfw_lda.plot_decoding_over_time_performance( perf, perf_labels', gaze_time_series, ps, p_labels' ...
+  , 'cats', {{}, {'region'}, {'roi-pairs'}} ...
+  , 'p_match', {'region', 'roi-pairs'} ...
+  , 'config', conf ...
+  , 'do_save', true ...
+); 
 
 %%
 % base_subdir = 'per_region_bagged_trees';
