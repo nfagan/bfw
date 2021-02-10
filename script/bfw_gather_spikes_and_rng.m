@@ -14,11 +14,15 @@ defaults.non_overlapping_pairs = bfw_get_non_overlapping_pairs();
 defaults.spike_dir = 'spikes';
 defaults.events_subdir = 'raw_events';
 defaults.is_already_non_overlapping = false;
+defaults.include_rng = true;
 
 p = bfw.parsestruct( defaults, varargin );
 spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
 
-inputs = { p.events_subdir, spike_dir, 'meta', 'rng' };
+inputs = { p.events_subdir, spike_dir, 'meta' };
+if ( p.include_rng )
+  inputs{end+1} = 'rng';
+end
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 loop_runner.convert_to_non_saving_with_output();
@@ -45,12 +49,15 @@ else
   outs.labels = vertcat( fcat(), outputs.labels );
   outs.spikes = vertcat( outputs.spikes );
   outs.session = vertcat( outputs.session );
-  outs.has_rng_state = [ outputs.has_rng_state ]';
-  outs.rng_state = { outputs.rng_state }';
   outs.t = outputs(1).t;
   outs.events = vertcat( outputs.events );
   outs.event_labels = vertcat( fcat, outputs.event_labels );
   outs.event_key = outputs(1).event_key;
+  
+  if ( p.include_rng )
+    outs.has_rng_state = [ outputs.has_rng_state ]';
+    outs.rng_state = { outputs.rng_state }';
+  end
 end
 
 end
@@ -73,8 +80,11 @@ aligned_spike_file = bfw.make.raw_aligned_spikes( files ...
 );
 
 meta_file = shared_utils.general.get( files, 'meta' );
-rng_file = shared_utils.general.get( files, 'rng' );
 events_file = shared_utils.general.get( files, params.events_subdir );
+
+if ( params.include_rng )
+  rng_file = shared_utils.general.get( files, 'rng' );
+end
 
 [spikes, t] = feval( params.spike_func, aligned_spike_file.spikes, aligned_spike_file.t );
 spike_labels = fcat.from( aligned_spike_file );
@@ -122,13 +132,13 @@ outs = struct();
 outs.labels = spike_labels;
 outs.spikes = spikes;
 outs.session = combs( spike_labels, 'session' );
-outs.has_rng_state = ~was_link;
+outs.has_rng_state = ~was_link && params.include_rng;
 outs.t = t;
 outs.events = events;
 outs.event_labels = fcat.from( event_labels, events_file.categories );
 outs.event_key = events_file.event_key;
 
-if ( ~was_link )
+if ( ~was_link && params.include_rng )
   outs.rng_state = rng_file.state;
 else
   outs.rng_state = {};

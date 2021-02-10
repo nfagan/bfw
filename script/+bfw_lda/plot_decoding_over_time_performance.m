@@ -4,6 +4,9 @@ defaults = bfw.get_common_plot_defaults( bfw.get_common_make_defaults() );
 defaults.cats = {{}, {}};
 defaults.p_match = { 'region' };
 defaults.alpha = 0.05;
+defaults.y_lims = [];
+defaults.mask_func = @(l, m) m;
+defaults.base_subdir = '';
 params = bfw.parsestruct( defaults, varargin );
 
 assert_ispair( data, labels );
@@ -23,7 +26,8 @@ else
   fcats = {};
 end
 
-fig_I = findall_or_one( labels, fcats );
+mask = params.mask_func( labels, rowmask(labels) );
+fig_I = findall_or_one( labels, fcats, mask );
 
 for idx = 1:numel(fig_I)
   fig_ind = fig_I{idx};
@@ -43,7 +47,11 @@ for idx = 1:numel(fig_I)
     for j = 1:numel(inds)
       match_c = combs( l, params.p_match, inds{j} );
       p_ind = find( p_labels, match_c );
-      assert( numel(p_ind) == 1, 'More or fewer than 1 match for p-value labels.' );
+      try
+        assert( numel(p_ind) == 1, 'More or fewer than 1 match for p-value labels.' );
+      catch err
+        d = 10;
+      end
       p = ps(p_ind, :);
 
       for k = 1:numel(p)
@@ -53,10 +61,15 @@ for idx = 1:numel(fig_I)
       end
     end  
   end
+  
+  if ( ~isempty(params.y_lims) )
+    shared_utils.plot.set_ylims( axs, params.y_lims );
+  end
 
   if ( params.do_save )
     shared_utils.plot.fullscreen( gcf );
-    save_p = fullfile( bfw.dataroot(params.config), 'plots/lda/over_time', dsp3.datedir );
+    save_p = fullfile( bfw.dataroot(params.config), 'plots/lda/over_time', dsp3.datedir ...
+      , params.base_subdir );
     dsp3.req_savefig( gcf, save_p, l, [fcats, gcats, pcats], params.prefix );
   end
 end

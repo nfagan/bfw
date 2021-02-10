@@ -9,16 +9,36 @@ gaze_counts.spikes = gaze_counts.spikes(gaze_ind, :);
 
 %%
 
-conf = bfw.set_dataroot( '~/Desktop/bfw' );
+gaze_counts = bfw_lda.load_only_gaze_spikes( conf );
+rwd_counts = gaze_counts;
+
+%%
+
+% conf = bfw.set_dataroot( '~/Desktop/bfw' ); 
 gaze_counts = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
   , 'analyses/spike_lda/joint_gaze_spikes/whole_face/joint_gaze_counts.mat') );
+rwd_counts = gaze_counts;
 
 %%  gaze decoding
 
 include_reward = false;
+is_pre_vs_post = false;
 use_permutation_test = true;
-gaze_decoding_type = 'roi';
+gaze_decoding_type = 'joint_event_type';
+% gaze_decoding_type = 'roi';
 specificity_type = 'per_region';
+% specificity_type = 'per_session';
+gaze_time_series = -0.5:0.05:0.5;
+gaze_time_window = [-0.1, 0.1];
+decode_model_type = 'bagged_trees';
+% decode_model_type = 'lda';
+% gaze_spike_summary_func = @(s) max( s, [], 2 ); % peak
+gaze_spike_summary_func = @(s) nanmean( s, 2 );
+
+if ( is_pre_vs_post )
+  gaze_time_series = [-0.25, 0.25];
+  gaze_time_window = [-0.25, 0.25];
+end
 
 switch ( gaze_decoding_type )
   case 'roi'
@@ -27,10 +47,6 @@ switch ( gaze_decoding_type )
       , {'eyes_nf', 'face'} ...
       , {'whole_face', 'nonsocial_object'} ...
     };
-  
-%     roi_pairs = { ...
-%         {'eyes_nf', 'nonsocial_object'} ...
-%     };
   
     gaze_condition_cat = 'roi';
     initiators = { {'m1', 'mutual'} };
@@ -42,6 +58,7 @@ switch ( gaze_decoding_type )
   
     gaze_condition_cat = 'joint_event_type';
     initiators = { 'm1', 'm2' };
+%     initiators = { 'm2' };
     
   otherwise
     error( 'Unrecognized gaze decoding type "%s".', gaze_decoding_type );
@@ -52,7 +69,8 @@ switch ( specificity_type )
     eaches = { {'region', 'session', 'unit_uuid'} };
     
   case 'per_session'
-    eaches = { {'region'}, {'region', 'session'} };
+%     eaches = { {'region'}, {'region', 'session'} };
+    eaches = { {'region', 'session'} };
     
   case 'per_run'
     eaches = { {'region', 'unified_filename'} };
@@ -67,15 +85,12 @@ end
 cs = dsp3.numel_combvec( roi_pairs, eaches, initiators );
 nc = size( cs, 2 );
 
-gaze_time_series = -0.5:0.05:0.5;
-gaze_time_window = [-0.1, 0.1];
-
 % gaze_time_series = 0;
 % gaze_t_win = [0, 0.3];
 
 store_over_time = cell( numel(gaze_time_series), 1 );
 
-for idx = 1:numel(gaze_time_series)
+parfor idx = 1:numel(gaze_time_series)
   
 fprintf( '\n %d of %d', idx, numel(gaze_time_series) );
 
@@ -120,9 +135,11 @@ decode_outs = bfw_lda.revisit_population_decoding( gaze_counts, rwd_counts ...
   , 'iters', 100 ...
   , 'include_reward', include_reward ...
   , 'resample_to_larger_n', true ...
-  , 'model_type', 'lda' ...
+  , 'model_type', decode_model_type ...
   , 'gaze_condition', gaze_condition_cat ...
   , 'gaze_t_win', gaze_t_win ...
+  , 'match_gaze_and_reward_units', false ...
+  , 'gaze_spike_summary_func', gaze_spike_summary_func ...
 );
 
 lab_fs = { 'labels', 'p_labels' };
@@ -148,6 +165,31 @@ end
 
 %%
 
+over_time_file = 'lda/joint-vs-solo.mat';
+store_over_time_res = load( fullfile(bfw.dataroot(conf) ...
+  , 'analyses/spike_lda/output', over_time_file) );
+
+store_over_time = store_over_time_res.store_over_time;
+gaze_time_series = store_over_time_res.gaze_time_series;
+
+%%
+
+analysis_type = 'rf';
+rf_files = shared_utils.io.findmat( fullfile(bfw.dataroot(conf), 'analyses/spike_lda/output' ...
+  , analysis_type) );
+
+rf_files = { fullfile( bfw.dataroot(conf) ...
+  , 'analyses/spike_lda/output', 'rf/mean-gaze-only.mat' ) };
+
+for idx = 1:numel(rf_files)
+  
+[~, base_subdir] = fileparts( rf_files{idx} );
+base_subdir = sprintf( '%s-%s', analysis_type, base_subdir );
+
+store_over_time_res = load( rf_files{idx} );
+store_over_time = store_over_time_res.store_over_time;
+gaze_time_series = store_over_time_res.gaze_time_series;
+
 perf = cat_expanded( 2, cellfun(@(x) x.performance, store_over_time, 'un', 0) );
 perf_labels = store_over_time{1}.labels;
 
@@ -161,12 +203,21 @@ for i = 2:numel(store_over_time)
   assert( isequal(c, s) );
 end
 
+mask_func = @(l, m) fcat.mask(l, m ...
+  , @find, 'real' ...
+);
+
 bfw_lda.plot_decoding_over_time_performance( perf, perf_labels', gaze_time_series, ps, p_labels' ...
-  , 'cats', {{}, {'region'}, {'roi-pairs'}} ...
-  , 'p_match', {'region', 'roi-pairs'} ...
+  , 'cats', {{}, {'region'}, {'roi-pairs', 'looks_by', 'session'}} ...
+  , 'p_match', {'region', 'roi-pairs', 'looks_by', 'session'} ...
   , 'config', conf ...
   , 'do_save', true ...
+  , 'y_lims', [0.3, 0.9] ...
+  , 'mask_func', mask_func ...
+  , 'base_subdir', base_subdir ...
 ); 
+
+end
 
 %%
 % base_subdir = 'per_region_bagged_trees';

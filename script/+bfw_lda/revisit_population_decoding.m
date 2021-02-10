@@ -14,19 +14,31 @@ defaults.resample_to_larger_n = false;
 defaults.model_type = 'lda';
 defaults.gaze_condition = 'roi';
 defaults.match_gaze_and_reward_units = true;
+defaults.gaze_spike_summary_func = @(s) nanmean(s, 2);
 
 params = bfw.parsestruct( defaults, varargin );
 
-shared_ids = bfw_lda.shared_unit_ids( gaze_counts.labels, rwd_counts.labels );
+if ( params.match_gaze_and_reward_units )
+  shared_ids = bfw_lda.shared_unit_ids( gaze_counts.labels, rwd_counts.labels );
+  base_gaze_mask = get_gaze_mask( gaze_counts.labels, params.gaze_mask_func, shared_ids );
+else
+  base_gaze_mask = params.gaze_mask_func( gaze_counts.labels, rowmask(gaze_counts.labels) );
+end
 
-base_gaze_mask = get_gaze_mask( gaze_counts.labels, params.gaze_mask_func, shared_ids );
-base_rwd_mask = get_rwd_mask( rwd_counts.labels, params.rwd_mask_func, shared_ids );
+if ( params.match_gaze_and_reward_units )
+  base_rwd_mask = get_rwd_mask( rwd_counts.labels, params.rwd_mask_func, shared_ids );
+else
+  base_rwd_mask = base_gaze_mask;
+end
 
 cs = get_shared_combs( gaze_counts.labels, rwd_counts.labels ...
   , base_gaze_mask, base_rwd_mask, params.each );
 
 gaze_spikes = get_gaze_spikes( gaze_counts, params );
-rwd_spikes = get_rwd_spikes( rwd_counts, params );
+
+if ( params.include_reward )
+  rwd_spikes = get_rwd_spikes( rwd_counts, params );
+end
 
 num_combs = size( cs, 2 );
 
@@ -214,7 +226,11 @@ end
 function spikes = get_gaze_spikes(gaze_counts, params)
 
 t = params.gaze_t_win;
-spikes = ...
-  nanmean( gaze_counts.spikes(:, mask_gele(gaze_counts.t, t(1), t(2))), 2 );
+time_subset = gaze_counts.spikes(:, mask_gele(gaze_counts.t, t(1), t(2)));
+n_row = size( time_subset, 1 );
+spikes = params.gaze_spike_summary_func( time_subset );
+
+assert( n_row == size(spikes, 1) ...
+  , 'Expected summary function to preserve row dimension.' );
 
 end

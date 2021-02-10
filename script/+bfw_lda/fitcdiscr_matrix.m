@@ -85,7 +85,6 @@ for i = 1:params.iters
           to_test_ind = randi( numel(can_test), test_n, 1 );
         catch err
           is_ok = false;
-          warning( err.message );
           break;
         end
         
