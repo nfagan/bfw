@@ -46,6 +46,7 @@ obj.filter_files_func =     @(x) bfw.filter_files( x, fc, nc );
 obj.get_identifier_func =   @(x, y) bfw.try_get_unified_filename( x );
 obj.log_level =             params.log_level;
 obj.files_aggregate_type =  'containers.Map';
+obj.main_error_handler =    params.main_error_handler;
 
 if ( params.skip_existing )
   obj.set_skip_existing_files();

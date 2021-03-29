@@ -110,8 +110,16 @@ all_keep_exclusive = true( length(excl_labels), 1 );
 if ( has_mutual_events )
   mut_outs = handle_mutual_events_roi_method( start_stops, roi_file, pos_file, time_file, mutual_inputs );
   
-  all_keep_exclusive(m1_ind(mut_outs.remove_m1)) = false;
-  all_keep_exclusive(m2_ind(mut_outs.remove_m2)) = false;
+  if ( params.preserve_pre_032821_incorrect_exclusive_event_removal )
+    %{
+      pre 03/28/2021 - wrong indices
+    %}
+    all_keep_exclusive(m1_ind(mut_outs.remove_m1)) = false;
+    all_keep_exclusive(m2_ind(mut_outs.remove_m2)) = false;    
+  else
+    all_keep_exclusive(maybe_mutual_m1(mut_outs.remove_m1)) = false;
+    all_keep_exclusive(maybe_mutual_m2(mut_outs.remove_m2)) = false;
+  end
   
   adjust_excl_inds = mut_outs.adjust_exclusive_end_inds;
   excl_events.events(adjust_excl_inds, :) = mut_outs.adjusted_exclusive_event_info;
@@ -127,6 +135,25 @@ events_file.events = excl_events.events;
 events_file.event_key = excl_events.event_key;
 events_file.labels = excl_events.labels;
 events_file.categories = excl_events.categories;
+
+if ( ~params.preserve_pre_032821_incorrect_exclusive_event_removal )
+  post_process_validate_events( events_file );
+end
+
+end
+
+function post_process_validate_events(events_file)
+
+f = fcat.from( events_file.labels, events_file.categories );
+roi_ind = rowmask( f );
+m1_ind = find( f, 'm1', roi_ind );
+m2_ind = find( f, 'm2', roi_ind );
+mut_ind = find( f, 'mutual', roi_ind );
+m1_s = events_file.events(m1_ind, 1);
+m2_s = events_file.events(m2_ind, 1);
+mut_s = events_file.events(mut_ind, 1);
+assert( isempty(intersect(m2_s, mut_s)), 'mutual event starts contained m2 starts' );
+assert( isempty(intersect(m1_s, mut_s)), 'mutual event starts contained m1 starts' );
 
 end
 
@@ -310,6 +337,20 @@ for i = 1:use_n
     };
   
     mutual_event_info(end+1, :) = make_event_info( mut_start, mut_stop, t );
+  end
+end
+
+if ( ~isempty(mutual_event_info) )
+  intersect_m1_starts = intersect( start_stops(m1_ind, 1), mutual_event_info(:, 1) );
+  intersect_m2_starts = intersect( start_stops(m2_ind, 1), mutual_event_info(:, 1) );
+  [~, m1_intersect_ind] = ismember( intersect_m1_starts, start_stops(m1_ind, 1) );
+  [~, m2_intersect_ind] = ismember( intersect_m2_starts, start_stops(m2_ind, 1) );
+  if ( src_is_m1 )
+    assert( ~any(keep_exclusive_src(m1_intersect_ind)), 'm1 intersected' );
+    assert( ~any(keep_exclusive_test(m2_intersect_ind)), 'm2 intersected' );
+  else
+    assert( ~any(keep_exclusive_test(m1_intersect_ind)), 'm1 intersected' );
+    assert( ~any(keep_exclusive_src(m2_intersect_ind)), 'm2 intersected' );
   end
 end
 

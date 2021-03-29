@@ -24,8 +24,8 @@ rwd_counts = gaze_counts;
 include_reward = false;
 is_pre_vs_post = false;
 use_permutation_test = true;
-gaze_decoding_type = 'joint_event_type';
-% gaze_decoding_type = 'roi';
+% gaze_decoding_type = 'joint_event_type';
+gaze_decoding_type = 'roi';
 specificity_type = 'per_region';
 % specificity_type = 'per_session';
 gaze_time_series = -0.5:0.05:0.5;
@@ -165,7 +165,7 @@ end
 
 %%
 
-over_time_file = 'lda/joint-vs-solo.mat';
+over_time_file = 'rf/mean-gaze-only.mat';
 store_over_time_res = load( fullfile(bfw.dataroot(conf) ...
   , 'analyses/spike_lda/output', over_time_file) );
 
@@ -179,7 +179,7 @@ rf_files = shared_utils.io.findmat( fullfile(bfw.dataroot(conf), 'analyses/spike
   , analysis_type) );
 
 rf_files = { fullfile( bfw.dataroot(conf) ...
-  , 'analyses/spike_lda/output', 'rf/mean-gaze-only.mat' ) };
+  , 'analyses/spike_lda/output', 'rf/mean-only-gaze-no-reward.mat' ) };
 
 for idx = 1:numel(rf_files)
   
@@ -204,11 +204,11 @@ for i = 2:numel(store_over_time)
 end
 
 mask_func = @(l, m) fcat.mask(l, m ...
-  , @find, 'real' ...
+  , @find, {'real', 'null'} ...
 );
 
 bfw_lda.plot_decoding_over_time_performance( perf, perf_labels', gaze_time_series, ps, p_labels' ...
-  , 'cats', {{}, {'region'}, {'roi-pairs', 'looks_by', 'session'}} ...
+  , 'cats', {{'data-type'}, {'region'}, {'roi-pairs', 'looks_by', 'session'}} ...
   , 'p_match', {'region', 'roi-pairs', 'looks_by', 'session'} ...
   , 'config', conf ...
   , 'do_save', true ...

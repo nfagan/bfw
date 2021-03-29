@@ -29,6 +29,7 @@ defaults.save = true;
 defaults.is_parallel = true;
 defaults.keep_output = false;
 defaults.skip_existing = false;
+defaults.main_error_handler = 'warn';
 defaults.config = bfw.config.load();
 
 end

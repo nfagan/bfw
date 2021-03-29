@@ -47,11 +47,7 @@ for idx = 1:numel(fig_I)
     for j = 1:numel(inds)
       match_c = combs( l, params.p_match, inds{j} );
       p_ind = find( p_labels, match_c );
-      try
-        assert( numel(p_ind) == 1, 'More or fewer than 1 match for p-value labels.' );
-      catch err
-        d = 10;
-      end
+      assert( numel(p_ind) == 1, 'More or fewer than 1 match for p-value labels.' );
       p = ps(p_ind, :);
 
       for k = 1:numel(p)

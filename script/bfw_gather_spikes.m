@@ -19,6 +19,7 @@ outs = struct();
 if ( isempty(outputs) )
   outs.spike_times = {};
   outs.labels = fcat();
+  outs.units = struct( [] );
 else
   outs = shared_utils.struct.soa( outputs );
 end
@@ -46,5 +47,6 @@ bfw.unify_single_region_labels( spike_labels );
 
 out.spike_times = spike_times;
 out.labels = spike_labels;
+out.units = units;
 
 end

@@ -7,6 +7,7 @@ defaults.get_center_func = @get_eyes_nf_center;
 defaults.degree_threshold = 20;
 defaults.monitor_info = bfw_default_monitor_info();
 defaults.samples_subdir = 'aligned_raw_samples';
+defaults.require_in_bounds = true;
 
 p = shared_utils.general.parsestruct( defaults, varargin );
 ins = inputs( p.samples_subdir );
@@ -72,7 +73,12 @@ for i = 1:numel(m_fields)
   rois = handle_rois( possible_rois, params.rois );
   
   bounds_vectors = eachcell( @(x) columnize(bounds_map(x))', rois );
-  look_vecs = eachcell( @(x) x & fix_vector & degree_crit, bounds_vectors );
+  
+  if ( params.require_in_bounds )
+    look_vecs = eachcell( @(x) x & fix_vector & degree_crit, bounds_vectors );
+  else
+    look_vecs = eachcell( @(x) fix_vector & degree_crit, bounds_vectors );
+  end
   
   labs = join( bfw.struct2fcat(meta_file), fcat.create('looks_by', m_id) );
   repmat( labs, numel(look_vecs) );
