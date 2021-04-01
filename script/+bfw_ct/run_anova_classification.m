@@ -37,8 +37,11 @@ spike density heat map
 
 %}
 
+
 load_p = fullfile( bfw.dataroot(conf), 'analyses', 'spike_lda' ...
-  , 'reward_gaze_spikes', 'for_anova_class', 'gaze_counts.mat' );
+  , 'reward_gaze_spikes', 'for_anova_class' );
+% load_p = fullfile( load_p, 'gaze_counts.mat' );
+load_p = fullfile( load_p, 'gaze_counts_remade.mat' );
 
 gaze_counts = shared_utils.io.fload( load_p );
 
@@ -131,7 +134,7 @@ addsetcat( roi_prop_labels, 'factor', 'roi' );
 %%
 
 save_sig_soc_labels = false;
-save_sig_roi_labels = true;
+save_sig_roi_labels = false;
 
 if ( save_sig_soc_labels )
   save_file_path = fullfile( bfw.dataroot(conf), 'analyses' ...
@@ -184,7 +187,7 @@ if ( save_stats )
   writetable( roi_chi_tbl, roi_filepath, 'writerownames', true );
 end
 
-%%
+%%  pie plot
 
 do_save = true;
 plot_counts = true;

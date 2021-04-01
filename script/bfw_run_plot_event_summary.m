@@ -1,9 +1,11 @@
 % @T import mt.base
 % event_subdir = '031720_70ms_non_binned';
-event_subdir = '040320_70ms_non_binned_mouth';
+% event_subdir = '040320_70ms_non_binned_mouth';
+event_subdir = 'remade_032921';
 
 events = bfw_gather_events( ...
   'event_subdir', event_subdir ...
+  , 'require_stim_meta', false ...
 );
 
 %%

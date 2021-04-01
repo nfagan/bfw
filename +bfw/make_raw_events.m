@@ -11,7 +11,7 @@ inputs = { 'time', 'bounds', 'position', fixations_subdir };
 inputs = cellfun( @(x) fullfile(samples_subdir, x), inputs, 'un', 0 );
 inputs = [ 'rois', inputs ];
 
-output = 'raw_events';
+output = fullfile( 'raw_events', params.output_subdir );
 
 [params, loop_runner] = bfw.get_params_and_loop_runner( inputs, output, defaults, varargin );
 loop_runner.func_name = mfilename;

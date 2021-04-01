@@ -49,5 +49,6 @@ defaults.calculate_mutual = true;
 defaults.rois = 'all';
 defaults.intermediate_directory_name = 'raw_events';
 defaults.get_current_events_file_func = @bfw.make.util.get_saved_file_or_struct;
+defaults.output_subdir = '';
 
 end

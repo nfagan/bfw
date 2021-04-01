@@ -1,13 +1,19 @@
 %%  current saved events
 
-events = bfw_gather_events( 'require_stim_meta', false, 'is_parallel', true );
+old_events = bfw_gather_events( 'require_stim_meta', false, 'is_parallel', true );
+new_events = bfw_gather_events( 'require_stim_meta', false, 'is_parallel', true, 'event_subdir', 'remade_032921' );
+
+%%
+
+events = new_events;
 
 %%  check whether exclusive / mutual event ranges overlap for existing saved events
 
 start_inds = bfw.event_column( events, 'start_index' );
 stop_inds = bfw.event_column( events, 'stop_index' );
 
-event_mask = fcat.mask( events.labels, @find, 'eyes_nf' );
+% event_mask = fcat.mask( events.labels, @find, 'eyes_nf' );
+event_mask = fcat.mask( events.labels );
 check_intersect( start_inds, stop_inds, events.labels, event_mask );
 
 %%  check whether exclusive / mutual event ranges overlap for regenerated events
