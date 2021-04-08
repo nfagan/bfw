@@ -51,6 +51,7 @@ aligned_file.categories = categories;
 aligned_file.t = t_series;
 aligned_file.n_events_per_unit = numel( event_times );
 aligned_file.event_indices = all_event_indices;
+aligned_file.event_times = repmat( event_times(:), numel(units), 1 );
 
 end
 

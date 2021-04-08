@@ -15,6 +15,7 @@ defaults.spike_dir = 'spikes';
 defaults.events_subdir = 'raw_events';
 defaults.is_already_non_overlapping = false;
 defaults.include_rng = true;
+defaults.include_rasters = false;
 
 p = bfw.parsestruct( defaults, varargin );
 spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
@@ -45,9 +46,11 @@ if ( isempty(outputs) )
   outs.events = [];
   outs.event_labels = fcat();
   outs.event_key = containers.Map();
+  outs.rasters = [];
 else
   outs.labels = vertcat( fcat(), outputs.labels );
   outs.spikes = vertcat( outputs.spikes );
+  outs.rasters = vertcat( outputs.rasters );
   outs.session = vertcat( outputs.session );
   outs.t = outputs(1).t;
   outs.events = vertcat( outputs.events );
@@ -122,6 +125,13 @@ join( spike_labels, bfw.struct2fcat(meta_file) );
 prune( keep(spike_labels, ok_event_inds) );
 spikes = spikes(ok_event_inds, :);
 
+if ( params.include_rasters )
+  rasters = compute_rasters( aligned_spike_file.spikes, aligned_spike_file.event_times );
+  rasters = rasters(ok_event_inds, :);
+else
+  rasters = [];
+end
+
 % Keep matching events
 event_labels = events_file.labels(aligned_spike_file.event_indices, :);
 events = events_file.events(aligned_spike_file.event_indices, :);
@@ -131,6 +141,7 @@ event_labels = event_labels(ok_event_inds, :);
 outs = struct();
 outs.labels = spike_labels;
 outs.spikes = spikes;
+outs.rasters = rasters;
 outs.session = combs( spike_labels, 'session' );
 outs.has_rng_state = ~was_link && params.include_rng;
 outs.t = t;
@@ -142,6 +153,19 @@ if ( ~was_link && params.include_rng )
   outs.rng_state = rng_file.state;
 else
   outs.rng_state = {};
+end
+
+end
+
+function rasters = compute_rasters(spikes, event_times)
+
+assert( size(spikes, 1) == numel(event_times) );
+
+rasters = cell( size(spikes) );
+for i = 1:size(spikes, 1)
+  for j = 1:size(spikes, 2)
+    rasters{i, j} = spikes{i, j} - event_times(i);
+  end
 end
 
 end

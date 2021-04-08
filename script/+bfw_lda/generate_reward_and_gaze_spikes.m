@@ -1,4 +1,4 @@
-function generate_reward_and_gaze_spikes(varargin)
+function out = generate_reward_and_gaze_spikes(varargin)
 
 make_defaults = bfw.get_common_make_defaults();
 defaults = bfw.get_common_plot_defaults( make_defaults );
@@ -10,6 +10,10 @@ defaults.include_reward = true;
 defaults.window_size = 0.05;
 defaults.step_size = 0.05;
 defaults.include_rng = true;
+defaults.include_rasters = false;
+defaults.look_back = -1;
+defaults.look_ahead = 1;
+defaults.do_save = true;
 
 params = bfw.parsestruct( defaults, varargin );
 pruned_params = prune_struct( params, make_defaults );
@@ -20,8 +24,8 @@ save_p = get_save_path( params );
 
 common_gaze_inputs = struct();
 common_gaze_inputs.spike_func = 'spike_counts';
-common_gaze_inputs.look_back = -1;
-common_gaze_inputs.look_ahead = 1;
+common_gaze_inputs.look_back = params.look_back;
+common_gaze_inputs.look_ahead = params.look_ahead;
 common_gaze_inputs.window_size = params.window_size;
 common_gaze_inputs.step_size = params.step_size;
 common_gaze_inputs.events_subdir = params.events_subdir;
@@ -34,6 +38,7 @@ if ( params.non_eye_face_method )
     , pruned_params ...
     , 'spike_dir', params.spike_dir ...
     , 'include_rng', params.include_rng ...
+    , 'include_rasters', params.include_rasters ...
   );
 
   gaze_counts_rest = bfw_gather_spikes_and_rng( ...
@@ -43,6 +48,7 @@ if ( params.non_eye_face_method )
     , pruned_params ...
     , 'spike_dir', params.spike_dir ...
     , 'include_rng', params.include_rng ...
+    , 'include_rasters', params.include_rasters ...
   );
 
   gaze_counts = combine_gaze_counts( gaze_counts_enef, gaze_counts_rest );
@@ -55,6 +61,7 @@ else
     , 'spike_dir', params.spike_dir ...
     , 'is_already_non_overlapping', true ...
     , 'include_rng', params.include_rng ...
+    , 'include_rasters', params.include_rasters ...
   );
 end
 
@@ -67,14 +74,22 @@ if ( include_reward )
     , pruned_params ...
     , 'spike_dir', params.spike_dir ...
   );
+else
+  reward_counts = [];
 end
 
-shared_utils.io.require_dir( save_p );
-save( fullfile(save_p, 'gaze_counts.mat'), 'gaze_counts', '-v7.3' );
+if ( params.do_save )
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, 'gaze_counts.mat'), 'gaze_counts', '-v7.3' );
 
-if ( include_reward )
-  save( fullfile(save_p, 'reward_counts.mat'), 'reward_counts', '-v7.3' );
+  if ( include_reward )
+    save( fullfile(save_p, 'reward_counts.mat'), 'reward_counts', '-v7.3' );
+  end
 end
+
+out = struct();
+out.gaze_counts = gaze_counts;
+out.reward_counts = reward_counts;
 
 end
 
