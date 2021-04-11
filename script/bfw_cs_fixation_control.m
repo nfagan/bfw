@@ -1,7 +1,13 @@
 conf = bfw.config.load();
 
-sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
-  , 'analyses/events/sorted_events.mat') );
+events = bfw_gather_events( ...
+    'config', conf ...
+  , 'require_stim_meta', false ...
+  , 'event_subdir', 'remade_032921' ...
+);
+sorted_events = bfw.sort_events( events );
+% sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
+%   , 'analyses/events/sorted_events.mat') );
 
 use_whole_face = true;
 
@@ -77,8 +83,9 @@ end
 
 %%  venn with hierarchical anova
 
+use_remade = true;
 hierarch_anova_sig_cell_labels = ...
-  bfw_ct.load_significant_social_cell_labels_from_anova( conf );
+  bfw_ct.load_significant_social_cell_labels_from_anova( conf, use_remade );
 
 existing_units = combs( p_labels, {'unit_uuid', 'region', 'session'} );
 keep_hierarch = [];

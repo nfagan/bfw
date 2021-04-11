@@ -138,13 +138,13 @@ save_sig_roi_labels = false;
 
 if ( save_sig_soc_labels )
   save_file_path = fullfile( bfw.dataroot(conf), 'analyses' ...
-    , 'anova_class', 'sig_labels', 'sig_soc_labels.mat' );
+    , 'anova_class', 'sig_labels', 'sig_soc_labels_remade.mat' );
   shared_utils.io.require_dir( fileparts(save_file_path) );  
   save( save_file_path, 'soc_labs' );
 end
 if ( save_sig_roi_labels )
   save_file_path = fullfile( bfw.dataroot(conf), 'analyses' ...
-    , 'anova_class', 'sig_labels', 'sig_roi_labels.mat' );
+    , 'anova_class', 'sig_labels', 'sig_roi_labels_remade.mat' );
   shared_utils.io.require_dir( fileparts(save_file_path) );  
   save( save_file_path, 'roi_subset_labs' );
 end

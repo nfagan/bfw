@@ -192,8 +192,9 @@ plot_heat_map( imgs, img_labels' ...
 
 %%  venn with model
 
+use_remade = true;
 hierarch_anova_sig_cell_labels = ...
-  bfw_ct.load_significant_social_cell_labels_from_anova( conf );
+  bfw_ct.load_significant_social_cell_labels_from_anova( conf, use_remade );
 
 x_ps = find( mdl_labels, 'x-degrees' );
 y_ps = find( mdl_labels, 'y-degrees' );
@@ -215,8 +216,9 @@ plot_venn_hierarch_anova_with_control_anova( hierarch_anova_sig_cell_labels, mdl
 
 %%  venn
 
+use_remade = true;
 hierarch_anova_sig_cell_labels = ...
-  bfw_ct.load_significant_social_cell_labels_from_anova( conf );
+  bfw_ct.load_significant_social_cell_labels_from_anova( conf, use_remade );
 
 plot_venn_hierarch_anova_with_control_anova( hierarch_anova_sig_cell_labels, anova_labs ...
   , 'do_save', true ...
@@ -1210,8 +1212,16 @@ end
 
 function sorted_events = load_events(conf, use_whole_face)
 
-sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
-  , 'analyses/events/sorted_events.mat') );
+% sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
+%   , 'analyses/events/sorted_events.mat') );
+
+events = bfw_gather_events( ...
+  'config', conf ...
+  , 'event_subdir', 'remade_032921' ...
+  , 'require_stim_meta', false ...
+);
+
+sorted_events = bfw.sort_events( events );
 
 if ( use_whole_face )
   [~, transform_ind] = bfw.make_whole_face_roi( sorted_events.labels );

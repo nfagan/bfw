@@ -1,15 +1,32 @@
 %%  Load data
 
-select_files = [
-  {'01042019'}
-  {'01092019'}
-  {'01112019'}
-  {'01132019'}
-  {'01152019'}
-  {'02042018'}
-  {'09292018'}
-  {'10092018'}
-];
+all_files = shared_utils.io.findmat( bfw.gid('raw_events_remade') );
+all_files = shared_utils.io.filenames( all_files, true );
+sessions = cellfun( @(x) x(1:8), all_files, 'un', 0 );
+unique_sessions = unique( sessions );
+num_session_bins = 10;
+binned_sessions = shared_utils.vector.distribute( 1:numel(unique_sessions), num_session_bins );
+binned_sessions = cellfun( @(x) unique_sessions(x), binned_sessions, 'un', 0 );
+
+for session_index = 8:numel(binned_sessions)
+  
+shared_utils.general.progress( session_index, numel(binned_sessions) );
+
+seshs = binned_sessions{session_index};
+sesh_ind = ismember( sessions, seshs );
+
+select_files = all_files(sesh_ind);
+
+% select_files = [
+%   {'01042019'}
+%   {'01092019'}
+%   {'01112019'}
+%   {'01132019'}
+%   {'01152019'}
+%   {'02042018'}
+%   {'09292018'}
+%   {'10092018'}
+% ];
 
 bin_size = 1e-2;
 step_size = 1e-2; % 10ms
@@ -22,6 +39,10 @@ res = bfw_make_psth_for_fig1( ...
   , 'look_ahead', 0.5 ...
   , 'files_containing', select_files(:)' ...
 );
+
+if ( isempty(res.gaze_counts.spikes) )
+  continue
+end
 
 %%  Add whole face roi
 
@@ -47,16 +68,18 @@ do_save = true;
 conf = bfw.config.load();
 
 labels = gaze_counts.labels';
-spikes = gaze_counts.spikes / bin_size;
+spikes = gaze_counts.spikes;
 rasters = gaze_counts.rasters;
 events = gaze_counts.events;
 
 smooth_each = true;
 if ( smooth_each )
   for i = 1:size(spikes, 1)
-    spikes(i, :) = movsum( spikes(i, :), 10 );
+    spikes(i, :) = movmean( spikes(i, :), 10 );
   end
 end
+
+spikes = spikes / bin_size;
 
 assert_ispair( spikes, labels );
 assert_ispair( rasters, labels );
@@ -72,19 +95,20 @@ p_size = 10;
 smooth_func = @(x) smoothdata( x, 'movmean', 5 );
 
 target_units = [ 588, 790, 2610, 1007, 1230, 1242, 322, 259, 359, 1771, 1796, 1795 ];
-% target_units = [ 1771 ];
 target_units = arrayfun( @(x) sprintf('unit_uuid__%d', x), target_units, 'un', 0 );
 
-mask = fcat.mask( labels, base_mask ...
-  , @findor, target_units ...
-);
+% mask = fcat.mask( labels, base_mask ...
+%   , @findor, target_units ...
+% );
+
+mask = base_mask;
 
 unit_I = findall( labels, {'region', 'unit_uuid', 'session'}, mask );
 t = gaze_counts.t;
 xlims = [-0.5, 0.5 ];
 
 for i = 1:numel(unit_I)
-  shared_utils.general.progress( i, numel(unit_I) );
+%   shared_utils.general.progress( i, numel(unit_I) );
   
   pl = plotlabeled.make_common();
   pl.x = t;
@@ -182,11 +206,16 @@ for i = 1:numel(unit_I)
   end
   
   if ( do_save )
+    reg = char( combs(labs, 'region') );
     shared_utils.plot.fullscreen( gcf );
-    save_p = fullfile( bfw.dataroot(conf), 'plots/static_psth', dsp3.datedir );
+    save_p = fullfile( bfw.dataroot(conf), 'plots/static_psth', dsp3.datedir, reg );
     dsp3.req_savefig( gcf, save_p, labs, {'region', 'unit_uuid'} );
   end
 end
+
+end
+
+%%
 
 function max_y = plot_comparing(ax, spks, t, ind_a, ind_b, p_step_size, p_size, y_off, base_color)
 

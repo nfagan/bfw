@@ -74,6 +74,26 @@ excl_labels = fcat.from( excl_events );
 m1_ind = find( excl_labels, 'm1' );
 m2_ind = find( excl_labels, 'm2' );
 
+% Add empty columns for mutual m1/m2 start/stop
+curr_n_cols = size( excl_events.events, 2 );
+
+if ( isempty(excl_events.events) )
+  excl_events.events = zeros( 0, curr_n_cols + 4 );
+else
+  event_cols_copy = { 'start_index', 'stop_index', 'start_index', 'stop_index' };  
+  for i = 1:4
+    event_col_ind = excl_events.event_key(event_cols_copy{i});
+    excl_events.events(:, end+1) = excl_events.events(:, event_col_ind);
+  end
+end
+
+new_column_ids = { 'm1_source_start_index', 'm1_source_stop_index' ...
+  , 'm2_source_start_index', 'm2_source_stop_index' };
+
+for i = 1:4
+  excl_events.event_key(new_column_ids{i}) = i + curr_n_cols;
+end
+
 starts = excl_events.events(:, excl_events.event_key('start_index'));
 stops = excl_events.events(:, excl_events.event_key('stop_index'));
 start_stops = [ starts, stops ];
@@ -114,12 +134,15 @@ if ( has_mutual_events )
     %{
       pre 03/28/2021 - wrong indices
     %}
-    all_keep_exclusive(m1_ind(mut_outs.remove_m1)) = false;
-    all_keep_exclusive(m2_ind(mut_outs.remove_m2)) = false;    
+    m1_mut_ind = m1_ind(mut_outs.remove_m1);
+    m2_mut_ind = m2_ind(mut_outs.remove_m2);
   else
-    all_keep_exclusive(maybe_mutual_m1(mut_outs.remove_m1)) = false;
-    all_keep_exclusive(maybe_mutual_m2(mut_outs.remove_m2)) = false;
+    m1_mut_ind = maybe_mutual_m1(mut_outs.remove_m1);
+    m2_mut_ind = maybe_mutual_m2(mut_outs.remove_m2);
   end
+
+  all_keep_exclusive(m1_mut_ind) = false;
+  all_keep_exclusive(m2_mut_ind) = false;
   
   adjust_excl_inds = mut_outs.adjust_exclusive_end_inds;
   excl_events.events(adjust_excl_inds, :) = mut_outs.adjusted_exclusive_event_info;
@@ -328,6 +351,18 @@ for i = 1:use_n
       test_roi_label = tmp_src_label;
     end
     
+    if ( src_is_m1 )
+      m1_start_ind = src_range(1);
+      m1_stop_ind = src_range(end);
+      m2_start_ind = test_range(1);
+      m2_stop_ind = test_range(end);
+    else
+      m1_start_ind = test_range(1);
+      m1_stop_ind = test_range(end);
+      m2_start_ind = src_range(1);
+      m2_stop_ind = src_range(end);
+    end
+    
     m1_roi_label = get_monk_id_roi_label( 'm1', src_roi_label );
     m2_roi_label = get_monk_id_roi_label( 'm2', test_roi_label );
     
@@ -336,7 +371,8 @@ for i = 1:use_n
       , m1_roi_label, m2_roi_label ...
     };
   
-    mutual_event_info(end+1, :) = make_event_info( mut_start, mut_stop, t );
+    mutual_event_info(end+1, :) = [ make_event_info(mut_start, mut_stop, t) ...
+      , m1_start_ind, m1_stop_ind, m2_start_ind, m2_stop_ind ];
   end
 end
 
