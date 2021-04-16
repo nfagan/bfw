@@ -77,20 +77,25 @@ m2_ind = find( excl_labels, 'm2' );
 % Add empty columns for mutual m1/m2 start/stop
 curr_n_cols = size( excl_events.events, 2 );
 
+event_cols_copy = { ...
+    'start_index', 'stop_index', 'start_index', 'stop_index' ...
+  , 'start_time', 'stop_time', 'start_time', 'stop_time' ...
+};  
+
 if ( isempty(excl_events.events) )
-  excl_events.events = zeros( 0, curr_n_cols + 4 );
+  excl_events.events = zeros( 0, curr_n_cols + numel(event_cols_copy) );
 else
-  event_cols_copy = { 'start_index', 'stop_index', 'start_index', 'stop_index' };  
-  for i = 1:4
+  for i = 1:numel(event_cols_copy)
     event_col_ind = excl_events.event_key(event_cols_copy{i});
     excl_events.events(:, end+1) = excl_events.events(:, event_col_ind);
   end
 end
 
 new_column_ids = { 'm1_source_start_index', 'm1_source_stop_index' ...
-  , 'm2_source_start_index', 'm2_source_stop_index' };
+  , 'm2_source_start_index', 'm2_source_stop_index', 'm1_source_start_time', 'm1_source_stop_time' ...
+  , 'm2_source_start_time', 'm2_source_stop_time' };
 
-for i = 1:4
+for i = 1:numel(event_cols_copy)
   excl_events.event_key(new_column_ids{i}) = i + curr_n_cols;
 end
 
@@ -372,7 +377,8 @@ for i = 1:use_n
     };
   
     mutual_event_info(end+1, :) = [ make_event_info(mut_start, mut_stop, t) ...
-      , m1_start_ind, m1_stop_ind, m2_start_ind, m2_stop_ind ];
+      , m1_start_ind,   m1_stop_ind,    m2_start_ind,    m2_stop_ind ....
+      , t(m1_start_ind) t(m1_stop_ind), t(m2_start_ind), t(m2_stop_ind) ];
   end
 end
 

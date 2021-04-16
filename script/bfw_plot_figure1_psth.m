@@ -4,11 +4,13 @@ all_files = shared_utils.io.findmat( bfw.gid('raw_events_remade') );
 all_files = shared_utils.io.filenames( all_files, true );
 sessions = cellfun( @(x) x(1:8), all_files, 'un', 0 );
 unique_sessions = unique( sessions );
-num_session_bins = 10;
+num_session_bins = 5;
 binned_sessions = shared_utils.vector.distribute( 1:numel(unique_sessions), num_session_bins );
 binned_sessions = cellfun( @(x) unique_sessions(x), binned_sessions, 'un', 0 );
 
-for session_index = 8:numel(binned_sessions)
+%%
+
+for session_index = 1:numel(binned_sessions)
   
 shared_utils.general.progress( session_index, numel(binned_sessions) );
 
