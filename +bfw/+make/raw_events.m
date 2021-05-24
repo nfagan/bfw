@@ -24,7 +24,7 @@ params = bfw.parsestruct( defaults, varargin );
 
 bfw.validatefiles( files, {'rois', 'time', 'bounds', 'position', params.fixations_subdir} );
 
-roi_file = shared_utils.general.get( files, 'rois' );
+roi_file = transform_rois( shared_utils.general.get(files, 'rois'), params.transform_rois );
 time_file = shared_utils.general.get( files, 'time' );
 bounds_file = shared_utils.general.get( files, 'bounds' );
 pos_file = shared_utils.general.get( files, 'position' );
@@ -52,6 +52,15 @@ function tf = check_has_mutual_events(roi_file, params)
 
 monk_ids = intersect( {'m1', 'm2'}, fieldnames(roi_file) );
 tf = params.calculate_mutual && numel( monk_ids ) > 1;
+
+end
+
+function roi_file = transform_rois(roi_file, transform_func)
+
+fs = intersect( fieldnames(roi_file), {'m1', 'm2'} );
+for i = 1:numel(fs)
+  roi_file.(fs{i}).rects = transform_func( roi_file.(fs{i}).rects );
+end
 
 end
 

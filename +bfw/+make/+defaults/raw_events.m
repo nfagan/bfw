@@ -45,6 +45,9 @@ defaults.fill_gaps_duration = nan;
 defaults.is_truly_exclusive = true;
 
 defaults.calculate_mutual = true;
+% Optionally transform rois (by e.g. adding padding) before calculating
+% events.
+defaults.transform_rois = @bfw.identity_roi_transform;
 
 defaults.rois = 'all';
 defaults.intermediate_directory_name = 'raw_events';
