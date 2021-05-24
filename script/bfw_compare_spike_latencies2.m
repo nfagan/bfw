@@ -20,6 +20,11 @@ gaze_counts = ...
   shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
   , 'analyses/spike_latency/counts/gaze_counts_right_object_face_size.mat') );
 
+%%  reload
+
+psth_p = 'C:\data\bfw\psth\fig1_psths';
+gaze_counts = bfw.load_gaze_count_files( shared_utils.io.findmat(psth_p) );
+
 %%
 
 sig_anova_ids = shared_utils.io.fload( '/Users/Nick/Desktop/sig_anova_ids.mat' );
@@ -60,6 +65,10 @@ end
 spikes = spikes(transform_ind, :);
 start_ts = start_ts(transform_ind);
 
+[~, transform_ind] = bfw.make_whole_object_roi( labels );
+spikes = spikes(transform_ind, :);
+start_ts = start_ts(transform_ind);
+
 time = gaze_counts.t;
 
 subset_t = time >= subset_t_lims(1) & time <= subset_t_lims(2);
@@ -82,7 +91,7 @@ end
 
 % rois = { 'whole_face', 'eyes_nf', 'face', 'nonsocial_object_eyes_nf_matched' };
 % rois = { 'whole_face', 'eyes_nf' };
-rois = { 'nonsocial_object' };
+rois = { 'whole_face', 'eyes_nf', 'nonsocial_object_whole_face_matched', 'face', 'nonsocial_object_eyes_nf_matched' };
 
 % plot_types = { 'spectra' };
 % plot_types = { 'hist' };
@@ -117,10 +126,13 @@ for i = 1:size(cs, 2)
   base_subdir = fullfile( smooth_dir, base_subdir );
   base_subdir = fullfile( evt_dir, base_subdir );
 
-  mask_func = @(l, m) fcat.mask( l, m ...
-    , @findnone, bfw.nan_unit_uuid ...
-    , @findor, {'m1', 'mutual'} ...
-    , @find, roi ...
+  mask_func = @(l, m) pipe(m ...
+    , @(m) fcat.mask(l, m ...
+      , @findnone, bfw.nan_unit_uuid ...
+      , @findor, {'m1', 'mutual'} ...
+      , @find, roi ...
+    ) ...
+    , @(m) prune_ns_object(l, m) ...
   );
 
   if ( is_only_significant_cells )
@@ -152,4 +164,17 @@ for i = 1:size(cs, 2)
     , 'exclude_all_zero_trials', false ...
     , 'ordered_points_for_cell', false ...
   );
+end
+
+function rois = ns_obj_rois()
+rois = { 'nonsocial_object', 'nonsocial_object_whole_face_matched', 'nonsocial_object_eyes_nf_matched' };
+end
+
+function m = prune_ns_object(l, m)
+
+base_mask = bfw.find_sessions_before_nonsocial_object_was_added( ...
+  l, find(l, ns_obj_rois()) );
+
+m = setdiff( m, base_mask );
+
 end

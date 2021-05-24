@@ -189,8 +189,8 @@ end
 
 %%  pie plot
 
-do_save = true;
-plot_counts = true;
+do_save = false;
+plot_counts = false;
 
 pl = plotlabeled.make_common();
 pl.pie_include_percentages = true;

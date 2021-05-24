@@ -10,6 +10,13 @@ binned_sessions = cellfun( @(x) unique_sessions(x), binned_sessions, 'un', 0 );
 
 session_auc = {};
 
+bin_size = 1e-2;
+step_size = 1e-2; % 10ms
+look_back = -0.5;
+look_ahead = 0.5;
+
+%%
+
 for session_index = 1:numel(binned_sessions)
   
 shared_utils.general.progress( session_index, numel(binned_sessions) );
@@ -30,22 +37,22 @@ select_files = all_files(sesh_ind);
 %   {'10092018'}
 % ];
 
-bin_size = 1e-2;
-step_size = 1e-2; % 10ms
-
 res = bfw_make_psth_for_fig1( ...
     'is_parallel', true ...
   , 'window_size', bin_size ...
   , 'step_size', step_size ...
-  , 'look_back', -0.5 ...
-  , 'look_ahead', 0.5 ...
+  , 'look_back', look_back ...
+  , 'look_ahead', look_ahead ...
   , 'files_containing', select_files(:)' ...
   , 'include_rasters', false ...
+  , 'collapse_nonsocial_object_rois', true ...
 );
 
 %%  Add whole face roi
 
-gaze_counts = add_whole_face_roi( res.gaze_counts );
+gaze_counts = res.gaze_counts;
+gaze_counts = add_whole_face_roi( gaze_counts );
+gaze_counts = add_whole_object_roi( gaze_counts );
 
 %%  Remove nonsocial object events prior to the actual introduction of the object.
 
@@ -67,7 +74,11 @@ perm_iters = 1e2;
 n_consecutive = 5;
 
 units_each = { 'unit_uuid', 'unit_index', 'region', 'session' };
-roi_pairs = { {'whole_face', 'nonsocial_object'} };
+roi_pairs = { ...
+    {'whole_face', 'nonsocial_object_whole_face_matched'} ...
+  , {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} ...
+  , {'eyes_nf', 'face'} ...
+};
 
 mask = fcat.mask( labels, base_mask );
 [unit_labels, unit_I] = keepeach( labels', units_each, mask );
@@ -110,6 +121,13 @@ session_auc{session_index} = struct( 'auc', auc, 'auc_labels', auc_labels, 'auc_
 
 end
 
+%%  or load
+
+auc_info = load( fullfile(bfw.dataroot, 'analyses/auc/042121/session_auc.mat') );
+session_auc = auc_info.session_auc;
+gaze_counts = struct();
+gaze_counts.t = look_back:step_size:look_ahead;
+
 %%  concatenate
 
 auc_info = vertcat( session_auc{:} );
@@ -117,7 +135,27 @@ auc = cat_expanded( 1, {auc_info.auc} );
 auc_labels = cat_expanded( 1, {fcat, auc_info.auc_labels} );
 auc_sig_info = cat_expanded( 1, {auc_info.auc_sig_info} );
 
-%%  Plot auc heat maps
+%%  extract subset
+
+save_subset = true;
+select_roi = 'eyes_nf_nonsocial_object_eyes_nf_matched';
+
+roi_ind = find( auc_labels, select_roi );
+subset_auc = auc(roi_ind, :);
+subset_auc_labels = gather( auc_labels(roi_ind) );
+
+subset_info = struct();
+subset_info.t = t;
+subset_info.auc = subset_auc;
+subset_info.labels = subset_auc_labels';
+
+if ( save_subset )
+  save_p = fullfile( bfw.dataroot, 'analyses/auc', dsp3.datedir );
+  shared_utils.io.require_dir( save_p );
+  save( fullfile(save_p, 'subset_auc.mat'), 'subset_info' );
+end
+
+%%  Plot heat maps
 
 plt_auc = auc;
 plt_auc_labels = auc_labels';
@@ -183,11 +221,11 @@ for i = 1:numel(fig_I)
   if ( do_save )
     save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'heatmaps' );
     shared_utils.plot.fullscreen( gcf );
-    dsp3.req_savefig( gcf, save_p, plt_auc_labels, [{'region'}, figs_each] );
+    dsp3.req_savefig( gcf, save_p, prune(plt_auc_labels(fig_I{i})), [{'region'}, figs_each] );
   end
 end
 
-%%  Average AUC traces
+%%  Plot average AUC traces
 
 plt_auc = auc;
 plt_auc(plt_auc < 0.5) = (0.5 - plt_auc(plt_auc < 0.5)) + 0.5;
@@ -200,17 +238,119 @@ is_sig = [ plt_auc_sig_info.sig_neg ] | [ plt_auc_sig_info.sig_pos ];
 plt_mask = get_base_mask( plt_auc_labels, false );
 plt_mask = intersect( plt_mask, find(is_sig) );
 
+plt_auc = plt_auc(plt_mask, :);
+plt_auc_labels = plt_auc_labels(plt_mask);
+
 pl = plotlabeled.make_common();
 pl.x = t;
-axs = pl.lines( plt_auc(plt_mask, :), plt_auc_labels(plt_mask), 'roi', 'region' );
+axs = pl.lines( plt_auc, plt_auc_labels, 'roi', 'region' );
 
 do_save = true;
 conf = bfw.config.load();
 
+pre_auc = nanmean( plt_auc(:, t < 0), 2 );
+post_auc = nanmean( plt_auc(:, t >= 0), 2 );
+combined_auc = [ pre_auc; post_auc ];
+combined_auc_labels = repset( addcat(plt_auc_labels', 'epoch'), 'epoch', {'pre', 'post'} );
+rs_outs = dsp3.ranksum( combined_auc, combined_auc_labels, {'region', 'roi'}, 'pre', 'post' );
+
 if ( do_save )
   save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'avg_traces' );
+  stat_p = fullfile( save_p, 'stats' );
+  
   shared_utils.plot.fullscreen( gcf );
   dsp3.req_savefig( gcf, save_p, plt_auc_labels, 'region' );
+  dsp3.save_ranksum_outputs( rs_outs, stat_p );
+end
+
+%%  Plot bar AUC summary
+
+do_save = true;
+y_lims = [ 0, 1 ];
+
+plt_auc = auc;
+plt_auc_labels = auc_labels';
+t = gaze_counts.t;
+[is_sig, is_neg] = arrayfun( @(x) sorting_index_value(x), auc_sig_info );
+
+plt_mask = get_base_mask( plt_auc_labels, false );
+plt_mask = intersect( plt_mask, find(is_sig) );
+
+fig_I = findall( plt_auc_labels, {'roi', 'region'}, plt_mask );
+for i = 1:numel(fig_I)
+  sub_neg = is_neg(fig_I{i});
+  sub_pos = ~sub_neg;
+  assert( all(is_sig(fig_I{i})) );
+  
+  pos_i = fig_I{i}(sub_pos);
+  neg_i = fig_I{i}(sub_neg);
+  
+  pos_inds = [auc_sig_info(pos_i).first_pos];
+  neg_inds = [auc_sig_info(neg_i).first_neg];
+  assert( numel(pos_inds) + numel(neg_inds) == numel(fig_I{i}) );
+  
+  pos_t = t(pos_inds);
+  neg_t = t(neg_inds);
+  
+  p_pos_pre = pnz( pos_t < 0 );
+  p_pos_post = 1 - p_pos_pre;
+  p_neg_pre = pnz( neg_t < 0 );
+  p_neg_post = 1 - p_neg_pre;
+  
+  pos_pre_i = pos_i(pos_t < 0);
+  pos_post_i = pos_i(pos_t >= 0);
+  neg_pre_i = neg_i(neg_t < 0);
+  neg_post_i = neg_i(neg_t >= 0);  
+  
+  pos_pre_auc = nanmean( plt_auc(pos_pre_i, t < 0), 2 );
+  pos_post_auc = nanmean( plt_auc(pos_post_i, t >= 0), 2 );
+  neg_pre_auc = nanmean( plt_auc(neg_pre_i, t < 0), 2 );
+  neg_post_auc = nanmean( plt_auc(neg_post_i, t >= 0), 2 );
+  
+  auc_value_labels = {'AUC > 0.5', 'AUC > 0.5', 'AUC < 0.5', 'AUC < 0.5'};
+  auc_epoch_labels = {'pre', 'post', 'pre', 'post'};
+  auc_values = { pos_pre_auc, pos_post_auc, neg_pre_auc, neg_post_auc };
+  
+  f = one( plt_auc_labels(fig_I{i}) );
+  repmat( f, 4 );
+  addsetcat( f, 'epoch', auc_epoch_labels );
+  addsetcat( f, 'auc_value', auc_value_labels );
+  
+  p_cats = { 'roi', 'region', 'auc_value' };
+  
+  ps = [ p_pos_pre; p_pos_post; p_neg_pre; p_neg_post ];  
+  pl = plotlabeled.make_common();
+  pl.x_order = { 'pre', 'post' };
+  pl.y_lims = y_lims;  
+  axs = pl.bar( ps, f, 'epoch', {}, p_cats );
+  if ( do_save )
+    save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'prop_sig_bin_pre_post' );
+    shared_utils.plot.fullscreen( gcf );
+    dsp3.req_savefig( gcf, save_p, f, p_cats );
+  end
+  
+  f2 = fcat();  
+  auc_vals = [];
+  
+  for j = 1:numel(auc_value_labels)
+    f_tmp = f(j);
+    repmat( f_tmp, numel(auc_values{j}) );
+    append( f2, f_tmp );
+    auc_vals = [ auc_vals; auc_values{j} ];
+  end
+  
+  pl = plotlabeled.make_common();
+  pl.add_points = true;
+  pl.x_order = { 'pre', 'post' };
+  pl.y_lims = y_lims;
+  pl.marker_size = 2;
+  pl.points_are = { 'session' };
+  axs = pl.bar( auc_vals, f2, 'epoch', {}, p_cats );
+  if ( do_save )
+    save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'avg_auc_bar' );
+    shared_utils.plot.fullscreen( gcf );
+    dsp3.req_savefig( gcf, save_p, f2, p_cats );
+  end
 end
 
 %%
@@ -327,7 +467,7 @@ if ( nargin < 2 )
 end
 
 if ( only_remove_obj )
-  sesh_mask = find( labels, 'nonsocial_object' );
+  sesh_mask = findor( labels, ns_obj_roi_labels() );
 else
   sesh_mask = rowmask( labels );
 end
@@ -337,12 +477,28 @@ base_mask = setdiff( rowmask(labels), base_mask );
 
 end
 
+function rois = ns_obj_roi_labels()
+rois = { 'nonsocial_object', 'nonsocial_object_eyes_nf_matched', 'nonsocial_object_whole_face_matched' };
+end
+
 function gaze_counts = add_whole_face_roi(gaze_counts)
 
 gaze_counts.labels = gaze_counts.labels';
-replace( gaze_counts.labels, 'nonsocial_object_eyes_nf_matched', 'nonsocial_object' );
-
 [~, transform_ind] = bfw.make_whole_face_roi( gaze_counts.labels );
+gaze_counts = index_gaze_counts( gaze_counts, transform_ind );
+
+end
+
+function gaze_counts = add_whole_object_roi(gaze_counts)
+
+gaze_counts.labels = gaze_counts.labels';
+[~, transform_ind] = bfw.make_whole_object_roi( gaze_counts.labels );
+gaze_counts = index_gaze_counts( gaze_counts, transform_ind );
+
+end
+
+function gaze_counts = index_gaze_counts(gaze_counts, transform_ind)
+
 gaze_counts.spikes = gaze_counts.spikes(transform_ind, :);
 gaze_counts.events = gaze_counts.events(transform_ind, :);
 

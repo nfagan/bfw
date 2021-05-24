@@ -12,6 +12,7 @@ defaults.x_lims = [];
 defaults.y_lims = [];
 defaults.looks_by_order = { 'm1', 'm2', 'mutual' };
 defaults.box_y_offset = 2;
+defaults.use_looks_by_order = true;
 params = bfw.parsestruct( defaults, varargin );
 
 assert_ispair( events, labels );
@@ -60,7 +61,11 @@ function plot_one_panel(ax, all_starts, all_durs, labels, mask, params)
 % each_I = each_I(preferred_ind);
 % each_C = each_C(:, preferred_ind);
 
-[~, looks_by_ind] = ismember( 'looks_by', params.each );
+if ( params.use_looks_by_order )
+  [~, looks_by_ind] = ismember( 'looks_by', params.each );
+else
+  looks_by_ind = 0;
+end
 
 if ( looks_by_ind > 0 )
   looks_by = params.looks_by_order;
@@ -111,7 +116,10 @@ leg_labels = eachcell( @(x) strrep(x, '_', ' '), leg_labels );
 
 dummy_lines_to_add_legend( ax, lims, colors, leg_labels );
 shared_utils.plot.set_ylims( ax, lims );
-shared_utils.plot.set_xlims( ax, params.x_lims );
+
+if ( ~isempty(params.x_lims) )
+  shared_utils.plot.set_xlims( ax, params.x_lims );
+end
 
 panel_labs = strjoin( fcat.strjoin(combs(labels, params.panels, mask), ' | '), ' ' );
 panel_labs = strrep( panel_labs, '_', ' ' );

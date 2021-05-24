@@ -1,8 +1,10 @@
-function [indices, times, labels] = bfw_extract_cc_interactive_event_info(cc_event_file, cc_time_file, roi)
+function [indices, times, labels, stop_indices] = ...
+  bfw_extract_cc_interactive_event_info(cc_event_file, cc_time_file, roi)
 
 day_labels = cc_event_file.nday;
 
 indices = [];
+stop_indices = [];
 times = [];
 labels = fcat();
 
@@ -22,7 +24,11 @@ for i = 1:numel(day_labels)
   
   m2_m1_starts = m2_m1_join(:, 1);
   m1_m2_starts = m1_m2_join(:, 1);
-  curr_starts = [ m2_m1_starts; m1_m2_starts ];  
+  curr_starts = [ m2_m1_starts; m1_m2_starts ];
+  
+  m2_m1_stops = m2_m1_join(:, 2);
+  m1_m2_stops = m1_m2_join(:, 2);
+  curr_stops = [ m2_m1_stops; m1_m2_stops ];
   
   curr_times = nan( size(curr_starts) );
   is_in_bounds_index = curr_starts <= numel( ts );
@@ -30,6 +36,7 @@ for i = 1:numel(day_labels)
   
   times = [ times; columnize(curr_times) ];
   indices = [ indices; columnize(curr_starts) ];
+  stop_indices = [ stop_indices; columnize(curr_stops) ];
   
   append( labels, m2_m1_mut_labels );
   append( labels, m1_m2_mut_labels );

@@ -50,9 +50,9 @@ end
 
 function out = gather_per_run(files, spike_p, meta_p, params)
 
-cs_labels_file = shared_utils.general.get( files, 'cs_labels/m1' );
-cs_events_file = shared_utils.general.get( files, 'cs_task_events/m1' );
-cs_trial_data_file = shared_utils.general.get( files, 'cs_trial_data/m1' );
+cs_labels_file = shared_utils.general.get( files, fullfile('cs_labels', 'm1') );
+cs_events_file = shared_utils.general.get( files, fullfile('cs_task_events', 'm1') );
+cs_trial_data_file = shared_utils.general.get( files, fullfile('cs_trial_data', 'm1') );
 
 un_filename = bfw.try_get_unified_filename( cs_labels_file );
 
@@ -103,6 +103,7 @@ for i = 1:numel(units)
   end
   
   unit_labels = fcat.from( bfw.get_unit_labels(units(i)) );
+  addsetcat( unit_labels, 'unit-number', sprintf('unit-%d', i) );  
   joined_labels = join( cs_labels_file.labels', unit_labels, meta_labels );
   bfw.unify_single_region_labels( joined_labels );
   
