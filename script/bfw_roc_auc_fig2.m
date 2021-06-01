@@ -137,7 +137,7 @@ auc_sig_info = cat_expanded( 1, {auc_info.auc_sig_info} );
 
 %%  extract subset
 
-save_subset = true;
+save_subset = false;
 select_roi = 'eyes_nf_nonsocial_object_eyes_nf_matched';
 
 roi_ind = find( auc_labels, select_roi );
@@ -176,7 +176,19 @@ f = figure(1);
 c_lims = [0.3, 0.7];
 
 conf = bfw.config.load();
-do_save = true;
+do_save = false;
+
+gt_lt_counts = [];
+gt_lt_labels = fcat();
+
+pre_post_counts = [];
+pre_post_count_labels = fcat();
+
+prop_p_stats = [];
+prop_p_labels = fcat();
+
+pre_post_prop_p_stats = [];
+pre_post_prop_p_labels = fcat();
 
 for i = 1:numel(fig_I)
   clf();
@@ -192,9 +204,41 @@ for i = 1:numel(fig_I)
     p_ind = p_I{j};
     sig_p_ind = p_ind(is_sig(p_ind));
     [sort_ind, first_sig] = sort_sig( plt_auc_sig_info(sig_p_ind) );
-    sig_p_ind = sig_p_ind(sort_ind);
-    
+    sig_p_ind = sig_p_ind(sort_ind);    
     sub_auc = plt_auc(sig_p_ind, :);
+    
+    tmp_labels = one( plt_auc_labels(p_ind) );
+    
+    first_sig_t = t(first_sig);
+    n_pre = sum( first_sig_t < 0 );
+    n_post = sum( first_sig_t >= 0 );
+    n_tot = n_pre + n_post;
+    
+    [~, pre_post_prop_p, pre_post_prop_chi2] = prop_test( [n_pre, n_post], [n_tot, n_tot], false );
+    tmp_pre_post_labs = addcat( tmp_labels', 'epoch' );
+    repset( tmp_pre_post_labs, 'epoch', {'pre', 'post'} );
+    
+    pre_post_prop_p_stats = [ pre_post_prop_p_stats; [pre_post_prop_p, pre_post_prop_chi2] ];
+    append( pre_post_prop_p_labels, tmp_labels );
+    
+    pre_post_counts = [ pre_post_counts; n_pre; n_post ];
+    append( pre_post_count_labels, tmp_pre_post_labs );
+    
+    first_sig_auc_val = arrayfun( @(x) sub_auc(x, first_sig(x)), 1:numel(first_sig) );
+    n_greater = sum( first_sig_auc_val >= 0.5 );
+    n_less = sum( first_sig_auc_val < 0.5 );
+    n_tot = n_greater + n_less;
+    
+    [~, prop_p, prop_chi2] = prop_test( [n_greater, n_less], [n_tot, n_tot], false );
+    
+    tmp_gt_lt_labels = addcat( tmp_labels', 'direction' );
+    repset( tmp_gt_lt_labels, 'direction', {'less', 'greater'} );
+    
+    gt_lt_counts = [ gt_lt_counts; n_less; n_greater ];
+    append( gt_lt_labels, tmp_gt_lt_labels );
+    
+    prop_p_stats = [ prop_p_stats; [prop_p, prop_chi2] ];
+    append( prop_p_labels, tmp_labels );
     
     h_im = imagesc( ax, t, 1:size(sub_auc, 1), sub_auc );
     
@@ -225,6 +269,45 @@ for i = 1:numel(fig_I)
   end
 end
 
+%%  prop test
+
+do_save = true;
+is_gt_lt = true;
+
+assert_ispair( gt_lt_counts, gt_lt_labels );
+assert_ispair( prop_p_stats, prop_p_labels );
+assert_ispair( pre_post_counts, pre_post_count_labels );
+assert_ispair( pre_post_prop_p_stats, pre_post_prop_p_labels );
+
+if ( is_gt_lt )
+  [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( gt_lt_counts, gt_lt_labels, 'roi', 'direction', 'region' );
+else
+  [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( pre_post_counts, pre_post_count_labels, 'roi', 'epoch', 'region' );
+end
+
+row_cats = { 'region', 'roi' };
+
+if ( is_gt_lt )
+  prop_table_row_labels = prop_p_labels(:, row_cats);
+  t = array2table(prop_p_stats, 'variablenames', {'p', 'chi2'});
+  t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+else
+  prop_table_row_labels = pre_post_prop_p_labels(:, row_cats);
+  t = array2table(pre_post_prop_p_stats, 'variablenames', {'p', 'chi2'});
+  t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+end
+
+t2 = [ [chi2_stats.p]', [chi2_stats.chi2]' ];
+t2 = array2table( t2, 'variablenames', {'p', 'chi2'} ...
+  , 'RowNames', fcat.strjoin(chi2_labels(:, row_cats)', ' | ') );
+
+if ( do_save )
+  prefix = ternary( is_gt_lt, 'stats_gt_lt', 'stats_pre_post' );  
+  save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, prefix );
+  dsp3.req_writetable( t, save_p, prop_p_labels, row_cats, 'within_region__' );
+  dsp3.req_writetable( t2, save_p, chi2_labels, row_cats, 'across_regions__' );
+end
+
 %%  Plot average AUC traces
 
 plt_auc = auc;
@@ -243,7 +326,7 @@ plt_auc_labels = plt_auc_labels(plt_mask);
 
 pl = plotlabeled.make_common();
 pl.x = t;
-axs = pl.lines( plt_auc, plt_auc_labels, 'roi', 'region' );
+axs = pl.lines( plt_auc, plt_auc_labels, 'region', 'roi' );
 
 do_save = true;
 conf = bfw.config.load();
