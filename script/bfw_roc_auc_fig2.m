@@ -170,13 +170,13 @@ is_sig = [ plt_auc_sig_info.sig_neg ] | [ plt_auc_sig_info.sig_pos ];
 figs_each = { 'roi' };
 
 plt_mask = get_base_mask( plt_auc_labels, false );
-fig_I = findall( plt_auc_labels, figs_each, plt_mask );
+[fig_auc_labels, fig_I] = keepeach( plt_auc_labels', figs_each, plt_mask );
 f = figure(1);
 
 c_lims = [0.3, 0.7];
 
 conf = bfw.config.load();
-do_save = false;
+do_save = true;
 
 gt_lt_counts = [];
 gt_lt_labels = fcat();
@@ -184,17 +184,27 @@ gt_lt_labels = fcat();
 pre_post_counts = [];
 pre_post_count_labels = fcat();
 
+tot_sig_counts = [];
+tot_sig_labels = fcat();
+
 prop_p_stats = [];
 prop_p_labels = fcat();
 
 pre_post_prop_p_stats = [];
 pre_post_prop_p_labels = fcat();
 
+pair_sig_stats = cell( numel(fig_I), 1 );
+pair_sig_labs = cell( size(pair_sig_stats) );
+
 for i = 1:numel(fig_I)
   clf();
   
   [p_I, p_C] = findall( plt_auc_labels, [{'region'}, figs_each], fig_I{i} );
   ss = plotlabeled.get_subplot_shape( numel(p_I) );
+  
+  num_sig_info = zeros( numel(p_I), 2 );
+  gt_first_ts = cell( numel(p_I), 1 );
+  lt_first_ts = cell( numel(p_I), 1 );
   
   for j = 1:numel(p_I)
     ax = subplot( ss(1), ss(2), j );
@@ -227,7 +237,7 @@ for i = 1:numel(fig_I)
     first_sig_auc_val = arrayfun( @(x) sub_auc(x, first_sig(x)), 1:numel(first_sig) );
     n_greater = sum( first_sig_auc_val >= 0.5 );
     n_less = sum( first_sig_auc_val < 0.5 );
-    n_tot = n_greater + n_less;
+    n_tot = n_greater + n_less;    
     
     [~, prop_p, prop_chi2] = prop_test( [n_greater, n_less], [n_tot, n_tot], false );
     
@@ -249,6 +259,10 @@ for i = 1:numel(fig_I)
     num_sig = numel( sig_p_ind );
     num_tot = numel( p_ind );
     
+    tot_sig_counts = [ tot_sig_counts; [num_sig, num_tot] ];
+    num_sig_info(j, :) = [ num_sig, num_tot ];
+    append( tot_sig_labels, tmp_labels );
+    
     pc_str = strrep( strjoin(p_C(:, j), ' | '), '_', ' ' );
     title_str = sprintf( '%s (%d of %d [%0.2f%%])', pc_str ...
       , num_sig, num_tot, num_sig/num_tot*100 );
@@ -260,41 +274,139 @@ for i = 1:numel(fig_I)
     
     colormap( 'jet' );
     colorbar;
+    
+    gt_first_ts{j} = first_sig_t(first_sig_auc_val >= 0.5);
+    lt_first_ts{j} = first_sig_t(first_sig_auc_val < 0.5);
   end
+  
+  pair_i = pair_combination_indices( numel(p_I) );
+  reg_pairs = arrayfun( ...
+    @(x, y) sprintf('%s_%s', p_C{1, x}, p_C{1, y}), pair_i(:, 1), pair_i(:, 2), 'un', 0 );
+  
+  pair_stats = pair_prop_tests( num_sig_info, pair_i );
+  pair_stats(:, 1) = dsp3.fdr( pair_stats(:, 1) );
+  
+  pair_sig_stats{i} = pair_stats;
+  pair_sig_labs{i} = setcat( repmat(fig_auc_labels(i), size(pair_i, 1)), 'region', reg_pairs );
   
   if ( do_save )
     save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'heatmaps' );
     shared_utils.plot.fullscreen( gcf );
     dsp3.req_savefig( gcf, save_p, prune(plt_auc_labels(fig_I{i})), [{'region'}, figs_each] );
   end
+  
+  all_hist_axs = gobjects( 0 ); 
+  for j = 1:numel(gt_first_ts)
+    ax_lt = subplot( ss(1) * 2, ss(2), (j-1)*2 + 1 );
+    ax_gt = subplot( ss(1) * 2, ss(2), (j-1)*2 + 2 );
+    
+    cla( ax_lt );
+    cla( ax_gt );
+    hold( ax_lt, 'on' );
+    hold( ax_gt, 'on' );
+    
+    h_gt = histogram( ax_gt, gt_first_ts{j}, 100 );
+    h_lt = histogram( ax_lt, lt_first_ts{j}, 100 );
+    
+    med_gt = nanmedian( gt_first_ts{j} );
+    med_lt = nanmedian( lt_first_ts{j} );
+    
+    is_sig_gt = signrank( gt_first_ts{j} ) < 0.05;
+    is_sig_lt = signrank( lt_first_ts{j} ) < 0.05;
+    
+    sig_hist = ranksum( gt_first_ts{j}, lt_first_ts{j} ) < 0.05;
+    if ( sig_hist )
+      sig_str = ' (*)';
+    else
+      sig_str = '';
+    end
+    
+    shared_utils.plot.add_vertical_lines( ax_gt, med_gt );
+    shared_utils.plot.add_vertical_lines( ax_lt, med_lt );
+    text( ax_gt, med_gt, max(get(ax_gt, 'ylim')), sprintf('M=%0.2f%s', med_gt, sig_str) );
+    text( ax_lt, med_lt, max(get(ax_lt, 'ylim')), sprintf('M=%0.2f%s', med_lt, sig_str) );
+    
+    set( h_gt, 'FaceColor', [1, 0, 0] );
+    set( h_gt, 'FaceAlpha', 1 );
+    set( h_lt, 'FaceColor', [0, 0, 1] );
+    set( h_lt, 'FaceAlpha', 1 );
+    
+    all_hist_axs(end+1, 1) = ax_lt;
+    all_hist_axs(end+1, 1) = ax_gt;
+    
+    title_str = strrep( strjoin(p_C(:, j), ' | '), '_', ' ' );
+    title_str_gt = title_str;
+    title_str_lt = title_str;
+    
+    if ( is_sig_gt )
+      title_str_gt = sprintf( '%s (*)', title_str );
+    end
+    if ( is_sig_lt )
+      title_str_lt = sprintf( '%s (*)', title_str );
+    end
+    
+    title( ax_gt, title_str_gt );
+    title( ax_lt, title_str_lt );
+  end
+  
+  shared_utils.plot.set_xlims( all_hist_axs, [min(t), max(t)] );
+  shared_utils.plot.match_ylims( all_hist_axs );
+  
+  if ( do_save )
+    save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, 'hist' );
+    shared_utils.plot.fullscreen( gcf );
+    dsp3.req_savefig( gcf, save_p, prune(plt_auc_labels(fig_I{i})), [{'region'}, figs_each] );
+  end
 end
+
+pair_sig_stats = vertcat( pair_sig_stats{:} );
+pair_sig_labs = vertcat( fcat, pair_sig_labs{:} );
+assert_ispair( pair_sig_stats, pair_sig_labs );
 
 %%  prop test
 
 do_save = true;
-is_gt_lt = true;
+
+% stats_type = 'gt_lt';
+stats_type = 'pre_post';
+% stats_type = 'total';
 
 assert_ispair( gt_lt_counts, gt_lt_labels );
 assert_ispair( prop_p_stats, prop_p_labels );
 assert_ispair( pre_post_counts, pre_post_count_labels );
 assert_ispair( pre_post_prop_p_stats, pre_post_prop_p_labels );
-
-if ( is_gt_lt )
-  [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( gt_lt_counts, gt_lt_labels, 'roi', 'direction', 'region' );
-else
-  [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( pre_post_counts, pre_post_count_labels, 'roi', 'epoch', 'region' );
-end
+assert_ispair( tot_sig_counts, tot_sig_labels );
 
 row_cats = { 'region', 'roi' };
+stat_prefix = sprintf( 'stats_%s', stats_type );
 
-if ( is_gt_lt )
-  prop_table_row_labels = prop_p_labels(:, row_cats);
-  t = array2table(prop_p_stats, 'variablenames', {'p', 'chi2'});
-  t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
-else
-  prop_table_row_labels = pre_post_prop_p_labels(:, row_cats);
-  t = array2table(pre_post_prop_p_stats, 'variablenames', {'p', 'chi2'});
-  t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+switch ( stats_type )
+  case 'gt_lt'    
+    [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( ...
+      gt_lt_counts, gt_lt_labels, 'roi', 'direction', 'region' );
+    
+    prop_table_row_labels = prop_p_labels(:, row_cats);
+    t = array2table(prop_p_stats, 'variablenames', {'p', 'chi2'});
+    t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+  
+  case 'pre_post'
+    [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( ...
+      pre_post_counts, pre_post_count_labels, 'roi', 'epoch', 'region' );
+    
+    prop_table_row_labels = pre_post_prop_p_labels(:, row_cats);
+    t = array2table(pre_post_prop_p_stats, 'variablenames', {'p', 'chi2'});
+    t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+    
+  case 'total'
+    [chi2_stats, chi2_labels] = dsp3.chi2_tabular_frequencies( ...
+      tot_sig_counts(:, 1), tot_sig_labels, {}, 'roi', 'region' );
+    
+    prop_table_row_labels = pair_sig_labs(:, row_cats);
+    t = array2table(pair_sig_stats, 'variablenames', {'p', 'chi2'});
+    t.Properties.RowNames = fcat.strjoin( prop_table_row_labels', ' | ' );
+    
+  otherwise
+    error( 'Unhandled stats type "%s".', stats_type );
 end
 
 t2 = [ [chi2_stats.p]', [chi2_stats.chi2]' ];
@@ -302,8 +414,7 @@ t2 = array2table( t2, 'variablenames', {'p', 'chi2'} ...
   , 'RowNames', fcat.strjoin(chi2_labels(:, row_cats)', ' | ') );
 
 if ( do_save )
-  prefix = ternary( is_gt_lt, 'stats_gt_lt', 'stats_pre_post' );  
-  save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, prefix );
+  save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, stat_prefix );
   dsp3.req_writetable( t, save_p, prop_p_labels, row_cats, 'within_region__' );
   dsp3.req_writetable( t2, save_p, chi2_labels, row_cats, 'across_regions__' );
 end
@@ -635,5 +746,29 @@ if ( sig_info.sig_pos && sig_info.sig_neg )
     is_neg = true;
   end
 end
+
+end
+
+function stats = pair_prop_tests(counts, inds)
+
+stats = zeros( size(inds, 1), 2 );
+
+for i = 1:size(inds, 1)
+  ind = inds(i, :);
+  num_a = counts(ind(1), 1);
+  num_b = counts(ind(2), 1);
+  tot_a = counts(ind(1), 2);
+  tot_b = counts(ind(2), 2);
+  
+  [~, p, chi2] = prop_test( [num_a, num_b], [tot_a, tot_b], false );
+  stats(i, :) = [ p, chi2 ];
+end
+
+end
+
+function i = pair_combination_indices(n)
+
+i = unique( sort(dsp3.ncombvec(n, n), 1)', 'rows' );
+i(i(:, 1) == i(:, 2), :) = [];
 
 end
