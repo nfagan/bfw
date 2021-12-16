@@ -4,13 +4,34 @@ all_files = shared_utils.io.findmat( bfw.gid('raw_events_remade') );
 all_files = shared_utils.io.filenames( all_files, true );
 sessions = cellfun( @(x) x(1:8), all_files, 'un', 0 );
 unique_sessions = unique( sessions );
-num_session_bins = 5;
+num_session_bins = 42;
 binned_sessions = shared_utils.vector.distribute( 1:numel(unique_sessions), num_session_bins );
 binned_sessions = cellfun( @(x) unique_sessions(x), binned_sessions, 'un', 0 );
+
+target_unit_ids = [ 588, 790, 2610, 1007, 1230, 1242, 322, 259, 359, 1771, 1796, 1795 ];
+% target_unit_ids = xlsread( 'C:\Users\nick\Downloads\CellID.xlsx' );
+use_target_units = true;
+
+use_corrected_events = true;
+
+events_subdir = 'raw_events_remade';
+if ( ~use_corrected_events )
+  events_subdir = 'raw_events';
+end
+
+% binned_sessions = { {'01132019'} };
+
+%%  Load sessions containing target unit ids
+
+cc_spikes = bfw_gather_spikes( 'spike_subdir', 'cc_spikes' );
+unit_id_strs = arrayfun( @(x) sprintf('unit_uuid__%d', x), target_unit_ids, 'un', 0 );
+seshs = combs( cc_spikes.labels, 'session', find(cc_spikes.labels, unit_id_strs) );
+binned_sessions = { seshs };
 
 %%
 
 for session_index = 1:numel(binned_sessions)
+% for session_index = 1
   
 shared_utils.general.progress( session_index, numel(binned_sessions) );
 
@@ -40,6 +61,7 @@ res = bfw_make_psth_for_fig1( ...
   , 'look_back', -0.5 ...
   , 'look_ahead', 0.5 ...
   , 'files_containing', select_files(:)' ...
+  , 'events_subdir', events_subdir ...
 );
 
 if ( isempty(res.gaze_counts.spikes) )
@@ -63,10 +85,12 @@ base_mask = bfw.find_sessions_before_nonsocial_object_was_added( ...
   gaze_counts.labels, find(gaze_counts.labels, 'nonsocial_object') );
 
 base_mask = setdiff( rowmask(gaze_counts.labels), base_mask );
+base_mask = find( gaze_counts.labels, 'm1', base_mask );
 
 %%  Plot psths w/ rasters
 
 do_save = true;
+smooth_each = true;
 conf = bfw.config.load();
 
 labels = gaze_counts.labels';
@@ -74,7 +98,6 @@ spikes = gaze_counts.spikes;
 rasters = gaze_counts.rasters;
 events = gaze_counts.events;
 
-smooth_each = true;
 if ( smooth_each )
   for i = 1:size(spikes, 1)
     spikes(i, :) = movmean( spikes(i, :), 10 );
@@ -96,14 +119,15 @@ p_size = 10;
 % smooth_func = @(x) smoothdata( x, 'SmoothingFactor', 0.8 );
 smooth_func = @(x) smoothdata( x, 'movmean', 5 );
 
-target_units = [ 588, 790, 2610, 1007, 1230, 1242, 322, 259, 359, 1771, 1796, 1795 ];
-target_units = arrayfun( @(x) sprintf('unit_uuid__%d', x), target_units, 'un', 0 );
+target_units = arrayfun( @(x) sprintf('unit_uuid__%d', x), target_unit_ids, 'un', 0 );
 
-% mask = fcat.mask( labels, base_mask ...
-%   , @findor, target_units ...
-% );
-
-mask = base_mask;
+if ( use_target_units )
+  mask = fcat.mask( labels, base_mask ...
+    , @findor, target_units ...
+  );
+else
+  mask = base_mask;
+end
 
 unit_I = findall( labels, {'region', 'unit_uuid', 'session'}, mask );
 t = gaze_counts.t;
@@ -117,6 +141,7 @@ for i = 1:numel(unit_I)
   pl.add_smoothing = true;
   pl.smooth_func = smooth_func;
   pl.add_errors = false;
+  pl.group_order = flip( {'nonsocial_object', 'face', 'eyes_nf', 'whole_face'} );
   
   unit_ind = unit_I{i};
   spks = spikes(unit_ind, :);
@@ -133,6 +158,10 @@ for i = 1:numel(unit_I)
     lims = get( axs(j), 'ylim' );
     lim_span = diff( lims );
     span_stp = (lim_span * raster_span) / tot_inds;
+    
+    if ( numel(hs{j}) == 4 )
+      set_default_line_colors( hs{j} );
+    end
     
     off = 0;
     for k = 1:numel(ipanel)
@@ -218,6 +247,22 @@ end
 end
 
 %%
+
+function set_default_line_colors(hs)
+
+assert( numel(hs) == 4 );
+
+orange = [252, 186, 3] / 255;
+purple = [252, 3, 244] / 255;
+blue = [3, 3, 252] / 255;
+green = [3, 252, 86] / 255;
+
+colors = flip( {green, purple, blue, orange} );
+for i = 1:numel(hs)
+  set( hs(i), 'color', colors{i} );
+end
+
+end
 
 function max_y = plot_comparing(ax, spks, t, ind_a, ind_b, p_step_size, p_size, y_off, base_color)
 

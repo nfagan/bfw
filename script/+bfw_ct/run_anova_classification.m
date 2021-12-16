@@ -131,6 +131,27 @@ add_sig_labels( roi_subset_labs, roi_subset );
 roi_counts = counts_of( roi_subset_labs, 'region', 'is_significant' );
 addsetcat( roi_prop_labels, 'factor', 'roi' );
 
+%%  prop soc vs roi selectivity
+
+is_sig_roi = (pre_roi | post_roi) & is_sig_soc;
+[region_I, region_C] = findall( anova_outs_pre.labels, 'region' );
+prop_factor_stats = nan( numel(region_I), 3 );
+
+for i = 1:numel(region_I)
+  reg1 = region_I{i};  
+  roi1 = sum( is_sig_roi(reg1) );  
+  soc1 = sum( is_sig_soc(reg1) );
+%   tot1 = numel( reg1 );
+  tot1 = sum( is_sig_soc(reg1) );
+  soc1 = tot1 - roi1;
+  
+  [~, test_p, test_chi2] = prop_test( [roi1, soc1], [tot1, tot1], false );
+  prop_factor_stats(i, :) = [test_chi2, test_p, nan];
+end
+
+prop_factor_table = array2table( prop_factor_stats, 'RowNames', region_C ...
+  , 'VariableNames', {'chi2', 'p_value', 'fdr_p_value'} );
+
 %%
 
 save_sig_soc_labels = false;
@@ -172,8 +193,14 @@ save_stats = true;
 [soc_chi_stats, soc_chi_tbl, soc_chi_labels] = ...
   chi2_prop_test_all_combinations( soc_counts, soc_prop_labels' );
 
+soc_chi_tbl_with_prop_factor = [ soc_chi_tbl; prop_factor_table ];
+soc_chi_tbl_with_prop_factor.fdr_p_value = dsp3.fdr( soc_chi_tbl_with_prop_factor.p_value );
+
 [roi_chi_stats, roi_chi_tbl, roi_chi_labels] = ...
   chi2_prop_test_all_combinations( roi_counts, roi_prop_labels' );
+
+% roi_chi_tbl_with_prop_factor = [ roi_chi_tbl; prop_factor_table ];
+% roi_chi_tbl_with_prop_factor.fdr_p_value = dsp3.fdr( roi_chi_tbl_with_prop_factor.p_value );
 
 if ( save_stats )
   save_p = fullfile( bfw.dataroot(conf), 'analyses', 'anova_class' ...
@@ -183,14 +210,14 @@ if ( save_stats )
   soc_filepath = fullfile( save_p, 'social-v-nonsocial.csv' );
   roi_filepath = fullfile( save_p, 'eyes-v-face.csv' );
   
-  writetable( soc_chi_tbl, soc_filepath, 'writerownames', true );
+  writetable( soc_chi_tbl_with_prop_factor, soc_filepath, 'writerownames', true );
   writetable( roi_chi_tbl, roi_filepath, 'writerownames', true );
 end
 
 %%  pie plot
 
-do_save = true;
-plot_counts = true;
+do_save = false;
+plot_counts = false;
 
 pl = plotlabeled.make_common();
 pl.pie_include_percentages = true;

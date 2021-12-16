@@ -21,6 +21,7 @@ outputs = shared_utils.pipeline.extract_outputs_from_results( results );
 if ( isempty(outputs) )
   outs = struct();
   outs.look_vectors = {};
+  outs.look_vectors_no_bounds_crit = {};
   outs.t = {};
   outs.labels = fcat();
 else
@@ -55,6 +56,7 @@ m_fields = bfw.m_fields( bounds_file );
 
 labels = fcat();
 look_vectors = {};
+look_vectors_no_bounds_crit = {};
 
 for i = 1:numel(m_fields)
   m_id = m_fields{i};
@@ -80,16 +82,20 @@ for i = 1:numel(m_fields)
     look_vecs = eachcell( @(x) fix_vector & degree_crit, bounds_vectors );
   end
   
+  look_vecs_no_bounds_crit = eachcell( @(x) fix_vector & degree_crit, bounds_vectors );
+  
   labs = join( bfw.struct2fcat(meta_file), fcat.create('looks_by', m_id) );
   repmat( labs, numel(look_vecs) );
   addsetcat( labs, 'roi', rois );
   append( labels, labs );
   
   look_vectors = [ look_vectors; look_vecs(:) ];
+  look_vectors_no_bounds_crit = [ look_vectors_no_bounds_crit; look_vecs_no_bounds_crit(:) ];
 end
 
 outs.labels = prune( bfw.add_monk_labels(labels) );
 outs.look_vectors = look_vectors;
+outs.look_vectors_no_bounds_crit = look_vectors_no_bounds_crit;
 outs.t = repmat( {time_file.t}, size(look_vectors) );
 
 end

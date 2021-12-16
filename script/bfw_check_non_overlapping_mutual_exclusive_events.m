@@ -1,5 +1,17 @@
 function bfw_check_non_overlapping_mutual_exclusive_events(start_inds, stop_inds, labels, mask)
 
+if ( nargin == 1 )
+  events = start_inds;
+  start_inds = bfw.event_column( events, 'start_index' );
+  stop_inds = bfw.event_column( events, 'stop_index' );
+  
+  if ( isfield(events, 'event_labels') )
+    labels = events.event_labels;
+  else
+    labels = addsetcat( fcat.from(events), 'unified_filename', events.unified_filename );
+  end
+end
+
 if ( nargin < 4 )
   mask = rowmask( start_inds );
 end

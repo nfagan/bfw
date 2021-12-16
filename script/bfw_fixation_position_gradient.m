@@ -196,6 +196,147 @@ bfw_plot_binned_position( counts, count_labels', spatial_outs ...
   , 'per_dispersion_quantile', false ...
 );
 
+%%  dispersion scatter
+
+x_edges = bfw.px2deg( spatial_outs.x_edges(1, :) );
+y_edges = bfw.px2deg( spatial_outs.y_edges(1, :) );
+[x_edges, y_edges] = meshgrid( x_edges, y_edges );
+disp_len = vecnorm( cat(3, x_edges, y_edges), 2, 3 );
+
+disp_counts = zeros( size(counts, 1), 1 );
+exclude_zeros_spikes = true;
+
+all_info = [];
+all_info_labels = fcat();
+
+for i = i:size(counts, 1)
+  shared_utils.general.progress( i, size(counts, 1) );
+  
+  one_counts = squeeze( counts(i, :, :) );
+  non_empty_counts = one_counts > 0;
+  
+  all_counts = reshape( one_counts, [], 1 );
+  all_lens = reshape( disp_len, [], 1 );
+  
+  if ( exclude_zeros_spikes )
+    is_zero = all_counts == 0;
+    all_counts(is_zero) = [];
+    all_lens(is_zero) = [];
+  end
+  
+  tmp_labs = append1( fcat, count_labels, i, numel(all_lens) );
+  all_info = [ all_info; [all_counts, all_lens] ];
+  append( all_info_labels, tmp_labs );
+  
+  assert_ispair( all_info, all_info_labels );
+  
+%   all_disp_counts = one_counts .* disp_len;
+%   all_disp_counts = one_counts ./ disp_len;
+%   non_empty_counts = non_empty_counts & disp_len > 0;
+  
+%   all_disp_counts = reshape( all_disp_counts(non_empty_counts), [], 1 );  
+%   disp_counts(i) = nanmean( all_disp_counts(:) );
+end
+
+%%  dispersion
+
+x_edges = bfw.px2deg( spatial_outs.x_edges(1, :) );
+y_edges = bfw.px2deg( spatial_outs.y_edges(1, :) );
+[x_edges, y_edges] = meshgrid( x_edges, y_edges );
+disp_len = vecnorm( cat(3, x_edges, y_edges), 2, 3 );
+
+z_counts = counts;
+for i = 1:size(z_counts, 1)
+  tmp = z_counts(i, :, :);
+  mu = nanmean( tmp );
+  sig = nanstd( tmp );
+  
+  if ( sig == 0 )
+    z_counts(i, :, :) = nan;
+  else
+    z_counts(i, :, :) = (tmp - mu) ./ sig;
+  end
+end
+
+disp_counts = zeros( size(counts, 1), 1 );
+exclude_zeros_spikes = true;
+use_z_counts = true;
+
+for i = 1:size(counts, 1)
+  shared_utils.general.progress( i, size(counts, 1) );
+  
+  if ( use_z_counts )
+    one_counts = squeeze( z_counts(i, :, :) );
+  else
+    one_counts = squeeze( counts(i, :, :) );
+  end
+  
+  if ( exclude_zeros_spikes )
+    non_empty_counts = one_counts > 0;
+  else
+    non_empty_counts = true( size(one_counts) );
+  end
+  
+  all_disp_counts = one_counts .* disp_len;
+  all_disp_counts = reshape( all_disp_counts(non_empty_counts), [], 1 );  
+  
+  disp_counts(i) = nanmean( all_disp_counts(:) );
+end
+
+%%  plot dispersion
+
+do_save = true;
+
+pl = plotlabeled.make_common();
+pl.hist_add_summary_line = true;
+pl.summary_func = @nanmedian;
+
+plt_mask = mask_func( count_labels, rowmask(count_labels) );
+plt_counts = disp_counts(plt_mask);
+plt_labels = prune( count_labels(plt_mask) );
+
+fcats = { 'region' };
+pcats = { 'roi', 'region' };
+[figs, axs, fig_I] = pl.figures( @hist, plt_counts, plt_labels, fcats, pcats );
+shared_utils.plot.match_ylims( axs );
+
+if ( do_save )
+  save_p = fullfile( bfw.dataroot(conf), 'plots/binned_position_psth/dispersion-spike_over_distance' ...
+    , dsp3.datedir );
+  for i = 1:numel(figs)
+    shared_utils.plot.fullscreen( figs(i) );
+    dsp3.req_savefig( figs(i), save_p, prune(plt_labels(fig_I{i})), [fcats, pcats] );
+  end
+end
+
+%%  Scatter dispersion 
+
+do_save = false;
+assert_ispair( all_info, all_info_labels );
+
+fcats = { 'region' };
+gcats = { 'roi' };
+pcats = { 'region' };
+
+plt_mask = mask_func( all_info_labels, rowmask(all_info_labels) );
+plt_mask = find( all_info_labels, 'bla', plt_mask );
+
+fig_I = findall( all_info_labels, fcats, plt_mask );
+
+for i = 1:numel(fig_I)
+  pl = plotlabeled.make_common();
+  pl.hist_add_summary_line = true;
+  pl.summary_func = @nanmedian;
+  
+  xs = all_info(fig_I{i}, 1);
+  ys = all_info(fig_I{i}, 2);
+  ls = all_info_labels(fig_I{i});
+  
+  [axs, ids] = pl.scatter( xs, ys, ls, gcats, pcats );
+end
+
+% fig_I = findall( 
+
 %%
 
 do_save = true;

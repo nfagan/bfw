@@ -26,7 +26,7 @@ if ( use_whole_face )
   sorted_events = bfw.sort_events( sorted_events );
 end
 
-cs_events = bfw_gather_cs_events( 'config', conf );
+cs_events = bfw_gather_cs_events( 'config', conf, 'include_labels', false, 'is_parallel', false );
 
 %%
 

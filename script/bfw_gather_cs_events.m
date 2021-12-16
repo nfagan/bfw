@@ -1,13 +1,19 @@
 function outs = bfw_gather_cs_events(varargin)
 
 defaults = bfw.get_common_make_defaults();
+defaults.include_labels = false;
 params = bfw.parsestruct( defaults, varargin );
 
 inputs = { 'cs_task_events/m1' };
 
+if ( params.include_labels )
+  inputs{end+1} = 'cs_labels/m1';
+end
+
 [~, runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
 runner.convert_to_non_saving_with_output();
 runner.get_identifier_func = @get_cs_unified_filename;
+runner.get_directory_name_func = @get_directory_name;
 
 results = runner.run( @gather, params );
 outputs = shared_utils.pipeline.extract_outputs_from_results( results );
@@ -45,27 +51,36 @@ events = vertcat( all_events{:} );
 
 end
 
+function name = get_directory_name(p)
+% remove m1/
+[~, name] = fileparts( fileparts(p) );
+end
+
 function un_filename = get_cs_unified_filename(file, ~)
 
 un_filename = file.cs_unified_filename;
 
 end
 
-function out = gather(files, ~)
+function out = gather(files, params)
 
 import shared_utils.general.*;
 
-events_file = get( files, 'm1' );
+events_file = get( files, 'cs_task_events' );
 
 events = events_file.event_times;
 event_key = events_file.event_key;
 session = events_file.cs_unified_filename(1:8);
 
-labels = fcat.create( ...
-  'session', session ...
-);
-
-repmat( labels, rows(events) );
+if ( params.include_labels )
+  labels_file = get( files, 'cs_labels' );
+  labels = addsetcat( labels_file.labels, 'session', session );
+else
+  labels = fcat.create( ...
+    'session', session ...
+  );
+  repmat( labels, rows(events) );
+end
 
 out = struct();
 out.events = events;
