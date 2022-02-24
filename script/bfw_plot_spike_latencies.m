@@ -15,6 +15,8 @@ defaults.imgauss_filter_spectra = true;
 defaults.first_trial_average = true;
 defaults.exclude_all_zero_trials = false;
 defaults.ordered_points_for_cell = false;
+defaults.n_sem_threshold = 2;
+defaults.hist_smooth_func = [];
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -40,6 +42,10 @@ else
 end
 
 [peak_ts, peak_mat] = get_peak_times( mean_spikes, time );
+cell_meets_crit = false( rows(peak_mat), 1 );
+for i = 1:rows(cell_meets_crit)
+  cell_meets_crit(i) = is_peak_above_sem( peak_mat(i, :), mean_spikes(i, :), params.n_sem_threshold );
+end
 
 if ( ~params.first_trial_average )
   peak_ts = peak_ts(:);
@@ -115,6 +121,11 @@ end
 pl = plotlabeled.make_common();
 pl.x = time;
 
+if ( ~isempty(params.hist_smooth_func) )
+  pl.smooth_func = params.hist_smooth_func;
+  pl.add_smoothing = true;
+end
+
 gcats = params.hist_gcats;
 pcats = params.hist_pcats;
 
@@ -135,7 +146,7 @@ if ( params.do_save )
   save_p = get_save_p( params, subdirs );
   
   shared_utils.plot.fullscreen( gcf );
-  dsp3.req_savefig( gcf, save_p, labs, pcats, plot_type );
+  dsp3.req_savefig( gcf, save_p, labs, csunion(pcats, gcats), plot_type );
 end
 
 end
@@ -290,9 +301,21 @@ if ( ~isempty(params.c_lims) )
   shared_utils.plot.set_clims( axs, params.c_lims );
 end
 
-anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
-  , 'remove_nonsignificant_comparisons', false ...
-);
+% anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
+%   , 'remove_nonsignificant_comparisons', false ...
+% );
+
+rois = combs( mean_labs, 'roi' );
+ttest_outs = [];
+anova_results = [];
+if ( numel(rois) == 2 )
+  ttest_outs = dsp3.ttest2( peak_ts(:), mean_labs, 'region', rois{1}, rois{2} );
+  setcat( ttest_outs.t_labels, 'roi', sprintf('%s_%s', rois{1}, rois{2}) );
+else
+  anova_results = dsp3.anova1( peak_ts(:), mean_labs, 'region', 'roi' ...
+    , 'remove_nonsignificant_comparisons', false ...
+  );
+end
 
 % anova_results = dsp3.anovan( peak_ts(:), mean_labs, params.anova_each ...
 %   , params.anova_categories ...
@@ -307,7 +330,12 @@ if ( params.do_save )
   shared_utils.plot.fullscreen( gcf );
   dsp3.req_savefig( gcf, save_p, mean_labs, pcats, plot_type );
   
-  dsp3.save_anova_outputs( anova_results, fullfile(save_p, 'stats'), pcats );
+  if ( ~isempty(anova_results) )
+    dsp3.save_anova_outputs( anova_results, fullfile(save_p, 'stats'), pcats );
+  end
+  if ( ~isempty(ttest_outs) )
+    dsp3.save_ttest2_outputs( ttest_outs, fullfile(save_p, 'stats'), pcats );
+  end
 end
 
 end
@@ -332,13 +360,32 @@ function [peak_ts, peak_mat] = get_peak_times(mean_spikes, time)
 
 [~, peak_ind] = max( mean_spikes, [], 2 );
 peak_ts = time(peak_ind);
-peak_mat = full( sparse(1:numel(peak_ind), peak_ind, true) );
+
+peak_mat = false( size(mean_spikes) );
+for i = 1:numel(peak_ind)
+  peak_mat(i, peak_ind(i)) = true;
+end
+
+% peak_mat = full( sparse(1:numel(peak_ind), peak_ind, true) );
 
 end
 
 function mask = get_mask(labels, params)
 
 mask = params.mask_func( labels, rowmask(labels) );
+
+end
+
+function tf = is_peak_above_sem(peak_vec, psth_vec, n_sems)
+
+assert( isequal(size(peak_vec), size(psth_vec)) );
+assert( nnz(peak_vec) == 1 );
+
+% sem = plotlabeled.sem( psth_vec(:) );
+sigma = std( psth_vec );
+mu = mean( psth_vec );
+% tf = psth_vec(peak_vec) >= mu + sem * n_sems;
+tf = psth_vec(peak_vec) >= mu + sigma * n_sems;
 
 end
 

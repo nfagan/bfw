@@ -23,6 +23,8 @@ defaults.zero_one_normalize = false;
 defaults.dispersion_data = [];
 defaults.collapse_units_in_dispersion_stats = false;
 defaults.per_dispersion_quantile = false;
+defaults.violin_gcats = { 'region' };
+defaults.violin_pcats = { 'roi' };
 
 params = bfw.parsestruct( defaults, varargin );
 
@@ -280,8 +282,13 @@ plot_type = 'violin';
 
 if ( strcmp(plot_type, 'violin') )
   pl = plotlabeled.make_common();
-  pl.group_order = {'bla', 'ofc', 'acc', 'dmpfc'};
-  axs = pl.violinalt( roi_means, labels, 'region', 'roi' );
+  
+  if ( ismember({'region'}, params.violin_gcats) )
+    pl.group_order = {'bla', 'ofc', 'acc', 'dmpfc'};
+  elseif ( ismember({'region'}, params.violin_pcats) )
+    pl.panel_order = {'bla', 'ofc', 'acc', 'dmpfc'};
+  end
+  axs = pl.violinalt( roi_means, labels, params.violin_gcats, params.violin_pcats );
   
 elseif ( strcmp(plot_type, 'bar') )
   pl = plotlabeled.make_common();
@@ -323,9 +330,11 @@ end
 %%
 
 anova_factors = { 'region', 'roi' };
-anova_outs = dsp3.anovan( roi_means, labels', {}, anova_factors ...
-  , 'remove_nonsignificant_comparisons', true ...
-);
+% anova_outs = dsp3.anovan( roi_means, labels', {}, anova_factors ...
+%   , 'remove_nonsignificant_comparisons', true ...
+% );
+
+anova_outs = dsp3.anovan2( roi_means, labels', {}, anova_factors );
 
 if ( params.do_save )
   shared_utils.plot.fullscreen( gcf );

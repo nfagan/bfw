@@ -18,8 +18,9 @@ if ( nargin < 2 ), conf = bfw.config.load(); end
 
 full_path = bfw.get_intermediate_directory( subdir, conf );
 
-cmd = sprintf( '!ls "%s"', full_path );
+% cmd = sprintf( '!ls "%s"', full_path );
+ls( full_path );
 
-eval( cmd );
+% eval( cmd );
 
 end

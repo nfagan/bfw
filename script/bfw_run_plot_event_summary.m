@@ -26,9 +26,30 @@ conf = bfw.set_dataroot( '~/Desktop/bfw' );
 sorted_events = shared_utils.io.fload( fullfile(bfw.dataroot(conf) ...
   , 'analyses/events/sorted_events.mat') );
 
+%%
+
 [~, transform_ind] = bfw.make_whole_face_roi( sorted_events.labels );
 sorted_events.events = sorted_events.events(transform_ind, :);
 labs = sorted_events.labels';
+
+%%
+
+[I, id_m2s] = findall( labs, 'id_m2' );
+curr_m2s = strrep( id_m2s, 'm2_', '' );
+m2_genders = bfw.monk_id_to_gender( curr_m2s );
+m2_genders = cellfun( @(x) sprintf('%s_m2', x), m2_genders, 'un', 0 );
+addcat( labs, 'gender_m2' );
+for i = 1:numel(id_m2s)
+  setcat( labs, 'gender_m2', m2_genders{i}, I{i} );
+end
+
+%%
+
+bfw_check_non_overlapping_mutual_exclusive_events( ...
+  bfw.event_column(sorted_events, 'start_index') ...
+  , bfw.event_column(sorted_events, 'stop_index') ...
+  , sorted_events.labels ...
+);
 
 %%
 
@@ -57,6 +78,7 @@ back_within_thresh = @(l, m) intersect(m, find(abs(prev_ts) <= back_thresh));
 make_ratio = false;
 nonsocial_obj_rois = {'right_nonsocial_object', 'right_nonsocial_object_eyes_nf_matched'};
 collapse_event_type = true;
+exclude_ns_obj = true;
 
 if ( make_ratio )
   possible_rois = {'eyes_nf', 'face', 'mouth' ...
@@ -70,6 +92,10 @@ base_mask_func = @(l, m) fcat.mask( l, m ...
   , @findor, possible_rois ...
   , @findnot, {'right_nonsocial_object', 'mutual', 'm2'} ...
 );
+
+if ( exclude_ns_obj )
+  base_mask_func = @(l, m) base_mask_func(l, findor(l, {'eyes_nf', 'face', 'mouth'}, m));
+end
 
 if ( make_ratio )
   base_mask_func = @(l, m) base_mask_func(l, find(l, 'exclusive_event', m));
@@ -100,12 +126,18 @@ end
 
 has_mouth = ~isempty( find(use_labs, 'mouth') );
 base_spec = { 'unified_filename', 'roi' };
+per_m2 = true;
 % base_spec = { 'roi', 'session' };
 
 if ( has_mouth )
   base_subdir = 'mouth';
 else
   base_subdir = 'non-mouth';
+end
+
+if ( per_m2 )
+  base_spec = csunion( base_spec, 'id_m2' );
+%   base_spec = csunion( base_spec, 'id_m1' );
 end
 
 if ( ismember({'unified_filename'}, base_spec) )

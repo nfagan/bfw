@@ -16,6 +16,8 @@ defaults.events_subdir = 'raw_events';
 defaults.is_already_non_overlapping = false;
 defaults.include_rng = true;
 defaults.include_rasters = false;
+defaults.preserve_output = true;
+defaults.output_directory = '';
 
 p = bfw.parsestruct( defaults, varargin );
 spike_dir = validatestring( p.spike_dir, {'spikes', 'cc_spikes'}, mfilename, 'spike_dir' );
@@ -25,8 +27,16 @@ if ( p.include_rng )
   inputs{end+1} = 'rng';
 end
 
-[params, loop_runner] = bfw.get_params_and_loop_runner( inputs, '', defaults, varargin );
-loop_runner.convert_to_non_saving_with_output();
+output_dir = '';
+if ( ~p.preserve_output )
+  output_dir = p.output_directory;
+end
+
+[params, loop_runner] = bfw.get_params_and_loop_runner( ...
+  inputs, output_dir, defaults, varargin );
+if ( params.preserve_output )
+  loop_runner.convert_to_non_saving_with_output();
+end
 
 results = loop_runner.run( @gather_spikes, params );
 outputs = [ results([results.success]).output ];

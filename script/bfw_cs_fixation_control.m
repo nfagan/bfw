@@ -81,11 +81,29 @@ for i = 1:numel(cs_I)
   end
 end
 
+%%
+
+count_labels = fcat();
+
+for i = 1:numel(cs_I)
+  shared_utils.general.progress( i, numel(cs_I) );
+  
+  match_units = find( spike_data.labels, cs_sessions{i} );
+  match_gaze_events = find( sorted_events.labels, [cs_sessions(i), {'whole_face'}] );
+  
+  if ( ~isempty(match_gaze_events) && ~isempty(match_units) )
+    for j = 1:numel(match_units)
+      append( count_labels, spike_data.labels, match_units(j) );
+    end
+  end
+end
+
+
 %%  venn with hierarchical anova
 
 use_remade = true;
-hierarch_anova_sig_cell_labels = ...
-  bfw_ct.load_significant_social_cell_labels_from_anova( conf, use_remade );
+hierarch_anova_sig_cell_labels = shared_utils.io.fload( ...
+  fullfile(bfw.dataroot, 'analyses/anova_class/sig_labels/archive/sig_soc_labels_remade.mat') );
 
 existing_units = combs( p_labels, {'unit_uuid', 'region', 'session'} );
 keep_hierarch = [];
@@ -109,13 +127,16 @@ do_save = true;
 
 pl = plotlabeled.make_common();
 pl.pie_include_percentages = true;
+pl.pie_percentage_format = '%s (%d)';
 
 plt_labels = p_labels';
 addsetcat( plt_labels, 'sig', 'sig_false' );
 setcat( plt_labels, 'sig', 'sig_true', find(ps < 0.05) );
 [props, prop_labels] = proportions_of( plt_labels, {'region'}, 'sig' );
+cts = counts_of( plt_labels, {'region'}, 'sig' );
 
-axs = pl.pie( props*1e2, prop_labels, 'sig', 'region' );
+% axs = pl.pie( props*1e2, prop_labels, 'sig', 'region' );
+axs = pl.pie( cts, prop_labels, 'sig', 'region' );
 
 if ( do_save )
   save_p = fullfile( bfw.dataroot(conf), 'plots', 'cs_fixation_control', dsp3.datedir, 'pie' );

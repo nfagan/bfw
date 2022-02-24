@@ -92,12 +92,24 @@ end
 % rois = { 'whole_face', 'eyes_nf', 'face', 'nonsocial_object_eyes_nf_matched' };
 % rois = { 'whole_face', 'eyes_nf' };
 rois = { 'whole_face', 'eyes_nf', 'nonsocial_object_whole_face_matched', 'face', 'nonsocial_object_eyes_nf_matched' };
+% rois = { {'whole_face', 'nonsocial_object_whole_face_matched'} };
+% rois = { {'eyes_nf', 'face'} };
+% rois = { {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} };
 
-% plot_types = { 'spectra' };
-% plot_types = { 'hist' };
-plot_types = { 'hist', 'spectra', 'lines' };
-only_significant_cells = [false];
+rois = { {'whole_face', 'nonsocial_object_whole_face_matched'}, {'face', 'eyes_nf'}, {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} };
+
+soc_anova_labels = bfw_ct.load_significant_social_cell_labels_from_anova( [], true );
+roi_anova_labels = bfw_ct.load_significant_roi_cell_labels_from_anova( [], true );
+
+soc_anova_ids = soc_anova_labels(find(soc_anova_labels, 'significant'), {'unit_uuid'});
+roi_anova_ids = roi_anova_labels(find(roi_anova_labels, 'significant'), {'unit_uuid'});
+
+% plot_types = { 'hist', 'spectra', 'lines' };
+plot_types = { 'hist', 'spectra' };
+only_significant_cells = false;
 one_event_per_time_windows = true;
+
+use_roi_anova_labels = true;
 
 cs = dsp3.numel_combvec( rois, plot_types, only_significant_cells ...
   , one_event_per_time_windows );
@@ -125,6 +137,12 @@ for i = 1:size(cs, 2)
   base_subdir = sprintf( '%0.2f, %0.2f', subset_t_lims(1), subset_t_lims(2) );
   base_subdir = fullfile( smooth_dir, base_subdir );
   base_subdir = fullfile( evt_dir, base_subdir );
+  
+  if ( use_roi_anova_labels )
+    sig_anova_ids = roi_anova_ids;
+  else
+    sig_anova_ids = soc_anova_ids;
+  end
 
   mask_func = @(l, m) pipe(m ...
     , @(m) fcat.mask(l, m ...
@@ -163,6 +181,11 @@ for i = 1:size(cs, 2)
     , 'first_trial_average', true ...
     , 'exclude_all_zero_trials', false ...
     , 'ordered_points_for_cell', false ...
+    , 'n_sem_threshold', 1 ...
+    , 'hist_smooth_func', @(x) smoothdata(x, 'smoothingfactor', 0.05) ...
+    , 'hist_smooth_func', @identity ...
+    , 'hist_gcats', {'roi'} ...
+    , 'hist_pcats', {'region'} ...
   );
 end
 

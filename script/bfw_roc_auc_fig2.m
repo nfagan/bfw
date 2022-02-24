@@ -127,6 +127,7 @@ auc_info = load( fullfile(bfw.dataroot, 'analyses/auc/042121/session_auc.mat') )
 session_auc = auc_info.session_auc;
 gaze_counts = struct();
 gaze_counts.t = look_back:step_size:look_ahead;
+t = look_back:step_size:look_ahead;
 
 %%  concatenate
 
@@ -138,11 +139,23 @@ auc_sig_info = cat_expanded( 1, {auc_info.auc_sig_info} );
 %%  extract subset
 
 save_subset = false;
-select_roi = 'eyes_nf_nonsocial_object_eyes_nf_matched';
+% select_roi = 'eyes_nf_nonsocial_object_eyes_nf_matched';
+select_roi = 'whole_face_nonsocial_object_whole_face_matched';
+% select_roi = 'eyes_nf_face';
 
 roi_ind = find( auc_labels, select_roi );
+subset_auc_labels = auc_labels(roi_ind);
+
+id_matrix = bfw_load_cell_id_matrix();
+[unit_I, match_rows, new_ids] = bfw.find_new_id_labels( subset_auc_labels, id_matrix );
+for i = 1:numel(unit_I)
+  setcat( subset_auc_labels, 'unit_uuid', sprintf('unit_uuid__%s', new_ids{i}), unit_I{i} );
+end
+
 subset_auc = auc(roi_ind, :);
-subset_auc_labels = gather( auc_labels(roi_ind) );
+subset_auc_labels = gather( subset_auc_labels );
+
+sum( all(isnan(subset_auc), 2) )
 
 subset_info = struct();
 subset_info.t = t;
@@ -154,6 +167,17 @@ if ( save_subset )
   shared_utils.io.require_dir( save_p );
   save( fullfile(save_p, 'subset_auc.mat'), 'subset_info' );
 end
+
+%%
+
+mats = shared_utils.io.findmat( 'D:\data\bfw\analyses\auc\072121' );
+eye_face = shared_utils.io.fload( mats{1} );
+eye_obj = shared_utils.io.fload( mats{2} );
+face_obj = shared_utils.io.fload( mats{3} );
+
+sum( all(isnan(eye_face.auc), 2) )
+sum( all(isnan(eye_obj.auc), 2) )
+sum( all(isnan(face_obj.auc), 2) )
 
 %%  Plot heat maps
 
@@ -169,7 +193,10 @@ is_sig = [ plt_auc_sig_info.sig_neg ] | [ plt_auc_sig_info.sig_pos ];
 
 figs_each = { 'roi' };
 
-plt_mask = get_base_mask( plt_auc_labels, false );
+only_remove_obj = true;  % was false
+plt_mask = get_base_mask( plt_auc_labels, only_remove_obj );
+% plt_mask = find( plt_auc_labels, 'eyes_nf_face', plt_mask );
+
 [fig_auc_labels, fig_I] = keepeach( plt_auc_labels', figs_each, plt_mask );
 f = figure(1);
 
@@ -195,6 +222,12 @@ pre_post_prop_p_labels = fcat();
 
 pair_sig_stats = cell( numel(fig_I), 1 );
 pair_sig_labs = cell( size(pair_sig_stats) );
+
+face = uint8( [234, 128, 39] );
+obj = uint8( [105, 188, 69] );
+eyes = uint8( [55, 86, 165] );
+non_eye_face = uint8( [143, 77, 157] );
+cmap = bfw_make_color_map( obj, face, 128 );
 
 for i = 1:numel(fig_I)
   clf();
@@ -272,7 +305,11 @@ for i = 1:numel(fig_I)
     shared_utils.plot.set_xlims( ax, [min(t), max(t)] );
     shared_utils.plot.set_ylims( ax, [1, numel(sig_p_ind)] );
     
-    colormap( 'jet' );
+    if ( true )
+      colormap( cmap );
+    else
+      colormap( 'jet' );
+    end
     colorbar;
     
     gt_first_ts{j} = first_sig_t(first_sig_auc_val >= 0.5);
@@ -368,8 +405,8 @@ assert_ispair( pair_sig_stats, pair_sig_labs );
 do_save = true;
 
 % stats_type = 'gt_lt';
-stats_type = 'pre_post';
-% stats_type = 'total';
+% stats_type = 'pre_post';
+stats_type = 'total';
 
 assert_ispair( gt_lt_counts, gt_lt_labels );
 assert_ispair( prop_p_stats, prop_p_labels );
@@ -417,6 +454,12 @@ if ( do_save )
   save_p = fullfile( bfw.dataroot(conf), 'plots/auc', dsp3.datedir, stat_prefix );
   dsp3.req_writetable( t, save_p, prop_p_labels, row_cats, 'within_region__' );
   dsp3.req_writetable( t2, save_p, chi2_labels, row_cats, 'across_regions__' );
+  
+  for i = 1:numel(chi2_stats)
+    roi_l = prune( chi2_labels(i) );
+    dsp3.req_writetable( ...
+      chi2_stats(i).labeled_frequency_table, save_p, roi_l, 'roi', 'frequencies__' );
+  end
 end
 
 %%  Plot average AUC traces
@@ -429,7 +472,8 @@ plt_auc_sig_info = auc_sig_info;
 t = gaze_counts.t;
 is_sig = [ plt_auc_sig_info.sig_neg ] | [ plt_auc_sig_info.sig_pos ];
 
-plt_mask = get_base_mask( plt_auc_labels, false );
+plt_mask = get_base_mask( plt_auc_labels, true );
+plt_mask = find( plt_auc_labels, 'eyes_nf_face', plt_mask );
 plt_mask = intersect( plt_mask, find(is_sig) );
 
 plt_auc = plt_auc(plt_mask, :);
@@ -467,7 +511,8 @@ plt_auc_labels = auc_labels';
 t = gaze_counts.t;
 [is_sig, is_neg] = arrayfun( @(x) sorting_index_value(x), auc_sig_info );
 
-plt_mask = get_base_mask( plt_auc_labels, false );
+plt_mask = get_base_mask( plt_auc_labels, true );
+plt_mask = find( plt_auc_labels, 'eyes_nf_face', plt_mask );
 plt_mask = intersect( plt_mask, find(is_sig) );
 
 fig_I = findall( plt_auc_labels, {'roi', 'region'}, plt_mask );
@@ -672,7 +717,9 @@ base_mask = setdiff( rowmask(labels), base_mask );
 end
 
 function rois = ns_obj_roi_labels()
-rois = { 'nonsocial_object', 'nonsocial_object_eyes_nf_matched', 'nonsocial_object_whole_face_matched' };
+rois = { 'nonsocial_object', 'nonsocial_object_eyes_nf_matched', 'nonsocial_object_whole_face_matched' ...
+  , 'whole_face_nonsocial_object_whole_face_matched', 'eyes_nf_nonsocial_object_eyes_nf_matched' ...
+};
 end
 
 function gaze_counts = add_whole_face_roi(gaze_counts)

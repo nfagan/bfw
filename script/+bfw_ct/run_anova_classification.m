@@ -45,6 +45,14 @@ load_p = fullfile( load_p, 'gaze_counts_remade.mat' );
 
 gaze_counts = shared_utils.io.fload( load_p );
 
+new_cell_ids = bfw_load_cell_id_matrix();
+[unit_I, match_inds, new_ids] = bfw.find_new_id_labels( gaze_counts.labels, new_cell_ids );
+new_ids = cellfun( @(x) sprintf('unit_uuid__%s', x), new_ids, 'un', 0 );
+
+for i = 1:numel(unit_I)
+  setcat( gaze_counts.labels, 'unit_uuid', new_ids{i}, unit_I{i} );
+end
+
 %%
 
 counts = gaze_counts;
@@ -154,8 +162,8 @@ prop_factor_table = array2table( prop_factor_stats, 'RowNames', region_C ...
 
 %%
 
-save_sig_soc_labels = false;
-save_sig_roi_labels = false;
+save_sig_soc_labels = true;
+save_sig_roi_labels = true;
 
 if ( save_sig_soc_labels )
   save_file_path = fullfile( bfw.dataroot(conf), 'analyses' ...

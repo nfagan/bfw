@@ -188,8 +188,8 @@ bhv_info = basic_behavior_summary( events, labels, mask, base_spec );
 subdir = 'basic_behavior';
 
 plot_info.fcats = intersect( {'m1_m2', 'exclusive_monk_id'}, base_spec );
-plot_info.pcats = {};
-plot_info.gcats = intersect( {'event_type', 'looks_by'}, base_spec );
+plot_info.pcats = intersect( {'id_m1'}, base_spec );
+plot_info.gcats = intersect( {'event_type', 'looks_by', 'id_m2'}, base_spec );
 plot_info.xcats = { 'roi' };
 
 % nfix
@@ -198,6 +198,7 @@ plot_info.subdir = fullfile( subdir, plot_info.data_type );
 
 args = {bhv_info.counts, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
 
+plot_line_hists( args{:} );
 plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
@@ -212,6 +213,7 @@ init_plot_info.subdir = fullfile( subdir, init_plot_info.data_type );
 init_plot_info.gcats = union( plot_info.gcats, {'initiator'} );
 
 args = {init_props, init_labels, rowmask(init_labels), init_plot_info, params};
+plot_line_hists( args{:} );
 plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
@@ -226,6 +228,7 @@ term_plot_info.subdir = fullfile( subdir, term_plot_info.data_type );
 term_plot_info.gcats = union( plot_info.gcats, {'terminator'} );
 
 args = {term_props, term_labels, rowmask(term_labels), term_plot_info, params};
+plot_line_hists( args{:} );
 plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
@@ -238,6 +241,7 @@ plot_info.data_type = 'Duration';
 plot_info.subdir = fullfile( subdir, plot_info.data_type );
 
 args = {bhv_info.duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
+plot_line_hists( args{:} );
 plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
@@ -251,6 +255,7 @@ plot_info.data_type = 'Total-duration';
 plot_info.subdir = fullfile( subdir, plot_info.data_type );
 
 args = {bhv_info.total_duration, bhv_info.labels, rowmask(bhv_info.labels), plot_info, params};
+plot_line_hists( args{:} );
 plot_boxplot( args{:} );
 plot_bar( args{:} );
 plot_violin( args{:} );
@@ -281,6 +286,10 @@ fcats = plot_info.fcats;
 pcats = plot_info.pcats;
 gcats = plot_info.gcats;
 xcats = plot_info.xcats;
+
+xcats = setdiff( xcats, 'event_type' );
+gcats = setdiff( gcats, 'event_type' );
+pcats = setdiff( pcats, 'event_type' );
 
 pcats = union( pcats, fcats );
 
@@ -361,6 +370,66 @@ for i = 1:numel(figs)
   if ( params.do_save )
     shared_utils.plot.fullscreen( figs{i} );
     use_subdir = fullfile( plot_info.subdir, 'bars' );
+    save_p = bfw.behav_summary_data_path( 'behavior', use_subdir, params );
+    dsp3.req_savefig( figs{i}, save_p, labs, [fcats, pcats, gcats], params.prefix );
+  end
+end
+
+end
+
+function plot_line_hists(data, labels, mask, plot_info, params)
+
+fcats = plot_info.fcats;
+pcats = plot_info.pcats;
+gcats = plot_info.gcats;
+
+pcats = union( pcats, fcats );
+gcats = union( gcats, plot_info.xcats );
+
+pcats = { 'roi' };
+gcats = { 'id_m2' };
+
+mn = min( data(:) );
+mx = max( data(:) );
+bins = linspace( mn, mx, 100 );
+
+[hist_labs, all_I] = keepeach( labels', unique([fcats, pcats, gcats]), mask );
+lines = zeros( numel(all_I), numel(bins) );
+
+for i = 1:numel(all_I)
+  h = hist( data(all_I{i}), bins );
+  h = smoothdata( h, 'gaussian', 20 );
+  lines(i, :) = h;
+end
+
+fig_I = findall_or_one( hist_labs, fcats );
+figs = cell( size(fig_I) );
+all_axs = cell( size(fig_I) );
+
+for i = 1:numel(fig_I)
+  figs{i} = figure( i );
+  dat = lines(fig_I{i}, :);
+  labs = prune( hist_labs(fig_I{i}) );
+  
+  pl = plotlabeled.make_common();
+  pl.x = bins;
+  pl.x_order = params.x_order;
+  
+  pl.fig = figs{i};
+  axs = pl.lines( dat, labs, gcats, pcats );  
+  ylabel( axs(1), plot_info.data_type );
+  all_axs{i} = axs;
+end
+
+all_axs = vertcat( all_axs{:} );
+shared_utils.plot.match_ylims( all_axs );
+
+for i = 1:numel(figs)
+  labs = prune( labels(fig_I{i}) );
+  
+  if ( params.do_save )
+    shared_utils.plot.fullscreen( figs{i} );
+    use_subdir = fullfile( plot_info.subdir, 'hist_lines' );
     save_p = bfw.behav_summary_data_path( 'behavior', use_subdir, params );
     dsp3.req_savefig( figs{i}, save_p, labs, [fcats, pcats, gcats], params.prefix );
   end
@@ -465,25 +534,29 @@ for i = 1:numel(roi_combs)
   store_sr_outs{i} = sr_outs;
 end
 
-ps = cellfun( @(x) cellfun(@(y) y.p, x.sr_tables), store_sr_outs );
-fdr_ps = dsp3.fdr( ps );
-p_stp = 1;
+try
+  ps = cellfun( @(x) cellfun(@(y) y.p, x.sr_tables), store_sr_outs );
+  fdr_ps = dsp3.fdr( ps );
+  p_stp = 1;
 
-for i = 1:numel(store_sr_outs)
-  for j = 1:numel(store_sr_outs{i}.sr_tables)
-    store_sr_outs{i}.sr_tables{j}.fdr_p = fdr_ps(p_stp);
-    p_stp = p_stp + 1;
-  end
-end
-
-if ( params.do_save )
-  stat_subdir = fullfile( plot_info.subdir, 'stats' );
-  save_p = bfw.behav_summary_data_path( 'behavior', stat_subdir, params );
-  
   for i = 1:numel(store_sr_outs)
-    dsp3.save_signrank1_outputs( store_sr_outs{i}, save_p, union(total_spec, each) );
+    for j = 1:numel(store_sr_outs{i}.sr_tables)
+      store_sr_outs{i}.sr_tables{j}.fdr_p = fdr_ps(p_stp);
+      p_stp = p_stp + 1;
+    end
   end
-end  
+
+  if ( params.do_save )
+    stat_subdir = fullfile( plot_info.subdir, 'stats' );
+    save_p = bfw.behav_summary_data_path( 'behavior', stat_subdir, params );
+
+    for i = 1:numel(store_sr_outs)
+      dsp3.save_signrank1_outputs( store_sr_outs{i}, save_p, union(total_spec, each) );
+    end
+  end  
+catch err
+  warning( err.message );
+end
 
 end
 
