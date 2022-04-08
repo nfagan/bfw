@@ -96,7 +96,8 @@ rois = { 'whole_face', 'eyes_nf', 'nonsocial_object_whole_face_matched', 'face',
 % rois = { {'eyes_nf', 'face'} };
 % rois = { {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} };
 
-rois = { {'whole_face', 'nonsocial_object_whole_face_matched'}, {'face', 'eyes_nf'}, {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} };
+% roi pairs
+% rois = { {'whole_face', 'nonsocial_object_whole_face_matched'}, {'face', 'eyes_nf'}, {'eyes_nf', 'nonsocial_object_eyes_nf_matched'} };
 
 soc_anova_labels = bfw_ct.load_significant_social_cell_labels_from_anova( [], true );
 roi_anova_labels = bfw_ct.load_significant_roi_cell_labels_from_anova( [], true );

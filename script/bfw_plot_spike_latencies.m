@@ -301,17 +301,25 @@ if ( ~isempty(params.c_lims) )
   shared_utils.plot.set_clims( axs, params.c_lims );
 end
 
-% anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
-%   , 'remove_nonsignificant_comparisons', false ...
-% );
 
 rois = combs( mean_labs, 'roi' );
 ttest_outs = [];
+rs_outs = [];
 anova_results = [];
+
+compare_regions = true;
+if ( compare_regions )
+  anova_results = dsp3.anova1( peak_ts(:), mean_labs, params.target_categories, 'region' ...
+    , 'remove_nonsignificant_comparisons', false ...
+  );
+end
+
 if ( numel(rois) == 2 )
   ttest_outs = dsp3.ttest2( peak_ts(:), mean_labs, 'region', rois{1}, rois{2} );
   setcat( ttest_outs.t_labels, 'roi', sprintf('%s_%s', rois{1}, rois{2}) );
-else
+  rs_outs = dsp3.ranksum( peak_ts(:), mean_labs, 'region', rois{1}, rois{2} );
+  setcat( rs_outs.rs_labels, 'roi', sprintf('%s_%s', rois{1}, rois{2}) );
+elseif ( ~compare_regions )
   anova_results = dsp3.anova1( peak_ts(:), mean_labs, 'region', 'roi' ...
     , 'remove_nonsignificant_comparisons', false ...
   );
@@ -335,6 +343,9 @@ if ( params.do_save )
   end
   if ( ~isempty(ttest_outs) )
     dsp3.save_ttest2_outputs( ttest_outs, fullfile(save_p, 'stats'), pcats );
+  end
+  if ( ~isempty(rs_outs) )
+    dsp3.save_ranksum_outputs( rs_outs, fullfile(save_p, 'stats'), pcats );
   end
 end
 

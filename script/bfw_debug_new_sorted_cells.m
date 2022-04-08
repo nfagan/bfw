@@ -1,104 +1,63 @@
-spktimes = {spike_data.times};
-dates = {spike_data.date};
-regions = {spike_data.region};
-uuid = {spike_data.uuid};
-uuid_nums = arrayfun( @identity, 1:numel(uuid), 'un', 0 );
+%%  load
 
-%%
+solo_evts = shared_utils.io.fload( 'C:\data\bfw\public\interactive_events\interactive_solo_event_times.mat' );
+join_evts = shared_utils.io.fload( 'C:\data\bfw\public\interactive_events\interactive_event_times.mat' );
+src_data = shared_utils.io.fload( 'C:\Users\nick\Downloads\cc_data.mat' );
 
-pg_data = load( 'C:\Users\nick\Downloads\sorted_neural_data_social_gaze.mat' );
-
-%%
-
-f_regions = categorical( [dates(:), regions(:)] );
-[dates_regs, ~, ic] = unique( f_regions, 'rows' );
-reg_I = groupi( ic );
-
-src_data = [];
-
-for i = 1:numel(reg_I)  
-  date = char( dates_regs(i, 1) );
-  reg = char( dates_regs(i, 2) );
-  
-  ri = reg_I{i};
-    
-  spk_inds = cellfun( @(x) ceil(x * 40e3), spktimes(ri), 'un', 0 );
-  spk_channel = cellfun( @(x) ones(size(x)), spk_inds, 'un', 0 );
-  spk_unit_num = arrayfun( @(x, y) repmat(y, size(x{1})), spk_inds(:)', 1:numel(ri), 'un', 0 );
-  % 1: channel
-  % 2: spike time
-  % 3: unit number
-  spk_inds = horzcat( spk_inds{:} );
-  spk_channel = horzcat( spk_channel{:} );
-  spk_unit_num = horzcat( spk_unit_num{:} );
-  
-  s = struct();
-  s.filename = date;
-  s.region = reg;
-  s.n_units = numel( ri );
-  s.uuid = cat( 2, uuid_nums{ri} );
-  s.spikeindices = [spk_channel; spk_inds; spk_unit_num];
-  s.maxchn = ones( size(s.uuid) );
-  s.validity = ones( size(s.uuid) );
-  
-  if ( i == 1 )
-    src_data = s;
-  else
-    src_data(end+1) = s;
-  end
-end
-
-%%
-
-solo_evts = load( 'C:\data\bfw\public\interactive_events\interactive_solo_event_times' );
-solo_evts = solo_evts.(char(fieldnames(solo_evts)));
-join_evts = load( 'C:\data\bfw\public\interactive_events\interactive_event_times' );
-join_evts = join_evts.(char(fieldnames(join_evts)));
+%%  reformat
 
 evt_labels = [ addsetcat(solo_evts.event_labels', 'roi', 'eyes'); join_evts.labels ];
 evt_times = [ solo_evts.events(:, 1); join_evts.events ];
+rmcat( evt_labels, {'region', 'cc-unit-index', 'cc-uuid'} );
 
-src_data = load( 'C:\Users\nick\Downloads\cc_data.mat' );
-src_data = src_data.(char(fieldnames(src_data)));
 [spike_times, spike_labels, spike_categories] = linearize_spike_times( src_data, 40e3 );
 spk_labels = fcat.from( spike_labels, spike_categories );
 
-%%
+%%  compute psth
 
 [evt_I, evt_C] = findall( evt_labels, 'session' );
 spk_I = bfw.find_combinations( spk_labels, evt_C );
 
-[psth, t] = bfw.event_psth( evt_times, spike_times, evt_I, spk_I, -1.05, 1.05, 0.01 );
+bin_width = 0.01;
+min_t = -1.0;
+max_t = 1.0;
+[psth, t] = bfw.event_psth( evt_times, spike_times, evt_I, spk_I, min_t, max_t, bin_width );
 psth_labels = bfw.event_psth_labels( evt_labels, spk_labels, evt_I, spk_I );
 
 psth = vertcat( psth{:} );
 psth_labels = vertcat( fcat, psth_labels{:} );
 assert_ispair( psth, psth_labels );
 
-%%
-
 smooth_psth = convn( psth, rectwin(10)', 'valid' );
+smooth_t = -1:bin_width:1;
 
-%%
+%%  ranksum test
 
 test_each = { 'uuid', 'initiator', 'follower' };
 [test_labs, test_I] = keepeach( psth_labels', test_each );
-
-is_sig = false( numel(test_I), 1 );
-test_psth = smooth_psth;
 
 i_solo = find_for_each( psth_labels, test_I, 'solo-event' );
 i_join = find_for_each( psth_labels, test_I, 'joint-event' );
 
 ps = ranksum_matrix( smooth_psth, i_solo, i_join );
 
-%%
-
 is_sig = false( size(ps, 1), 1 );
+t_mask = smooth_t >= 0 & smooth_t < 0.5;
+% t_mask = true( 1, size(psth, 2) );
+
 for i = 1:size(ps, 1)
-  [~, dur] = shared_utils.logical.find_islands( ps(i, :) < 0.05 );
+  [~, dur] = shared_utils.logical.find_islands( ps(i, t_mask) < 0.05 );
   is_sig(i) = any( dur >= 5 );
 end
+
+%%  prop sig
+
+[prop_labs, prop_I] = keepeach( test_labs', {'region', 'initiator', 'follower'} );
+props = cellfun( @(x) pnz(is_sig(x)), prop_I );
+cts = cellfun( @(x) sum(is_sig(x)), prop_I );
+
+pl = plotlabeled.make_common();
+axs = pl.bar( props, prop_labs, {'initiator', 'follower'}, 'region', 'roi' );
 
 %%
 
