@@ -1,4 +1,4 @@
-function psth_labels = event_psth_labels(evt_labels, spike_labels, evt_I, spk_I)
+function psth_labels = event_psth_labels(evt_labels, spike_labels, evt_I, spk_I, concat)
 
 assert( numel(evt_I) == numel(spk_I) );
 psth_labels = cell( size(evt_I) );
@@ -15,6 +15,10 @@ parfor i = 1:numel(evt_I)
   end
   
   psth_labels{i} = sub_labels;
+end
+
+if ( concat )
+  psth_labels = vertcat( fcat, psth_labels{:} );
 end
 
 end

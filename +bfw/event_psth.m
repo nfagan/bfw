@@ -1,4 +1,4 @@
-function [psth_matrix, t] = event_psth(evt_start_ts, spike_times, evt_I, spk_I, min_t, max_t, bin_width)
+function [psth_matrix, t] = event_psth(evt_start_ts, spike_times, evt_I, spk_I, min_t, max_t, bin_width, varargin)
 
 %   EVENT_PSTH -- PSTH for event and spike subsets.
 %
@@ -24,6 +24,10 @@ function [psth_matrix, t] = event_psth(evt_start_ts, spike_times, evt_I, spk_I, 
 %
 %     See also bfw.trial_psth
 
+defaults = struct();
+defaults.concatenate = false;
+params = shared_utils.general.parsestruct( defaults, varargin );
+
 assert( numel(evt_I) == numel(spk_I) );
 psth_matrix = cell( size(evt_I) );
 t = cell( size(psth_matrix) );
@@ -48,6 +52,15 @@ parfor i = 1:numel(evt_I)
   
   psth_matrix{i} = sub_psth;
   t{i} = bin_t;
+end
+
+if ( params.concatenate )
+  psth_matrix = vertcat( psth_matrix{:} );
+  if ( ~isempty(t) )
+    t = t{1};
+  else
+    t = [];
+  end
 end
 
 end
