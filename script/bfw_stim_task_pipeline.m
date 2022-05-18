@@ -64,7 +64,8 @@ bfw.make_binned_aligned_samples( params );
 
 %%  events
 
-bfw_events_pipeline( params );
+% bfw_events_pipeline( params );
+bfw_stim_task_make_events;
 
 end
 
