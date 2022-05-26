@@ -1,7 +1,8 @@
+repadd( 'chronux', true );
+repadd( 'bfw/script' );
+
 if ( isempty(gcp('nocreate')) )
   parpool( feature('numcores') );
-  repadd( 'chronux', true );
-  repadd( 'bfw/script' );
 end
 
 conf = bfw.config.load();
@@ -11,7 +12,7 @@ conf = bfw.config.load();
 lfp_p = bfw.gid( 'lfp', conf );
 spk_p = bfw.gid( 'cc_spikes', conf );
 
-base_dst_p = bfw.gid( 'sfcoherence' );
+base_dst_p = bfw.gid( 'sfcoherence', conf );
 
 lfp_files = shared_utils.io.findmat( lfp_p );
 [ps, exists] = bfw.match_files( lfp_files ...
@@ -29,7 +30,7 @@ no_nans = @(C) ~squeeze( any(any(isnan(C), 3), 2) );
 not_all_nans = @(C) ~squeeze( all(all(isnan(C), 3), 2) );
 
 for i = 1:size(to_process, 1)
-  fprintf( '\n %d of %d', i, numel(to_process) );
+  fprintf( '\n %d of %d', i, size(to_process, 1) );
   
   ps = to_process(i, :);
   lfp_file = bfw.load_linked( ps{1} );
@@ -79,7 +80,7 @@ for i = 1:size(to_process, 1)
     if ( 1 )
       dst_file_path = fullfile( base_dst_p, rois{j}, lfp_file.unified_filename );
       shared_utils.io.require_dir( fileparts(dst_file_path) );
-      save( 'dsst_file', dst_file_path );
+      save( dst_file_path, 'dst_file' );
     end
   end
   
