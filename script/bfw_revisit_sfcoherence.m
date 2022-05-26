@@ -65,6 +65,10 @@ for i = 1:size(to_process, 1)
     fprintf( '\n\t %d of %d', j, numel(rois) );
     
     event_mask = find( event_labs, rois{j} );
+    if ( isempty(event_mask) )
+      continue
+    end
+    
     subset_event_ts = event_ts(event_mask);
     [coh, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
       , 'f_lims', [0, 85] ...
@@ -75,10 +79,10 @@ for i = 1:size(to_process, 1)
     labs = make_labels( spike_file.data, lfp_labels, bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
     coh = vertcat( coh{:} );    
     assert_ispair( coh, labs );
-    dst_file = make_file( coh, labs, f, t, info, lfp_file.unified_filename );
+    dst_file = make_file( coh, labs, f, t, info, meta_file.unified_filename );
     
     if ( 1 )
-      dst_file_path = fullfile( base_dst_p, rois{j}, lfp_file.unified_filename );
+      dst_file_path = fullfile( base_dst_p, rois{j}, meta_file.unified_filename );
       shared_utils.io.require_dir( fileparts(dst_file_path) );
       save( dst_file_path, 'dst_file' );
     end
