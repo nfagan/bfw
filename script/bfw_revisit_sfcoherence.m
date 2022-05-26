@@ -28,7 +28,7 @@ rois = { 'eyes_nf', 'face', 'right_nonsocial_object', 'right_nonsocial_object_ey
 no_nans = @(C) ~squeeze( any(any(isnan(C), 3), 2) );
 not_all_nans = @(C) ~squeeze( all(all(isnan(C), 3), 2) );
 
-parfor i = 1:size(to_process, 1)
+for i = 1:size(to_process, 1)
   fprintf( '\n %d of %d', i, size(to_process, 1) );
   
   ps = to_process(i, :);
