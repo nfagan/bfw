@@ -24,6 +24,8 @@ defaults.chronux_params = struct( 'Fs', 1e3, 'tapers', [1.5, 2] );
 
 defaults.keep_func = @identity_keep_func;
 
+defaults.verbose = false;
+
 end
 
 function [lfp_ind, spike_ind] = identity_keep_func(lfp_data, lfp_labels ...

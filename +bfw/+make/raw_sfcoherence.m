@@ -3,16 +3,17 @@ function coh_file = raw_sfcoherence(files, varargin)
 defaults = bfw.make.defaults.raw_sfcoherence();
 params = bfw.parsestruct( defaults, varargin );
 
-bfw.validatefiles( files, {'lfp', 'spikes', params.events_subdir} );
+bfw.validatefiles( files, {'lfp', 'cc_spikes', params.events_subdir} );
 files = shared_utils.general.copy( files );
+files('spikes') = files('cc_spikes');
 
 lfp_file = files('lfp');
-spike_file = files('spikes');
+spike_file = files('cc_spikes');
 meta_file = files('meta');
 events_file = files(params.events_subdir);
 
 if ( spike_file.is_link )
-  files('spikes') = load_linked_file( spike_file, 'spike_subdir', 'spikes', params );
+  files('cc_spikes') = load_linked_file( spike_file, 'spike_subdir', 'cc_spikes', params );
 end
 
 if ( lfp_file.is_link )
@@ -69,6 +70,10 @@ freqs = [];
 keep_comb = true( n_combs, 1 );
 
 for i = 1:n_combs  
+  if ( params.verbose )
+    fprintf( '\n %d of %d', i, n_combs );
+  end
+  
   lfp_index = lfp_I{index_combinations(1, i)};
   spike_index = spike_I{index_combinations(2, i)};
   
