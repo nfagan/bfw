@@ -22,7 +22,7 @@ lfp_files = shared_utils.io.findmat( lfp_p );
 );
 
 to_process = ps(all(exists, 2), :);
-to_process = to_process(1, :);
+to_process = to_process(1:4, :);
 
 rois = { 'eyes_nf', 'face', 'right_nonsocial_object', 'right_nonsocial_object_eyes_nf_matched' };
 
