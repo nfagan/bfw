@@ -22,14 +22,13 @@ lfp_files = shared_utils.io.findmat( lfp_p );
 );
 
 to_process = ps(all(exists, 2), :);
-to_process = to_process(1:4, :);
 
 rois = { 'eyes_nf', 'face', 'right_nonsocial_object', 'right_nonsocial_object_eyes_nf_matched' };
 
 no_nans = @(C) ~squeeze( any(any(isnan(C), 3), 2) );
 not_all_nans = @(C) ~squeeze( all(all(isnan(C), 3), 2) );
 
-for i = 1:size(to_process, 1)
+parfor i = 1:size(to_process, 1)
   fprintf( '\n %d of %d', i, size(to_process, 1) );
   
   ps = to_process(i, :);
@@ -84,7 +83,7 @@ for i = 1:size(to_process, 1)
     if ( 1 )
       dst_file_path = fullfile( base_dst_p, rois{j}, meta_file.unified_filename );
       shared_utils.io.require_dir( fileparts(dst_file_path) );
-      save( dst_file_path, 'dst_file' );
+      shared_utils.io.psave( dst_file_path, dst_file );
     end
   end
   
