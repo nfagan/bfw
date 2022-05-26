@@ -9,6 +9,7 @@ defaults.chronux_params = struct( 'Fs', 1e3, 'tapers', [1.5, 2] );
 defaults.verbose = false;
 defaults.f_lims = [-inf, inf];
 defaults.keep_if = @(x) true(size(x, 1), 1);
+defaults.single_precision = false;
 
 params = shared_utils.general.parsestruct( defaults, varargin );
 
@@ -18,7 +19,7 @@ cohs = cell( size(pairs, 1), 1 );
 freqs = cell( size(cohs) );
 inds = cell( size(cohs) );
 
-for i = 1:size(pairs, 1)
+parfor i = 1:size(pairs, 1)
   if ( params.verbose )
     fprintf( '\n %d of %d', i, size(pairs, 1) );
   end
@@ -48,6 +49,10 @@ for i = 1:size(pairs, 1)
   keep_ind = find( params.keep_if(coh) );
   coh = coh(keep_ind, :, :);
   inds{i} = keep_ind;
+  
+  if ( params.single_precision )
+    coh = single( coh );
+  end
   
   cohs{i} = coh;
   freqs{i} = f;

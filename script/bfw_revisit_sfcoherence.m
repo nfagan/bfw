@@ -1,3 +1,11 @@
+if ( isempty(gcp('nocreate')) )
+  parpool( feature('numcores') );
+end
+
+conf = bfw.config.load();
+
+%%
+
 lfp_p = bfw.gid( 'lfp', conf );
 spk_p = bfw.gid( 'cc_spikes', conf );
 
@@ -19,6 +27,8 @@ no_nans = @(C) ~squeeze( any(any(isnan(C), 3), 2) );
 not_all_nans = @(C) ~squeeze( all(all(isnan(C), 3), 2) );
 
 for i = 1:size(to_process, 1)
+  fprintf( '\n %d of %d', i, numel(to_process) );
+  
   ps = to_process(i, :);
   lfp_file = bfw.load_linked( ps{1} );
   spike_file = bfw.load_linked( ps{2} );
@@ -49,17 +59,26 @@ for i = 1:size(to_process, 1)
   event_ts = bfw.event_column( events_file, 'start_time' );
   
   for j = 1:numel(rois)
+    fprintf( '\n\t %d of %d', j, numel(rois) );
+    
     event_mask = find( event_labs, rois{j} );
     subset_event_ts = event_ts(event_mask);
     [coh, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
       , 'f_lims', [0, 85] ...
       , 'keep_if', no_nans ...
+      , 'single_precision', true ...
     );
     
     labs = make_labels( spike_file.data, lfp_labels, bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
     coh = vertcat( coh{:} );    
     assert_ispair( coh, labs );
-    dst_file = make_file( coh, labs, f, t, info, lfp_file.unified_filename );    
+    dst_file = make_file( coh, labs, f, t, info, lfp_file.unified_filename );
+    
+    if ( 1 )
+      dst_file_path = fullfile( base_dst_p, rois{j}, lfp_file.unified_filename );
+      shared_utils.io.require_dir( fileparts(dst_file_path) );
+      save( 'dsst_file', dst_file_path );
+    end
   end
   
 end
