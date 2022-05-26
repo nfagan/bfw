@@ -1,5 +1,7 @@
 if ( isempty(gcp('nocreate')) )
   parpool( feature('numcores') );
+  repadd( 'chronux', true );
+  repadd( 'bfw/script' );
 end
 
 conf = bfw.config.load();
