@@ -1,4 +1,4 @@
-function [cohs, freqs, t, info] = sfcoherence(spikes, lfp, events, pairs, varargin)
+function [cohs, phis, freqs, t, info] = sfcoherence(spikes, lfp, events, pairs, varargin)
 
 defaults.min_t = -0.5;
 defaults.max_t = 0.5;
@@ -16,6 +16,7 @@ params = shared_utils.general.parsestruct( defaults, varargin );
 t = params.min_t:params.bin_step:params.max_t;
 
 cohs = cell( size(pairs, 1), 1 );
+phis = cell( size(cohs) );
 freqs = cell( size(cohs) );
 inds = cell( size(cohs) );
 
@@ -35,26 +36,33 @@ parfor i = 1:size(pairs, 1)
     aligned_lfp = align_lfp_window( channel, t0, params );
     aligned_spikes = align_spikes( unit, t0, t1 );    
     
-    [C,~,~,~,~,f] = coherencycpt( aligned_lfp', aligned_spikes, params.chronux_params );
+    [C,P,~,~,~,f] = coherencycpt( aligned_lfp', aligned_spikes, params.chronux_params );
     f_ind = f >= params.f_lims(1) & f <= params.f_lims(2);
     C = C(f_ind, :);
+    P = P(f_ind, :);
     f = f(f_ind);
     
     if ( j == 1 )
       coh = nan( size(C, 2), size(C, 1), numel(t) );
+      phi = nan( size(coh) );
     end
+    
     coh(:, :, j) = C';
+    phi(:, :, j) = P';
   end
   
   keep_ind = find( params.keep_if(coh) );
   coh = coh(keep_ind, :, :);
+  phi = phi(keep_ind, :, :);
   inds{i} = keep_ind;
   
   if ( params.single_precision )
     coh = single( coh );
+    phi = single( phi );
   end
   
   cohs{i} = coh;
+  phis{i} = phi;
   freqs{i} = f;
 end
 
@@ -65,7 +73,7 @@ else
   freqs = freqs{1};
 end
 
-if ( nargout > 3 )
+if ( nargout > 4 )
   info = struct();
   info.params = params;
   info.inds = inds;

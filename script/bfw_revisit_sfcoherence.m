@@ -69,7 +69,7 @@ for i = 1:size(to_process, 1)
     end
     
     subset_event_ts = event_ts(event_mask);
-    [coh, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
+    [coh, phi, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
       , 'f_lims', [0, 85] ...
       , 'keep_if', no_nans ...
       , 'single_precision', true ...
@@ -77,6 +77,7 @@ for i = 1:size(to_process, 1)
     
     labs = make_labels( spike_file.data, lfp_labels, bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
     coh = vertcat( coh{:} );    
+    phi = vertcat( phi{:} );
     assert_ispair( coh, labs );
     dst_file = make_file( coh, labs, f, t, info, meta_file.unified_filename );
     
