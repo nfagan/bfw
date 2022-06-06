@@ -1,3 +1,5 @@
+conf = bfw.config.load();
+
 repadd( 'chronux', true );
 repadd( 'bfw/script' );
 
