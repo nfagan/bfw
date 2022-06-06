@@ -1,4 +1,4 @@
-function bfw_revisit_sfcoherence(event_ts, event_labs, event_each, varargin)
+function bfw_revisit_sfcoherence_per_session(event_ts, event_labs, event_each, varargin)
 
 assert_ispair( event_ts, event_labs );
 
@@ -23,6 +23,8 @@ lfp_files = shared_utils.io.findmat( lfp_p );
 );
 
 to_process = ps(all(exists, 2), :);
+has_first = cellfun( @(x) contains(x, '_1.mat'), to_process(:, 1) );
+to_process = to_process(has_first, :);
 
 no_nans = @(C) ~squeeze( any(any(isnan(C), 3), 2) );
 not_all_nans = @(C) ~squeeze( all(all(isnan(C), 3), 2) );
@@ -60,10 +62,7 @@ for i = 1:size(to_process, 1)
   
   %%
   
-  event_labs = fcat.from( events_file );
-  event_ts = bfw.event_column( events_file, 'start_time' );
-  
-  mask = params.mask_func( event_labs, find(event_labs, meta_file.unified_filename) );
+  mask = params.mask_func( event_labs, find(event_labs, meta_file.session) );
   [subset_I, subset_C] = findall( event_labs, event_each, mask );
   
   for j = 1:numel(subset_I)
@@ -77,11 +76,12 @@ for i = 1:size(to_process, 1)
     subset_event_ts = event_ts(event_mask);
     [coh, ~, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
       , 'f_lims', [0, 85] ...
-      , 'keep_if', no_nans ...
+      , 'keep_if', not_all_nans ...
       , 'single_precision', true ...
     );
     
-    labs = make_labels( spike_file.data, lfp_labels, bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
+    labs = make_labels( spike_file.data, lfp_labels ...
+      , bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
     coh = vertcat( coh{:} );    
 %     phi = vertcat( phi{:} );
     assert_ispair( coh, labs );
