@@ -64,37 +64,41 @@ for i = 1:size(to_process, 1)
   
   mask = params.mask_func( event_labs, find(event_labs, meta_file.session) );
   [subset_I, subset_C] = findall( event_labs, event_each, mask );
-  
-  for j = 1:numel(subset_I)
-    fprintf( '\n\t %d of %d', j, numel(subset_I) );
     
-    event_mask = subset_I{j};
-    if ( isempty(event_mask) )
-      continue
-    end
-    
-    subset_event_ts = event_ts(event_mask);
-    [coh, ~, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs ...
-      , 'f_lims', [0, 85] ...
-      , 'keep_if', not_all_nans ...
-      , 'single_precision', true ...
-    );
-    
-    labs = make_labels( spike_file.data, lfp_labels ...
-      , bfw.struct2fcat(meta_file), event_labs(event_mask), pairs, info.inds );
-    coh = vertcat( coh{:} );    
-%     phi = vertcat( phi{:} );
-    assert_ispair( coh, labs );
-    dst_file = make_file( coh, labs, f, t, info, meta_file.unified_filename );
-    
-    if ( 1 )
-      each_p = strjoin( subset_C(:, j), '_' );
-      dst_file_path = fullfile( base_dst_p, each_p, meta_file.unified_filename );
-      shared_utils.io.require_dir( fileparts(dst_file_path) );
-      shared_utils.io.psave( dst_file_path, dst_file );
+  for pp = 1:size(pairs, 1)
+    fprintf( '\n\t %d of %d', pp, size(pairs, 1) );
+    pairs_subset = pairs(pp, :);
+
+    for j = 1:numel(subset_I)
+      fprintf( '\n\t\t %d of %d', j, numel(subset_I) );
+
+      event_mask = subset_I{j};
+      if ( isempty(event_mask) )
+        continue
+      end
+
+      subset_event_ts = event_ts(event_mask);
+      [coh, ~, f, t, info] = bfw.sfcoherence( spks, lfp, subset_event_ts, pairs_subset ...
+        , 'f_lims', [0, 85] ...
+        , 'keep_if', not_all_nans ...
+        , 'single_precision', true ...
+      );
+
+      labs = make_labels( spike_file.data, lfp_labels ...
+        , bfw.struct2fcat(meta_file), event_labs(event_mask), pairs_subset, info.inds );
+      coh = vertcat( coh{:} );    
+  %     phi = vertcat( phi{:} );
+      assert_ispair( coh, labs );
+      dst_file = make_file( coh, labs, f, t, info, meta_file.unified_filename );
+
+      if ( 1 )
+        each_p = strjoin( subset_C(:, j), '_' );
+        dst_file_path = fullfile( base_dst_p, each_p, sprintf('pair_%d_%s', pp, meta_file.unified_filename) );
+        shared_utils.io.require_dir( fileparts(dst_file_path) );
+        shared_utils.io.psave( dst_file_path, dst_file );
+      end
     end
   end
-  
 end
 
 end
