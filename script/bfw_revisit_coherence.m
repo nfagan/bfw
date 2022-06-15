@@ -4,46 +4,102 @@ conf = bfw.set_dataroot( 'C:\data\bfw' );
 rois = { 'eyes_nf', 'face', 'right_nonsocial_object', 'right_nonsocial_object_eyes_nf_matched' };
 ms = shared_utils.io.findmat( fullfile(bfw.gid(fullfile('sfcoherence', rois), conf)) );
 
-coh_labels = cell( numel(ms), 1 );
-coh = cell( size(coh_labels) );
-time_freq = cell( size(coh_labels) );
-
-parfor i = 1:numel(ms)
-  coh_file = shared_utils.io.fload( ms{i} );
-  coh_labels{i} = fcat.from( coh_file.labels, coh_file.categories );
-  coh{i} = coh_file.data;
-  time_freq{i} = {coh_file.f, coh_file.t};
-end
-
-coh = vertcat( coh{:} );
-coh_labels = vertcat( fcat, coh_labels{:} );
-f = time_freq{1}{1};
-t = time_freq{1}{2};
-
-do_sort = false;
-src_reg_pairs = combs( coh_labels, 'region' );
-src_regs = cellfun( @(x) strsplit(x, '_'), src_reg_pairs, 'un', 0 );
-dst_regs = clean_region_pairs( src_regs, do_sort );
-
-for i = 1:numel(src_reg_pairs)
-  replace( coh_labels, src_reg_pairs{i}, dst_regs{i} );
-end
-
-[I, regs] = findall( coh_labels, 'region' );
-split_regs = split_regions( regs );
-set_spike_field_regions( coh_labels, split_regs, I );
+[coh, coh_labels, f, t] = load_coh( ms );
+clean_labels( coh_labels );
 
 [~, transform_ind] = bfw.make_whole_face_roi( coh_labels );
 coh = coh(transform_ind, :, :);
 
-%%  spectra
+%%
 
-mask = pipe( rowmask(coh_labels) ...
-  , @(m) findnone(coh_labels, ref_regions, m) ...
+bands = dsp3.get_bands( 'map' );
+beta = bands('beta');
+tf_mean_coh = squeeze( nanmean(nanmean(coh(:, f >= beta(1) & f <= beta(2), t >= 0 & t <= 0.5), 2), 3) );
+out_I = findall( coh_labels, 'region-pair' );
+is_outlier = detect_outliers( tf_mean_coh, out_I, 2.5 );
+p_outliers = cellfun( @(x) pnz(is_outlier(x)), out_I );
+non_outlier_inds = find( ~is_outlier );
+
+%%  cs sf coherence
+
+cs_ms = shared_utils.io.findmat( fullfile(bfw.gid(fullfile('sfcoherence', 'cs'), conf)) );
+[cs_coh, cs_coh_labels, cs_f, cs_t] = load_coh( cs_ms );
+clean_labels( cs_coh_labels );
+
+%%  cs baseline mean sf coherence
+
+match_each = {'session', 'region', 'channel', 'unit_uuid'};
+
+cs_coh_mean = nanmean( cs_coh(:, :, cs_t >= 0 & cs_t <= 0.15), 3 );
+[cs_base_labels, I] = keepeach( cs_coh_labels', match_each ...
+  , find(cs_coh_labels, 'no-error') ...
+);
+cs_coh_mean = bfw.row_nanmean( double(cs_coh_mean), I );
+
+%%  baseline normalize
+
+[match_I, match_C] = findall( coh_labels, match_each );
+base_I = bfw.find_combinations( cs_base_labels, match_C );
+norm_coh = normalize_each( coh, cs_coh_mean, match_I, base_I, @minus );
+
+%%
+
+mask = pipe( rowmask(cs_coh_labels) ...
+  , @(m) findnone(cs_coh_labels, ref_regions, m) ...
 );
 
-plot_spectra( coh, coh_labels, mask, f, t, {'roi', 'spk-region'}, 'region' ...
-  , 'do_save', true, 'config', conf, 'clims', [0.65, 0.68] );
+do_norm = false;
+if ( do_norm )
+  assert( false );
+  clims = [-1e-2, 1e-2];
+  plt_coh = cs_coh;
+  subdir = 'normalized';
+else
+  clims = [0.65, 0.68];
+  plt_coh = cs_coh;
+  subdir = 'raw';
+end
+
+% subdir = sprintf( '%s-%s', subdir, strjoin(cellstr(looks_by), '_') );
+
+% if ( rem_outliers )
+%   mask = intersect( mask, non_outlier_inds );
+%   subdir = sprintf( '%s-outliers-removed', subdir );
+% end
+
+plot_spectra( plt_coh, cs_coh_labels, mask, cs_f, cs_t, {'region-pair'}, {'spk-region'} ...
+  , 'do_save', true, 'config', conf, 'clims', clims, 'subdir', subdir );
+
+%%  spectra
+
+looks_by = { 'm1' };
+mask = pipe( rowmask(coh_labels) ...
+  , @(m) findnone(coh_labels, ref_regions, m) ...
+  , @(m) find(coh_labels, looks_by, m) ...
+);
+
+rem_outliers = true;
+do_norm = false;
+
+if ( do_norm )
+  clims = [-1e-2, 1e-2];
+  plt_coh = norm_coh;
+  subdir = 'normalized';
+else
+  clims = [0.65, 0.68];
+  plt_coh = coh;
+  subdir = 'raw';
+end
+
+subdir = sprintf( '%s-%s', subdir, strjoin(cellstr(looks_by), '_') );
+
+if ( rem_outliers )
+  mask = intersect( mask, non_outlier_inds );
+  subdir = sprintf( '%s-outliers-removed', subdir );
+end
+
+plot_spectra( plt_coh, coh_labels, mask, f, t, {'roi', 'region-pair'}, {'spk-region'} ...
+  , 'do_save', true, 'config', conf, 'clims', clims, 'subdir', subdir );
 
 %%  lines
 
@@ -140,10 +196,13 @@ end
 
 function plot_spectra(coh, coh_labels, mask, f, t, fcats, pcats, varargin)
 
+assert_ispair( coh, coh_labels );
+
 defaults = struct();
 defaults.do_save = false;
 defaults.config = bfw.config.load();
 defaults.clims = [];
+defaults.subdir = '';
 params = shared_utils.general.parsestruct( defaults, varargin );
 
 pcats = csunion( pcats, fcats );
@@ -151,6 +210,8 @@ pcats = csunion( pcats, fcats );
 fig_I = findall( coh_labels, fcats, mask );
 
 for i = 1:numel(fig_I)
+  
+shared_utils.general.progress( i, numel(fig_I) );
   
 fi = fig_I{i};
 
@@ -167,7 +228,7 @@ shared_utils.plot.set_clims( axs, params.clims );
 
 if ( params.do_save )
   shared_utils.plot.fullscreen( gcf );
-  save_p = fullfile( bfw.dataroot(params.config), 'plots/coherence/spectra', dsp3.datedir );
+  save_p = fullfile( bfw.dataroot(params.config), 'plots/coherence/spectra', dsp3.datedir, params.subdir );
   dsp3.req_savefig( gcf, save_p, plt_labels, pcats );
 end
 
@@ -206,6 +267,76 @@ if ( params.do_save )
   dsp3.req_savefig( gcf, save_p, plt_labels, pcats );
 end
 
+end
+
+end
+
+function clean_labels(coh_labels)
+
+do_sort = false;
+src_reg_pairs = combs( coh_labels, 'region' );
+src_regs = cellfun( @(x) strsplit(x, '_'), src_reg_pairs, 'un', 0 );
+dst_regs = clean_region_pairs( src_regs, do_sort );
+
+for i = 1:numel(src_reg_pairs)
+  replace( coh_labels, src_reg_pairs{i}, dst_regs{i} );
+end
+
+[I, regs] = findall( coh_labels, 'region' );
+split_regs = split_regions( regs );
+set_spike_field_regions( coh_labels, split_regs, I );
+
+sorted_regs = eachcell( @(x) sort(x), split_regs );
+joined_regs = eachcell( @(x) sprintf('pair-%s', strjoin(x, '_')), sorted_regs );
+for i = 1:numel(I)
+  addsetcat( coh_labels, 'region-pair', joined_regs{i}, I{i} );
+end
+
+end
+
+function [coh, coh_labels, f, t] = load_coh(ms)
+
+coh_labels = cell( numel(ms), 1 );
+coh = cell( size(coh_labels) );
+time_freq = cell( size(coh_labels) );
+
+parfor i = 1:numel(ms)
+  coh_file = shared_utils.io.fload( ms{i} );
+  coh_labels{i} = fcat.from( coh_file.labels, coh_file.categories );
+  coh{i} = coh_file.data;
+  time_freq{i} = {coh_file.f, coh_file.t};
+end
+
+coh = vertcat( coh{:} );
+coh_labels = vertcat( fcat, coh_labels{:} );
+f = time_freq{1}{1};
+t = time_freq{1}{2};
+
+end
+
+function normed = normalize_each(target, base, targ_I, base_I, op)
+
+assert( numel(targ_I) == numel(base_I) );
+
+normed = target;
+for i = 1:numel(targ_I)
+  mi = targ_I{i};
+  bi = base_I{i};
+  normed(mi, :, :) = op( target(mi, :, :), nanmean(base(bi, :, :), 1) );
+end
+
+end
+
+function tf = detect_outliers(coh, out_I, n_devs)
+
+validateattributes( coh, {'double', 'single'}, {'column'}, mfilename, 'coh' );
+
+tf = false( size(coh) );
+for i = 1:numel(out_I)
+  oi = out_I{i};
+  mu = nanmean( coh(oi) );
+  sig = nanstd( coh(oi) );
+  tf(oi) = (coh(oi) > mu + sig * n_devs) | (coh(oi) < mu - sig * n_devs);
 end
 
 end

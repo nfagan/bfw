@@ -5,6 +5,11 @@ assert_ispair( event_ts, event_labs );
 defaults = struct();
 defaults.config = bfw.config.load();
 defaults.mask_func = @(l, m) intersect(m, rowmask(l));
+defaults.min_t = -0.5;
+defaults.max_t = 0.5;
+defaults.bin_width = 0.15;
+defaults.bin_step = 0.05;
+
 params = shared_utils.general.parsestruct( defaults, varargin );
 
 conf = params.config;
@@ -82,6 +87,10 @@ for i = 1:size(to_process, 1)
         , 'f_lims', [0, 85] ...
         , 'keep_if', not_all_nans ...
         , 'single_precision', true ...
+        , 'min_t', params.min_t ...
+        , 'max_t', params.max_t ...
+        , 'bin_width', params.bin_width ...
+        , 'bin_step', params.bin_step ...
       );
 
       labs = make_labels( spike_file.data, lfp_labels ...
@@ -95,7 +104,9 @@ for i = 1:size(to_process, 1)
         each_p = strjoin( subset_C(:, j), '_' );
         dst_file_path = fullfile( base_dst_p, each_p, sprintf('pair_%d_%s', pp, meta_file.unified_filename) );
         shared_utils.io.require_dir( fileparts(dst_file_path) );
+        fprintf( '\n\t\t Saving %s ... ', dst_file_path );
         shared_utils.io.psave( dst_file_path, dst_file );
+        fprintf( 'Done.' );
       end
     end
   end
