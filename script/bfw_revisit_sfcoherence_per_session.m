@@ -9,6 +9,7 @@ defaults.min_t = -0.5;
 defaults.max_t = 0.5;
 defaults.bin_width = 0.15;
 defaults.bin_step = 0.05;
+defaults.do_save = true;
 
 params = shared_utils.general.parsestruct( defaults, varargin );
 
@@ -98,9 +99,13 @@ for i = 1:size(to_process, 1)
       coh = vertcat( coh{:} );    
   %     phi = vertcat( phi{:} );
       assert_ispair( coh, labs );
+      evt_inds = vertcat( info.inds{:} );
+      info.event_times = subset_event_ts(evt_inds);
+      assert( numel(info.event_times) == size(coh, 1) );
+
       dst_file = make_file( coh, labs, f, t, info, meta_file.unified_filename );
 
-      if ( 1 )
+      if ( params.do_save )
         each_p = strjoin( subset_C(:, j), '_' );
         dst_file_path = fullfile( base_dst_p, each_p, sprintf('pair_%d_%s', pp, meta_file.unified_filename) );
         shared_utils.io.require_dir( fileparts(dst_file_path) );
